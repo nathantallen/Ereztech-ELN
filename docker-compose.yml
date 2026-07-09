@@ -32,8 +32,7 @@ services:
       SAP_CLIENT: ${SAP_CLIENT:-}
       SAP_VERIFY_SSL: ${SAP_VERIFY_SSL:-true}
     ports:
-      # 8080 is used by the separately deployed "ereztech-scheduler" container
-      - "8090:8000"
+      - "8080:8000"
     volumes:
       # Folders mounted here become browsable in the app's "Browse…" dialog.
       # Register each under Admin → Doc Roots with a link prefix that maps the
