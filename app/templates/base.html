@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}EreZtech Operations{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="{{ url_for('static', filename='js/filebrowser.js') }}" defer></script>
+</head>
+<body>
+{% if current_user.is_authenticated %}
+<header class="topbar">
+  <a class="brand" href="{{ url_for('main.month_calendar') }}">
+    <span class="brand-mark">Ere<span class="z">Z</span>tech</span>
+    <span class="brand-sub">Operations</span>
+  </a>
+  <nav>
+    <a href="{{ url_for('main.month_calendar') }}" class="{{ 'active' if request.endpoint == 'main.month_calendar' }}">Calendar</a>
+    <a href="{{ url_for('main.timeline') }}" class="{{ 'active' if request.endpoint == 'main.timeline' }}">Reactor Timeline</a>
+    <a href="{{ url_for('runs.list_runs') }}" class="{{ 'active' if request.blueprint == 'runs' }}">Production Runs</a>
+    <a href="{{ url_for('reactors.list_reactors') }}" class="{{ 'active' if request.blueprint == 'reactors' }}">Reactors</a>
+    <a href="{{ url_for('rd.list_projects') }}" class="{{ 'active' if request.blueprint == 'rd' }}">R&amp;D Projects</a>
+    <a href="{{ url_for('sap.lookup') }}" class="{{ 'active' if request.blueprint == 'sap' }}">SAP</a>
+    {% if can_edit_prod %}
+    <a href="{{ url_for('settings.statuses') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('settings.statuses') or request.endpoint in ('settings.new_status',) }}">Statuses</a>
+    {% endif %}
+    {% if is_admin %}
+    <a href="{{ url_for('admin.list_users') }}" class="{{ 'active' if request.blueprint == 'admin' }}">Users</a>
+    <a href="{{ url_for('settings.roles') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('settings.role') }}">Roles</a>
+    <a href="{{ url_for('docroots.list_roots') }}" class="{{ 'active' if request.blueprint == 'docroots' }}">Doc Roots</a>
+    {% endif %}
+  </nav>
+  <div class="userbox">
+    <span class="user-name">{{ current_user.full_name }}</span>
+    <span class="user-role" style="background: {{ role_colors.get(current_user.role, '#F7941E') }}; color: #fff;">{{ current_user.role }}</span>
+    <a class="logout" href="{{ url_for('auth.logout') }}">Sign out</a>
+  </div>
+</header>
+{% endif %}
+<main class="container">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+<footer class="footer">EreZtech Operations — Bridging Chemical Gaps</footer>
+</body>
+</html>

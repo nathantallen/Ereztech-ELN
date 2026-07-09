@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Users — EreZtech Operations{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Users</h1>
+    <div class="sub">Accounts and approval roles</div>
+  </div>
+  <a class="btn btn-accent" href="{{ url_for('admin.new_user') }}">+ Add User</a>
+</div>
+
+<div class="card">
+  <table>
+    <thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      {% for user in users %}
+      <tr>
+        <td><strong>{{ user.full_name }}</strong></td>
+        <td>{{ user.username }}</td>
+        <td><span class="badge" style="background: {{ role_colors.get(user.role, '#8a8797') }}; color: #fff;">{{ user.role }}</span></td>
+        <td>
+          {% if user.is_active_user %}<span class="badge badge-active">Active</span>
+          {% else %}<span class="badge badge-inactive">Disabled</span>{% endif %}
+        </td>
+        <td style="white-space: nowrap;">
+          <a class="btn btn-outline btn-sm" href="{{ url_for('admin.edit_user', user_id=user.id) }}">Edit</a>
+          {% if user.id != current_user.id %}
+          <form class="inline" method="post" action="{{ url_for('admin.delete_user', user_id=user.id) }}"
+                onsubmit="return confirm('Delete user {{ user.full_name }}? Their R&D projects will become unassigned. Users with approval records cannot be deleted, only disabled.');">
+            <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Reactors — EreZtech Operations{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Reactors</h1>
+    <div class="sub">Vessels available for production scheduling</div>
+  </div>
+  {% if can_edit %}<a class="btn btn-accent" href="{{ url_for('reactors.new_reactor') }}">+ Add Reactor</a>{% endif %}
+</div>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr><th>Reactor</th><th>Description</th><th>Attributes</th><th>Status</th>{% if can_edit %}<th></th>{% endif %}</tr>
+    </thead>
+    <tbody>
+      {% for reactor in reactors %}
+      <tr>
+        <td><span class="reactor-dot" style="background: {{ reactor.color }}"></span><strong>{{ reactor.name }}</strong></td>
+        <td>{{ reactor.description }}</td>
+        <td>
+          {% for attr in reactor.attributes %}
+            <span class="badge badge-pending">{{ attr.name }}: {{ attr.value }}</span>
+          {% else %}<span class="muted">—</span>{% endfor %}
+        </td>
+        <td>
+          {% if reactor.is_active %}<span class="badge badge-active">Active</span>
+          {% else %}<span class="badge badge-inactive">Inactive</span>{% endif %}
+        </td>
+        {% if can_edit %}
+        <td style="white-space: nowrap;">
+          <a class="btn btn-outline btn-sm" href="{{ url_for('reactors.edit_reactor', reactor_id=reactor.id) }}">Edit</a>
+          <form class="inline" method="post" action="{{ url_for('reactors.delete_reactor', reactor_id=reactor.id) }}"
+                onsubmit="return confirm('Delete reactor {{ reactor.name }}?');">
+            <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+          </form>
+        </td>
+        {% endif %}
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="muted">No reactors defined yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit Reactor' if reactor else 'Add Reactor' }} — EreZtech Operations{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ 'Edit ' + reactor.name if reactor else 'Add a Reactor' }}</h1>
+</div>
+<div class="grid-2">
+  <div class="card">
+    <h2>Details</h2>
+    <form method="post">
+      <label for="name">Name</label>
+      <input type="text" id="name" name="name" value="{{ reactor.name if reactor }}" required>
+      <label for="description">Description</label>
+      <textarea id="description" name="description">{{ reactor.description if reactor }}</textarea>
+      <label for="color">Timeline Color</label>
+      <select id="color" name="color">
+        {% for c in colors %}
+        <option value="{{ c }}" {{ 'selected' if reactor and reactor.color == c }}>{{ c }}</option>
+        {% endfor %}
+      </select>
+      <div class="checkbox-line">
+        <input type="checkbox" id="is_active" name="is_active" {{ 'checked' if not reactor or reactor.is_active }}>
+        <label for="is_active">Active (available for scheduling)</label>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-accent" type="submit">{{ 'Save Changes' if reactor else 'Add Reactor' }}</button>
+        <a class="btn btn-outline" href="{{ url_for('reactors.list_reactors') }}">Back</a>
+      </div>
+    </form>
+  </div>
+
+  {% if reactor %}
+  <div class="card">
+    <h2>Attributes</h2>
+    <p class="muted">Free-form attributes: capacity, material of construction, max temperature, agitator type, …</p>
+    <table>
+      <tbody>
+        {% for attr in reactor.attributes %}
+        <tr>
+          <td><strong>{{ attr.name }}</strong></td>
+          <td>{{ attr.value }}</td>
+          <td style="text-align: right;">
+            <form class="inline" method="post" action="{{ url_for('reactors.delete_attribute', attr_id=attr.id) }}">
+              <button class="btn btn-danger btn-xs" type="submit">&times;</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3" class="muted">No attributes yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <form class="mini-form" method="post" action="{{ url_for('reactors.add_attribute', reactor_id=reactor.id) }}">
+      <input type="text" name="name" placeholder="Attribute (e.g. Capacity)" required>
+      <input type="text" name="value" placeholder="Value (e.g. 500 L)" required>
+      <button class="btn btn-sm" type="submit">Add</button>
+    </form>
+  </div>
+  {% else %}
+  <div class="card">
+    <h2>Attributes</h2>
+    <p class="muted">Save the reactor first, then add attributes such as capacity, material, and temperature limits.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

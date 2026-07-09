@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Run Statuses — EreZtech Operations{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Production Run Statuses</h1>
+    <div class="sub">Rename statuses and set the colors used on the calendar and timeline</div>
+  </div>
+</div>
+
+<div class="card" style="max-width: 860px;">
+  <table>
+    <thead><tr><th>Status</th><th>Color</th><th>Preview</th><th>Runs</th><th></th><th></th></tr></thead>
+    <tbody>
+      {% for status in statuses %}
+      <tr>
+        <td colspan="5" style="padding: 0;">
+          <form method="post" action="{{ url_for('settings.update_status', status_id=status.id) }}"
+                style="display: grid; grid-template-columns: 1.4fr auto 1fr auto auto; gap: 10px; align-items: center; padding: 10px;">
+            <input type="text" name="name" value="{{ status.name }}" required>
+            <input type="color" name="color" value="{{ status.color }}" title="Status color"
+                   style="width: 44px; height: 32px; padding: 2px; border: 1px solid var(--border); border-radius: 6px;">
+            <span class="badge" style="background: {{ status.color }}; color: #fff;">{{ status.name }}</span>
+            <span class="badge badge-pending">{{ counts.get(status.name, 0) }}</span>
+            <button class="btn btn-sm" type="submit">Save</button>
+          </form>
+        </td>
+        <td style="width: 1%;">
+          <form class="inline" method="post" action="{{ url_for('settings.delete_status', status_id=status.id) }}"
+                onsubmit="return confirm('Delete status {{ status.name }}?');">
+            <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted" style="margin-bottom: 0;">Renaming a status updates every run that uses it. A status in use can't be deleted.</p>
+</div>
+
+<div class="card" style="max-width: 560px;">
+  <h2>Add a Status</h2>
+  <form method="post" action="{{ url_for('settings.new_status') }}">
+    <div class="form-row">
+      <div>
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" placeholder="e.g. QC Hold" required>
+      </div>
+      <div>
+        <label for="color">Color</label>
+        <input type="color" id="color" name="color" value="#0693e3"
+               style="width: 60px; height: 36px; padding: 2px;">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-accent" type="submit">Add Status</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

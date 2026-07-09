@@ -1,0 +1,17 @@
+# Machine-specific compose mounts — keep per-machine, use the .example as a template
+docker-compose.override.yml
+
+# Secrets / local env
+.env
+deploy/.env
+
+# Built image tars (56MB+; rebuild instead of committing)
+deploy/*.tar.gz
+
+# Python
+__pycache__/
+*.pyc
+
+# OS noise
+.DS_Store
+.claude/settings.local.json

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit Project' if project else 'New R&D Project' }} — EreZtech Operations{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ 'Edit ' + project.name if project else 'New R&D Project' }}</h1>
+</div>
+<div class="card" style="max-width: 780px;">
+  <form method="post">
+    <div class="form-row">
+      <div>
+        <label for="name">Project Name</label>
+        <input type="text" id="name" name="name" value="{{ project.name if project }}" required>
+      </div>
+      <div>
+        <label for="customer">Customer</label>
+        <input type="text" id="customer" name="customer" value="{{ project.customer if project }}">
+      </div>
+      <div>
+        <label for="researcher_id">Assigned Researcher</label>
+        <select id="researcher_id" name="researcher_id">
+          <option value="">— Unassigned —</option>
+          {% for u in users %}
+          <option value="{{ u.id }}" {{ 'selected' if project and project.researcher_id == u.id }}>{{ u.full_name }} ({{ u.role }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="status">Status</label>
+        <select id="status" name="status">
+          {% for s in statuses %}
+          <option value="{{ s }}" {{ 'selected' if project and project.status == s }}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="start_date">Start Date</label>
+        <input type="date" id="start_date" name="start_date" value="{{ project.start_date if project and project.start_date }}">
+      </div>
+      <div>
+        <label for="due_date">Due Date</label>
+        <input type="date" id="due_date" name="due_date" value="{{ project.due_date if project and project.due_date }}">
+      </div>
+    </div>
+
+    <label for="description">Description / Scope</label>
+    <textarea id="description" name="description">{{ project.description if project }}</textarea>
+
+    <label for="folder_url">Project Folder (SharePoint URL or network path)</label>
+    <div class="input-with-browse">
+      <input type="text" id="folder_url" name="folder_url" value="{{ project.folder_url if project }}"
+             placeholder="https://ereztech.sharepoint.com/sites/RD/Projects/… or \\server\rd\projects\…">
+      <button type="button" class="btn btn-outline btn-sm browse-btn" data-target="#folder_url">Browse…</button>
+    </div>
+
+    <label for="final_procedure_url">Final Procedure (link)</label>
+    <div class="input-with-browse">
+      <input type="text" id="final_procedure_url" name="final_procedure_url" value="{{ project.final_procedure_url if project }}">
+      <button type="button" class="btn btn-outline btn-sm browse-btn" data-target="#final_procedure_url">Browse…</button>
+    </div>
+
+    <label for="final_qc_url">Final QC Methods (link)</label>
+    <div class="input-with-browse">
+      <input type="text" id="final_qc_url" name="final_qc_url" value="{{ project.final_qc_url if project }}">
+      <button type="button" class="btn btn-outline btn-sm browse-btn" data-target="#final_qc_url">Browse…</button>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-accent" type="submit">{{ 'Save Changes' if project else 'Create Project' }}</button>
+      <a class="btn btn-outline" href="{{ url_for('rd.project_detail', project_id=project.id) if project else url_for('rd.list_projects') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

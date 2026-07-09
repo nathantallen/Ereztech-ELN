@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} — EreZtech Operations{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ project.name }}</h1>
+    <div class="sub">
+      {{ project.customer or 'No customer' }} ·
+      Researcher: {{ project.researcher.full_name if project.researcher else 'Unassigned' }} ·
+      <span class="badge badge-{{ project.status|lower|replace(' ', '-') }}">{{ project.status }}</span>
+    </div>
+  </div>
+  {% if can_edit %}
+  <div>
+    <a class="btn btn-outline" href="{{ url_for('rd.edit_project', project_id=project.id) }}">Edit Project</a>
+    <form class="inline" method="post" action="{{ url_for('rd.delete_project', project_id=project.id) }}"
+          onsubmit="return confirm('Delete this project and all deliverables/approvals?');">
+      <button class="btn btn-danger" type="submit">Delete</button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h2>Overview</h2>
+    <dl class="kv">
+      <dt>Timeline</dt>
+      <dd>{{ project.start_date.strftime('%b %-d, %Y') if project.start_date else '—' }}
+          &rarr; {{ project.due_date.strftime('%b %-d, %Y') if project.due_date else '—' }}</dd>
+      {% if project.description %}<dt>Scope</dt><dd style="white-space: pre-wrap;">{{ project.description }}</dd>{% endif %}
+      <dt>Project Folder</dt>
+      <dd>{% if project.folder_url %}<a href="{{ project.folder_url }}" target="_blank" rel="noopener">📁 {{ project.folder_url }}</a>
+          {% else %}<span class="muted">Not assigned — set it in Edit Project</span>{% endif %}</dd>
+      <dt>Final Procedure <span class="badge badge-{{ project.aspect_status('Final Procedure')|lower }}">{{ project.aspect_status('Final Procedure') }}</span></dt>
+      <dd>{% if project.final_procedure_url %}<a href="{{ project.final_procedure_url }}" target="_blank" rel="noopener">📄 {{ project.final_procedure_url }}</a>
+          {% else %}<span class="muted">No link yet</span>{% endif %}</dd>
+      <dt>Final QC Methods <span class="badge badge-{{ project.aspect_status('Final QC Methods')|lower }}">{{ project.aspect_status('Final QC Methods') }}</span></dt>
+      <dd>{% if project.final_qc_url %}<a href="{{ project.final_qc_url }}" target="_blank" rel="noopener">📄 {{ project.final_qc_url }}</a>
+          {% else %}<span class="muted">No link yet</span>{% endif %}</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h2>Deliverables <span class="badge badge-{{ project.aspect_status('Project Deliverables')|lower }}">{{ project.aspect_status('Project Deliverables') }}</span></h2>
+    <table>
+      <thead><tr><th>Deliverable</th><th>Due</th><th>Status</th><th>Link</th>{% if can_edit %}<th></th>{% endif %}</tr></thead>
+      <tbody>
+        {% for d in project.deliverables %}
+        <tr>
+          <td><strong>{{ d.name }}</strong></td>
+          <td>{{ d.due_date.strftime('%b %-d') if d.due_date else '—' }}</td>
+          <td>
+            {% if can_edit %}
+            <form class="inline" method="post" action="{{ url_for('rd.update_deliverable', deliverable_id=d.id) }}">
+              <select name="status" onchange="this.form.submit()" style="width:auto; font-size:12px; padding:3px 6px;">
+                {% for s in deliverable_statuses %}
+                <option value="{{ s }}" {{ 'selected' if d.status == s }}>{{ s }}</option>
+                {% endfor %}
+              </select>
+            </form>
+            {% else %}
+            <span class="badge badge-{{ d.status|lower|replace(' ', '-') }}">{{ d.status }}</span>
+            {% endif %}
+          </td>
+          <td>{% if d.link_url %}<a href="{{ d.link_url }}" target="_blank" rel="noopener">Open</a>{% else %}—{% endif %}</td>
+          {% if can_edit %}
+          <td>
+            <form class="inline" method="post" action="{{ url_for('rd.delete_deliverable', deliverable_id=d.id) }}">
+              <button class="btn btn-danger btn-xs" type="submit">&times;</button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="muted">No deliverables yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if can_edit %}
+    <form class="mini-form" method="post" action="{{ url_for('rd.add_deliverable', project_id=project.id) }}">
+      <input type="text" name="name" placeholder="Deliverable name" required>
+      <input type="date" name="due_date" title="Due date">
+      <input type="text" name="link_url" id="deliverable-link" placeholder="Link (optional)">
+      <button type="button" class="btn btn-outline btn-sm browse-btn" data-target="#deliverable-link">Browse…</button>
+      <button class="btn btn-sm" type="submit">Add</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <h2>Approvals</h2>
+  {% for aspect in aspects %}
+  <div class="stage {{ project.aspect_status(aspect)|lower }}">
+    <div class="stage-head">
+      <h3>{{ aspect }}</h3>
+      <span class="badge badge-{{ project.aspect_status(aspect)|lower }}">{{ project.aspect_status(aspect) }}</span>
+    </div>
+    {% set entries = project.approvals | selectattr('aspect', 'equalto', aspect) | list %}
+    {% if entries %}
+    <ul class="approval-log">
+      {% for a in entries %}
+      <li>
+        <span class="badge badge-{{ a.status|lower }}">{{ a.status }}</span>
+        <strong>{{ a.user.full_name }}</strong> ({{ a.role }})
+        · {{ a.created_at.strftime('%Y-%m-%d %H:%M') }} UTC
+        {% if a.comment %}· “{{ a.comment }}”{% endif %}
+        {% if is_admin or a.user_id == current_user.id %}
+        <form class="inline" method="post" action="{{ url_for('rd.delete_project_approval', approval_id=a.id) }}">
+          <button class="btn btn-danger btn-xs" type="submit" title="Remove entry">&times;</button>
+        </form>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    <form class="mini-form" method="post" action="{{ url_for('rd.approve_project', project_id=project.id) }}">
+      <input type="hidden" name="aspect" value="{{ aspect }}">
+      <input type="text" name="comment" placeholder="Comment (optional)">
+      <button class="btn btn-sm" type="submit" name="status" value="Approved">Approve</button>
+      <button class="btn btn-danger btn-sm" type="submit" name="status" value="Rejected">Reject</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

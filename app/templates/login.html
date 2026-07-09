@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Sign in — EreZtech Operations{% endblock %}
+{% block content %}
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="login-hero">
+      <span class="brand-mark">Ere<span class="z">Z</span>tech</span>
+      <div class="tagline">OPERATIONS · BRIDGING CHEMICAL GAPS</div>
+    </div>
+    <div class="login-body">
+      <form method="post">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" autofocus required>
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required>
+        <button class="btn btn-accent" type="submit">Sign in</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

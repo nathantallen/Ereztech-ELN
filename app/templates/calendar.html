@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Production Calendar — EreZtech Operations{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="cal-nav">
+    <a class="btn btn-outline btn-sm" href="{{ url_for('main.month_calendar', year=prev_m.year, month=prev_m.month) }}">&larr;</a>
+    <h1>{{ month_name }} {{ year }}</h1>
+    <a class="btn btn-outline btn-sm" href="{{ url_for('main.month_calendar', year=next_m.year, month=next_m.month) }}">&rarr;</a>
+    <a class="btn btn-outline btn-sm" href="{{ url_for('main.month_calendar') }}">Today</a>
+  </div>
+  <div>
+    <a class="btn btn-outline" href="{{ url_for('main.timeline', year=year, month=month) }}">Reactor Timeline</a>
+    <a class="btn btn-accent" href="{{ url_for('runs.new_run') }}">+ Schedule Run</a>
+  </div>
+</div>
+
+<div class="card">
+  <table class="cal-table">
+    <thead>
+      <tr>
+        {% for d in ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] %}<th>{{ d }}</th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for week in weeks %}
+      <tr>
+        {% for day in week %}
+        <td class="{{ '' if day.in_month else 'out' }} {{ 'today' if day.is_today }}">
+          <span class="day-num">{{ day.date.day }}</span>
+          {% for run in day.lanes %}
+          {% if run %}
+          <a class="chip {{ 'start' if run.start_date == day.date }}
+                    {{ 'end' if run.end_date == day.date }}"
+             style="background: {{ status_colors.get(run.status, '#7a00df') }};"
+             href="{{ url_for('runs.run_detail', run_id=run.id) }}"
+             title="{{ run.product }} · {{ run.reactor.name }} · {{ run.duration_days }} day{{ 's' if run.duration_days != 1 }} · {{ run.status }}">
+            {% if run.start_date == day.date or day.date.weekday() == 0 %}
+              <span class="chip-label">{{ run.reactor.name }} · {{ run.product }}</span>
+            {% else %}&nbsp;{% endif %}
+          </a>
+          {% else %}
+          <span class="chip chip-spacer">&nbsp;</span>
+          {% endif %}
+          {% endfor %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div class="legend">
+    {% for name, color in status_colors.items() %}
+    <span><i style="background: {{ color }};"></i> {{ name }}</span>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

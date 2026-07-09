@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}R&D Calendar — EreZtech Operations{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="cal-nav">
+    <a class="btn btn-outline btn-sm" href="{{ url_for('rd.rd_calendar', year=prev_m.year, month=prev_m.month) }}">&larr;</a>
+    <h1>R&amp;D — {{ month_name }} {{ year }}</h1>
+    <a class="btn btn-outline btn-sm" href="{{ url_for('rd.rd_calendar', year=next_m.year, month=next_m.month) }}">&rarr;</a>
+    <a class="btn btn-outline btn-sm" href="{{ url_for('rd.rd_calendar') }}">Today</a>
+  </div>
+  <div>
+    <a class="btn btn-outline" href="{{ url_for('rd.list_projects') }}">Project List</a>
+    {% if can_edit %}<a class="btn btn-accent" href="{{ url_for('rd.new_project') }}">+ New Project</a>{% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <table class="cal-table">
+    <thead>
+      <tr>
+        {% for d in ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] %}<th>{{ d }}</th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for week in weeks %}
+      <tr>
+        {% for day in week %}
+        <td class="{{ '' if day.in_month else 'out' }} {{ 'today' if day.is_today }}">
+          <span class="day-num">{{ day.date.day }}</span>
+          {% for lane in day.lanes %}
+          {% if lane %}
+          <a class="chip {{ 'start' if lane.is_start }} {{ 'end' if lane.is_end }}"
+             style="background: {{ color_map.get(lane.p.researcher_id, unassigned_color) }};"
+             href="{{ url_for('rd.project_detail', project_id=lane.p.id) }}"
+             title="{{ lane.p.name }}{% if lane.p.customer %} · {{ lane.p.customer }}{% endif %} · {{ lane.p.researcher.full_name if lane.p.researcher else 'Unassigned' }} · {{ lane.p.status }}">
+            {% if lane.is_start or day.date.weekday() == 0 %}
+              <span class="chip-label">{{ lane.p.name }}</span>
+            {% else %}&nbsp;{% endif %}
+          </a>
+          {% else %}
+          <span class="chip chip-spacer">&nbsp;</span>
+          {% endif %}
+          {% endfor %}
+          {% for m in milestones.get(day.date, []) %}
+          <a class="milestone" href="{{ url_for('rd.project_detail', project_id=m.project_id) }}"
+             title="Deliverable due: {{ m.name }} ({{ m.project.name }}) · {{ m.status }}">{{ m.name }}</a>
+          {% endfor %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div class="legend">
+    {% for name, color in legend %}
+    <span><i style="background: {{ color }};"></i> {{ name }}</span>
+    {% endfor %}
+    <span><b style="color: var(--orange);">◆</b> Deliverable due</span>
+  </div>
+</div>
+
+{% if undated %}
+<div class="card">
+  <h2>Unscheduled Projects</h2>
+  <p class="muted">These projects have no start or due date, so they don't appear on the calendar. Set dates via Edit Project.</p>
+  <ul class="links-list">
+    {% for p in undated %}
+    <li><a href="{{ url_for('rd.project_detail', project_id=p.id) }}">{{ p.name }}</a>
+        <span class="badge badge-{{ p.status|lower|replace(' ', '-') }}">{{ p.status }}</span></li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% endblock %}

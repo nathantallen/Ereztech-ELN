@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit User' if user else 'Add User' }} — EreZtech Operations{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ 'Edit ' + user.full_name if user else 'Add a User' }}</h1>
+</div>
+<div class="card" style="max-width: 560px;">
+  <form method="post">
+    <label for="username">Username</label>
+    <input type="text" id="username" name="username" value="{{ user.username if user }}" required>
+    {% if user and user.id == current_user.id %}
+    <p class="muted" style="margin: 4px 0 0;">Changing your own username takes effect at your next sign-in.</p>
+    {% endif %}
+    <label for="full_name">Full Name</label>
+    <input type="text" id="full_name" name="full_name" value="{{ user.full_name if user }}" required>
+    <label for="role">Role</label>
+    <select id="role" name="role">
+      {% for r in roles %}
+      <option value="{{ r.name }}" {{ 'selected' if user and user.role == r.name }}>{{ r.name }}</option>
+      {% endfor %}
+    </select>
+    <label for="password">{{ 'New Password (leave blank to keep current)' if user else 'Password' }}</label>
+    <input type="password" id="password" name="password" {{ '' if user else 'required' }}>
+    {% if not user or user.id != current_user.id %}
+    <div class="checkbox-line">
+      <input type="checkbox" id="is_active" name="is_active" {{ 'checked' if not user or user.is_active_user }}>
+      <label for="is_active">Account enabled</label>
+    </div>
+    {% endif %}
+    <div class="form-actions">
+      <button class="btn btn-accent" type="submit">{{ 'Save Changes' if user else 'Create User' }}</button>
+      <a class="btn btn-outline" href="{{ url_for('admin.list_users') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

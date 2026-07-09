@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-erezops}
+      POSTGRES_USER: ${POSTGRES_USER:-erezops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-erezops} -d ${POSTGRES_DB:-erezops}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    image: erezops-app:1.0.0
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-erezops}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-erezops}
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+      SAP_BASE_URL: ${SAP_BASE_URL:-}
+      SAP_USER: ${SAP_USER:-}
+      SAP_PASSWORD: ${SAP_PASSWORD:-}
+      SAP_CLIENT: ${SAP_CLIENT:-}
+      SAP_VERIFY_SSL: ${SAP_VERIFY_SSL:-true}
+      SAP_BOM_SERVICE: ${SAP_BOM_SERVICE:-API_BILL_OF_MATERIAL_SRV;v=0002}
+      SAP_STOCK_SERVICE: ${SAP_STOCK_SERVICE:-API_MATERIAL_STOCK_SRV}
+    ports:
+      - "${APP_PORT:-8090}:8000"
+    volumes:
+      # Folders mounted under /shares become browsable in the app's Browse…
+      # dialog. Mount the server's copies of your document shares read-only,
+      # then register each under Admin → Doc Roots with a link prefix
+      # (\\fileserver\rd or a SharePoint URL) so picked links open for everyone.
+      #   - /mnt/rd-share:/shares/rd:ro
+      #   - /mnt/qc:/shares/qc:ro
+      - ./shares:/shares
+
+volumes:
+  pgdata:

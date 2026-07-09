@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Reactor Timeline — EreZtech Operations{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="cal-nav">
+    <a class="btn btn-outline btn-sm" href="{{ url_for('main.timeline', year=prev_m.year, month=prev_m.month) }}">&larr;</a>
+    <h1>{{ month_name }} {{ year }}</h1>
+    <a class="btn btn-outline btn-sm" href="{{ url_for('main.timeline', year=next_m.year, month=next_m.month) }}">&rarr;</a>
+    <a class="btn btn-outline btn-sm" href="{{ url_for('main.timeline') }}">Today</a>
+  </div>
+  <div>
+    <a class="btn btn-outline" href="{{ url_for('main.month_calendar', year=year, month=month) }}">Calendar</a>
+    <a class="btn btn-accent" href="{{ url_for('runs.new_run') }}">+ Schedule Run</a>
+  </div>
+</div>
+
+<div class="card tl">
+  <div class="tl-inner" style="--days: {{ days }};">
+    <div class="tl-header">
+      {% for d in range(1, days + 1) %}
+        <span class="{{ 'today-col' if today_col == d }}">{{ d }}</span>
+      {% endfor %}
+    </div>
+    {% for row in rows %}
+    <div class="tl-row">
+      <div class="tl-reactor">
+        <span class="reactor-dot" style="background: {{ row.reactor.color }}"></span>{{ row.reactor.name }}
+        <span class="cap">
+          {% for attr in row.reactor.attributes if attr.name == 'Capacity' %}{{ attr.value }}{% endfor %}
+          {% if not row.reactor.is_active %}<span class="badge badge-inactive">inactive</span>{% endif %}
+        </span>
+      </div>
+      <div class="tl-lanes">
+        <div class="tl-row-grid">
+          {% for bar in row.bars %}
+          <a class="tl-bar {{ 'clip-left' if bar.clipped_left }} {{ 'clip-right' if bar.clipped_right }}"
+             style="grid-column: {{ bar.col_start }} / {{ bar.col_end }}; background: {{ status_colors.get(bar.run.status, '#7a00df') }};"
+             href="{{ url_for('runs.run_detail', run_id=bar.run.id) }}"
+             title="{{ bar.run.product }} · {{ bar.run.start_date }} → {{ bar.run.end_date }} ({{ bar.run.duration_days }} d) · {{ bar.run.status }}">
+            {{ bar.run.product }}
+          </a>
+          {% endfor %}
+          {% if not row.bars %}<span class="muted" style="grid-column: 1 / -1; align-self: center; padding-left: 8px;">No runs this month</span>{% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="legend">
+    {% for name, color in status_colors.items() %}
+    <span><i style="background: {{ color }};"></i> {{ name }}</span>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

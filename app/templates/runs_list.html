@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Production Runs — EreZtech Operations{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Production Runs</h1>
+    <div class="sub">All scheduled and completed batch runs</div>
+  </div>
+  <a class="btn btn-accent" href="{{ url_for('runs.new_run') }}">+ Schedule Run</a>
+</div>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Product</th><th>Batch #</th><th>Reactor</th><th>Dates</th>
+        <th>Duration</th><th>Status</th><th>Approvals</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for run in runs %}
+      <tr>
+        <td>
+          <a href="{{ url_for('runs.run_detail', run_id=run.id) }}"><strong>{{ run.product }}</strong></a>
+          {% if run.intermediate_for %}
+          <div class="muted">↳ intermediate for <a href="{{ url_for('runs.run_detail', run_id=run.intermediate_for.id) }}">{{ run.intermediate_for.product }}</a></div>
+          {% endif %}
+        </td>
+        <td>{{ run.batch_number or '—' }}</td>
+        <td><span class="reactor-dot" style="background: {{ run.reactor.color }}"></span>{{ run.reactor.name }}</td>
+        <td>{{ run.start_date.strftime('%b %-d') }} – {{ run.end_date.strftime('%b %-d, %Y') }}</td>
+        <td>{{ run.duration_days }} day{{ 's' if run.duration_days != 1 }}</td>
+        <td><span class="badge" style="background: {{ status_colors.get(run.status, '#7a00df') }}; color: #fff;">{{ run.status }}</span></td>
+        <td>
+          <span class="progress-pips" title="{{ run.approved_stage_count }} of {{ run.stages|length }} aspects approved">
+            {% for s in run.stages %}<i class="{{ 'on' if s.approval_status == 'Approved' }}"></i>{% endfor %}
+          </span>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="muted">No production runs yet. Schedule one to get started.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}User Roles — EreZtech Operations{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>User Roles</h1>
+    <div class="sub">Rename role types, set their colors, and control what each can do</div>
+  </div>
+</div>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Role</th><th>Color</th><th>Permissions</th><th>Users</th><th></th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for role in roles %}
+      <tr>
+        <td colspan="5" style="padding: 0;">
+          <form method="post" action="{{ url_for('settings.update_role', role_id=role.id) }}"
+                style="display: grid; grid-template-columns: 1.2fr auto 2.4fr auto auto; gap: 10px; align-items: center; padding: 10px;">
+            <input type="text" name="name" value="{{ role.name }}" required>
+            <input type="color" name="color" value="{{ role.color }}" title="Role color"
+                   style="width: 44px; height: 32px; padding: 2px; border: 1px solid var(--border); border-radius: 6px;">
+            <span style="display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px;">
+              <label style="display:flex; align-items:center; gap:4px; margin:0;"><input type="checkbox" name="manage_users" {{ 'checked' if role.manage_users }}> Admin</label>
+              <label style="display:flex; align-items:center; gap:4px; margin:0;"><input type="checkbox" name="edit_production" {{ 'checked' if role.edit_production }}> Production</label>
+              <label style="display:flex; align-items:center; gap:4px; margin:0;"><input type="checkbox" name="edit_rd_all" {{ 'checked' if role.edit_rd_all }}> All R&amp;D</label>
+              <label style="display:flex; align-items:center; gap:4px; margin:0;"><input type="checkbox" name="edit_rd_own" {{ 'checked' if role.edit_rd_own }}> Own R&amp;D</label>
+            </span>
+            <span class="badge badge-pending">{{ counts.get(role.name, 0) }}</span>
+            <button class="btn btn-sm" type="submit">Save</button>
+          </form>
+        </td>
+        <td style="width: 1%;">
+          <form class="inline" method="post" action="{{ url_for('settings.delete_role', role_id=role.id) }}"
+                onsubmit="return confirm('Delete role {{ role.name }}?');">
+            <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted" style="margin-bottom: 0;">
+    <strong>Admin</strong> = manage users, roles, and doc roots (implies all other rights) ·
+    <strong>Production</strong> = edit runs, reactors, and statuses ·
+    <strong>All R&amp;D</strong> = edit any project · <strong>Own R&amp;D</strong> = edit only assigned projects.
+    Everyone can view everything and record approvals. Renaming a role updates all of its users;
+    past approval records keep the role name that was in effect when they were signed.
+  </p>
+</div>
+
+<div class="card" style="max-width: 720px;">
+  <h2>Add a Role</h2>
+  <form method="post" action="{{ url_for('settings.new_role') }}">
+    <div class="form-row">
+      <div>
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" placeholder="e.g. Plant Engineer" required>
+      </div>
+      <div>
+        <label for="color">Color</label>
+        <input type="color" id="color" name="color" value="#7a00df"
+               style="width: 60px; height: 36px; padding: 2px;">
+      </div>
+    </div>
+    <div class="checkbox-line"><input type="checkbox" id="nr-admin" name="manage_users"><label for="nr-admin">Admin (manage users, roles, doc roots)</label></div>
+    <div class="checkbox-line"><input type="checkbox" id="nr-prod" name="edit_production"><label for="nr-prod">Edit production (runs, reactors, statuses)</label></div>
+    <div class="checkbox-line"><input type="checkbox" id="nr-rdall" name="edit_rd_all"><label for="nr-rdall">Edit all R&amp;D projects</label></div>
+    <div class="checkbox-line"><input type="checkbox" id="nr-rdown" name="edit_rd_own"><label for="nr-rdown">Edit own R&amp;D projects</label></div>
+    <div class="form-actions">
+      <button class="btn btn-accent" type="submit">Add Role</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

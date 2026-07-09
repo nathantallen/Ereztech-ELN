@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}R&D Projects — EreZtech Operations{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>R&amp;D Projects</h1>
+    <div class="sub">Research projects, deliverables, and final procedure / QC method sign-off</div>
+  </div>
+  <div>
+    <a class="btn btn-outline" href="{{ url_for('rd.rd_calendar') }}">Calendar</a>
+    {% if can_edit %}<a class="btn btn-accent" href="{{ url_for('rd.new_project') }}">+ New Project</a>{% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Project</th><th>Customer</th><th>Researcher</th><th>Due</th>
+        <th>Deliverables</th><th>Status</th><th>Sign-off</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for project in projects %}
+      <tr>
+        <td><a href="{{ url_for('rd.project_detail', project_id=project.id) }}"><strong>{{ project.name }}</strong></a></td>
+        <td>{{ project.customer or '—' }}</td>
+        <td>{{ project.researcher.full_name if project.researcher else 'Unassigned' }}</td>
+        <td>{{ project.due_date.strftime('%b %-d, %Y') if project.due_date else '—' }}</td>
+        <td>{{ project.deliverables|length }}</td>
+        <td><span class="badge badge-{{ project.status|lower|replace(' ', '-') }}">{{ project.status }}</span></td>
+        <td>
+          <span class="badge badge-{{ project.aspect_status('Final Procedure')|lower }}" title="Final Procedure">Proc</span>
+          <span class="badge badge-{{ project.aspect_status('Final QC Methods')|lower }}" title="Final QC Methods">QC</span>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="muted">No R&amp;D projects yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

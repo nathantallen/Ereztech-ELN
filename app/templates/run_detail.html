@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}{{ run.product }} — EreZtech Operations{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ run.product }}</h1>
+    <div class="sub">
+      Batch {{ run.batch_number or '—' }} ·
+      <span class="reactor-dot" style="background: {{ run.reactor.color }}"></span>{{ run.reactor.name }} ·
+      {{ run.start_date.strftime('%b %-d') }} – {{ run.end_date.strftime('%b %-d, %Y') }}
+      ({{ run.duration_days }} day{{ 's' if run.duration_days != 1 }}) ·
+      <span class="badge" style="background: {{ status_colors.get(run.status, '#7a00df') }}; color: #fff;">{{ run.status }}</span>
+    </div>
+  </div>
+  {% if can_edit %}
+  <div>
+    <a class="btn btn-outline" href="{{ url_for('runs.edit_run', run_id=run.id) }}">Edit Run</a>
+    <form class="inline" method="post" action="{{ url_for('runs.delete_run', run_id=run.id) }}"
+          onsubmit="return confirm('Delete this run and all of its stage records?');">
+      <button class="btn btn-danger" type="submit">Delete</button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+
+{% if run.notes %}
+<div class="card"><h2>Run Notes</h2><p style="margin:0; white-space: pre-wrap;">{{ run.notes }}</p></div>
+{% endif %}
+
+{% if run.intermediate_for or run.feeder_runs %}
+<div class="card">
+  <h2>Batch Linkage</h2>
+  {% if run.intermediate_for %}
+  <p style="margin: 0 0 6px;">↳ This batch is an <strong>intermediate</strong> consumed by
+    <a href="{{ url_for('runs.run_detail', run_id=run.intermediate_for.id) }}">{{ run.intermediate_for.product }}
+      {%- if run.intermediate_for.batch_number %} · {{ run.intermediate_for.batch_number }}{% endif %}</a>
+    ({{ run.intermediate_for.reactor.name }}, {{ run.intermediate_for.start_date.strftime('%b %-d, %Y') }}).</p>
+  {% endif %}
+  {% if run.feeder_runs %}
+  <p style="margin: 0 0 4px;">Intermediate batches feeding this run:</p>
+  <ul class="links-list">
+    {% for feeder in run.feeder_runs %}
+    <li><a href="{{ url_for('runs.run_detail', run_id=feeder.id) }}">{{ feeder.product }}
+        {%- if feeder.batch_number %} · {{ feeder.batch_number }}{% endif %}</a>
+        <span class="muted">{{ feeder.reactor.name }}, {{ feeder.start_date.strftime('%b %-d') }} – {{ feeder.end_date.strftime('%b %-d, %Y') }}</span>
+        <span class="badge" style="background: {{ status_colors.get(feeder.status, '#7a00df') }}; color: #fff;">{{ feeder.status }}</span></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>Run Aspects — Documentation &amp; Approvals
+    <span class="muted" style="font-weight:400;">({{ run.approved_stage_count }}/{{ run.stages|length }} approved)</span>
+  </h2>
+
+  {% for stage in run.stages %}
+  <div class="stage {{ stage.approval_status|lower }}">
+    <div class="stage-head">
+      <h3>{{ loop.index }}. {{ stage.name }}</h3>
+      <span class="badge badge-{{ stage.approval_status|lower }}">{{ stage.approval_status }}</span>
+    </div>
+
+    {% if stage.notes %}<p class="muted" style="white-space: pre-wrap; margin: 4px 0;">{{ stage.notes }}</p>{% endif %}
+
+    {# ---- Links to folders / files ---- #}
+    {% if stage.links %}
+    <ul class="links-list">
+      {% for link in stage.links %}
+      <li>
+        <a href="{{ link.url }}" target="_blank" rel="noopener">{{ link.label }}</a>
+        <span class="muted" style="word-break: break-all;">{{ link.url }}</span>
+        {% if can_edit %}
+        <form class="inline" method="post" action="{{ url_for('runs.delete_stage_link', link_id=link.id) }}">
+          <button class="btn btn-danger btn-xs" type="submit" title="Remove link">&times;</button>
+        </form>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted" style="margin: 4px 0;">No documents linked yet.</p>
+    {% endif %}
+
+    {% if can_edit %}
+    <form class="mini-form" method="post" action="{{ url_for('runs.add_stage_link', stage_id=stage.id) }}">
+      <input type="text" name="label" placeholder="Link label (e.g. QC report)" required>
+      <input type="text" name="url" id="stage-url-{{ stage.id }}" placeholder="URL or path (SharePoint, \\server\share, …)" required>
+      <button type="button" class="btn btn-outline btn-sm browse-btn" data-target="#stage-url-{{ stage.id }}">Browse…</button>
+      <button class="btn btn-sm" type="submit">Add Link</button>
+    </form>
+    <details style="margin-top: 8px;">
+      <summary class="muted" style="cursor: pointer;">Edit stage notes</summary>
+      <form method="post" action="{{ url_for('runs.stage_notes', stage_id=stage.id) }}">
+        <textarea name="notes">{{ stage.notes }}</textarea>
+        <button class="btn btn-sm" type="submit" style="margin-top: 6px;">Save Notes</button>
+      </form>
+    </details>
+    {% endif %}
+
+    {# ---- Approval log ---- #}
+    {% if stage.approvals %}
+    <ul class="approval-log">
+      {% for a in stage.approvals %}
+      <li>
+        <span class="badge badge-{{ a.status|lower }}">{{ a.status }}</span>
+        <strong>{{ a.user.full_name }}</strong> ({{ a.role }})
+        · {{ a.created_at.strftime('%Y-%m-%d %H:%M') }} UTC
+        {% if a.comment %}· “{{ a.comment }}”{% endif %}
+        {% if is_admin or a.user_id == current_user.id %}
+        <form class="inline" method="post" action="{{ url_for('runs.delete_approval', approval_id=a.id) }}">
+          <button class="btn btn-danger btn-xs" type="submit" title="Remove entry">&times;</button>
+        </form>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    <form class="mini-form" method="post" action="{{ url_for('runs.approve_stage', stage_id=stage.id) }}">
+      <input type="text" name="comment" placeholder="Comment (optional)">
+      <button class="btn btn-sm" type="submit" name="status" value="Approved">Approve</button>
+      <button class="btn btn-danger btn-sm" type="submit" name="status" value="Rejected">Reject</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

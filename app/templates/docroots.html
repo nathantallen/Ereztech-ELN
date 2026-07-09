@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Document Roots — EreZtech Operations{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Document Roots</h1>
+    <div class="sub">Folders the Browse… dialog can open when assigning links</div>
+  </div>
+</div>
+
+<div class="card">
+  <p class="muted" style="margin-top: 0;">
+    A document root is a folder <strong>mounted into the app container</strong> (see the
+    <code>volumes:</code> section of <code>docker-compose.yml</code>). Mount your network
+    share or SharePoint sync folder there, then register it here. The optional
+    <strong>link prefix</strong> rewrites picked paths into the address teammates should
+    open — e.g. container path <code>/shares/rd</code> with prefix
+    <code>https://ereztech.sharepoint.com/sites/RD/Shared%20Documents</code> or
+    <code>\\fileserver\rd</code>.
+  </p>
+  <table>
+    <thead>
+      <tr><th>Name</th><th>Container Path</th><th>Link Prefix</th><th>Status</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for root in roots %}
+      <tr>
+        <td colspan="4" style="padding: 0;">
+          <form method="post" action="{{ url_for('docroots.update_root', root_id=root.id) }}"
+                style="display: grid; grid-template-columns: 1fr 1.4fr 1.6fr auto auto; gap: 8px; align-items: center; padding: 10px;">
+            <input type="text" name="name" value="{{ root.name }}" required>
+            <input type="text" name="container_path" value="{{ root.container_path }}" required>
+            <input type="text" name="link_prefix" value="{{ root.link_prefix }}" placeholder="(optional)">
+            {% if root.exists %}<span class="badge badge-active">Mounted</span>
+            {% else %}<span class="badge badge-rejected" title="Folder not found inside the container">Missing</span>{% endif %}
+            <button class="btn btn-sm" type="submit">Save</button>
+          </form>
+        </td>
+        <td style="width: 1%;">
+          <form class="inline" method="post" action="{{ url_for('docroots.delete_root', root_id=root.id) }}"
+                onsubmit="return confirm('Remove document root {{ root.name }}? Existing links are kept.');">
+            <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="muted">No document roots yet — add one below.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card" style="max-width: 780px;">
+  <h2>Add a Document Root</h2>
+  <form method="post" action="{{ url_for('docroots.new_root') }}">
+    <div class="form-row">
+      <div>
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" placeholder="R&D Share" required>
+      </div>
+      <div>
+        <label for="container_path">Container Path</label>
+        <input type="text" id="container_path" name="container_path" placeholder="/shares/rd" required>
+      </div>
+    </div>
+    <label for="link_prefix">Link Prefix (optional)</label>
+    <input type="text" id="link_prefix" name="link_prefix"
+           placeholder="https://ereztech.sharepoint.com/sites/RD/Shared%20Documents  or  \\fileserver\rd">
+    <div class="form-actions">
+      <button class="btn btn-accent" type="submit">Add Root</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

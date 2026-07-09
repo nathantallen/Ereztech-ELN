@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit Run' if run else 'Schedule Run' }} — EreZtech Operations{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ 'Edit Production Run' if run else 'Schedule a Production Run' }}</h1>
+</div>
+<div class="card" style="max-width: 720px;">
+  <form method="post">
+    <div class="form-row">
+      <div>
+        <label for="product">Product</label>
+        <input type="text" id="product" name="product" value="{{ run.product if run }}" required>
+      </div>
+      <div>
+        <label for="batch_number">Batch Number</label>
+        <input type="text" id="batch_number" name="batch_number" value="{{ run.batch_number if run }}">
+      </div>
+      <div>
+        <label for="reactor_id">Reactor</label>
+        <select id="reactor_id" name="reactor_id" required>
+          {% for reactor in reactors %}
+          <option value="{{ reactor.id }}" {{ 'selected' if run and run.reactor_id == reactor.id }}>
+            {{ reactor.name }}{% if not reactor.is_active %} (inactive){% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="status">Status</label>
+        <select id="status" name="status">
+          {% for s in statuses %}
+          <option value="{{ s.name }}" {{ 'selected' if run and run.status == s.name }}>{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="start_date">Start Date</label>
+        <input type="date" id="start_date" name="start_date" value="{{ run.start_date if run }}" required>
+      </div>
+      <div>
+        <label for="end_date">End Date</label>
+        <input type="date" id="end_date" name="end_date" value="{{ run.end_date if run }}" required>
+      </div>
+    </div>
+    <label for="intermediate_for_id">Intermediate for (optional)</label>
+    <select id="intermediate_for_id" name="intermediate_for_id">
+      <option value="">— Not an intermediate —</option>
+      {% for r in link_runs %}
+      <option value="{{ r.id }}" {{ 'selected' if run and run.intermediate_for_id == r.id }}>
+        {{ r.product }}{% if r.batch_number %} · {{ r.batch_number }}{% endif %} ({{ r.reactor.name }}, {{ r.start_date.strftime('%b %-d') }})
+      </option>
+      {% endfor %}
+    </select>
+    <p class="muted" style="margin: 4px 0 0;">Set this when the product of this run is consumed as an intermediate by another scheduled run.</p>
+
+    <label for="notes">Notes</label>
+    <textarea id="notes" name="notes">{{ run.notes if run }}</textarea>
+    <div class="form-actions">
+      <button class="btn btn-accent" type="submit">{{ 'Save Changes' if run else 'Schedule Run' }}</button>
+      <a class="btn btn-outline" href="{{ url_for('runs.run_detail', run_id=run.id) if run else url_for('runs.list_runs') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

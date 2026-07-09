@@ -1,0 +1,9 @@
+.git
+.claude
+.dockerignore
+deploy/
+shares/
+README.md
+docker-compose.yml
+__pycache__/
+*.pyc

@@ -1,0 +1,11 @@
+# Copy to docker-compose.override.yml and edit for this machine's folders.
+# docker compose merges it automatically; it is gitignored.
+# After mounting, register each folder under Admin → Doc Roots with a link
+# prefix (\\fileserver\share or a SharePoint URL) so picked links open for everyone.
+services:
+  app:
+    volumes:
+      # - C:\Users\you\OneDrive - EreZtech:/shares/OneDrive:ro        # Windows example
+      # - /Users/you/Library/CloudStorage/OneDrive-EreZtech:/shares/OneDrive:ro  # macOS example
+      # - /mnt/rd-share:/shares/rd:ro                                 # Linux example
+      - ./shares:/shares
