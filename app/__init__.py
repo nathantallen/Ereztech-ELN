@@ -24,7 +24,6 @@ def create_app():
     from .admin import bp as admin_bp
     from .docroots import bp as docroots_bp
     from .settings import bp as settings_bp
-    from .sap import bp as sap_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -34,7 +33,6 @@ def create_app():
     app.register_blueprint(admin_bp)
     app.register_blueprint(docroots_bp)
     app.register_blueprint(settings_bp)
-    app.register_blueprint(sap_bp)
 
     from . import models  # noqa: F401  (register models with SQLAlchemy)
 

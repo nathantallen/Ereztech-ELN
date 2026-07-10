@@ -65,19 +65,6 @@ Seeded accounts (all with password `ereztech` — change them after first login 
   Both runs then cross-link: the feeder shows what consumes it, the consumer lists its
   intermediate batches.
 
-**SAP lookup (optional)**
-- A read-only **SAP** page queries, over OData:
-  - **Products/materials** (`API_PRODUCT_SRV`) by material number
-  - **BOMs** (`API_BILL_OF_MATERIAL_SRV;v=0002`) — header plus exploded component
-    items with quantities and units, optionally filtered by plant
-  - **Inventory/stock** (`API_MATERIAL_STOCK_SRV`) — on-hand quantities by plant,
-    storage location, batch, and stock type, optionally filtered by plant
-  - **Batches** (`API_BATCH_SRV`) and free-form OData paths
-- Configure via `SAP_BASE_URL`, `SAP_USER`, `SAP_PASSWORD`, and optional `SAP_CLIENT`
-  env vars on the app service; unconfigured, the page shows setup instructions. If your
-  system exposes BOM/stock under different service names, override with
-  `SAP_BOM_SERVICE` / `SAP_STOCK_SERVICE`.
-
 ## Configuration
 
 Set in `docker-compose.yml`:
@@ -104,14 +91,6 @@ runs in Docker, it can only browse folders **mounted into the container**:
 A default root ("Shares" → `/shares`, mapped from `./shares` next to the compose file)
 is registered on first start with a small sample folder tree. You can still paste URLs
 or paths by hand in any link field.
-
-## Future expansion (deferred by design)
-
-- **SAP write-back**: posting goods receipts for produced inventory from the run's
-  "Final Material → Inventory" stage via `API_MATERIAL_DOCUMENT_SRV` (CSRF token
-  handshake, gated on stage approvals, idempotent via stored material document number).
-  Deliberately not implemented yet — decide movement type (101 vs 521/561) with the
-  SAP/finance team first, and trial against a test client.
 
 ## Notes
 

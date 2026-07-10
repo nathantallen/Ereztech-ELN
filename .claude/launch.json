@@ -5,7 +5,7 @@
       "name": "erezops",
       "runtimeExecutable": "docker",
       "runtimeArgs": ["compose", "up"],
-      "port": 8090,
+      "port": 8080,
       "autoPort": false
     }
   ]

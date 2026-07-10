@@ -22,7 +22,7 @@ in Docker.
 - Blueprints: `main` (calendar + reactor Gantt), `runs` (production runs, 5 approval
   stages each), `reactors`, `rd` (R&D projects + researcher-colored calendar),
   `admin` (users), `settings` (editable Roles + RunStatus tables), `docroots`
-  (Browse-dialog roots), `sap` (read-only OData lookups), `auth`.
+  (Browse-dialog roots), `auth`.
 - Permissions are flag-based via the `roles` table (`app/permissions.py`), NOT
   hardcoded role names. Users/runs reference roles/statuses by NAME; renames cascade
   via UPDATE. Approval records snapshot the role name at signing time (audit trail —
@@ -30,8 +30,6 @@ in Docker.
 - Links to documents are stored as text (SharePoint URLs, UNC paths). The Browse…
   dialog (`app/static/js/filebrowser.js` + `docroots.py`) walks folders mounted
   under the container and maps picks through each Doc Root's link prefix.
-- SAP page is READ-ONLY by explicit decision; write-back (goods receipts) is a
-  designed-but-deferred future feature — see README "Future expansion".
 
 ## Conventions
 

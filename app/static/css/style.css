@@ -43,8 +43,9 @@ a:hover { text-decoration: underline; }
   min-height: 60px;
   flex-wrap: wrap;
 }
-.brand { display: flex; align-items: baseline; gap: 8px; text-decoration: none; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
 .brand:hover { text-decoration: none; }
+.brand-logo { height: 34px; width: auto; display: block; }
 .brand-mark { color: #fff; font-size: 22px; font-weight: 700; letter-spacing: 0.5px; }
 .brand-mark .z { color: var(--orange); }
 .brand-sub {
@@ -405,7 +406,7 @@ td.today .day-num {
   overflow: hidden;
 }
 .login-hero { background: linear-gradient(135deg, var(--indigo) 0%, #2a0a6e 60%, var(--purple) 100%); padding: 30px 28px; }
-.login-hero .brand-mark { font-size: 28px; }
+.login-hero .brand-logo { height: 48px; width: auto; display: block; }
 .login-hero .tagline { color: var(--lavender); font-size: 12px; margin-top: 6px; letter-spacing: 1px; }
 .login-body { padding: 24px 28px 30px; }
 .login-body .btn { width: 100%; margin-top: 18px; padding: 10px; }

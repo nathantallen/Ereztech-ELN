@@ -23,14 +23,6 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://erezops:erezops@db:5432/erezops
       SECRET_KEY: change-this-in-production
-      # SAP lookup page (read-only OData queries) — set these in your shell or a
-      # .env file next to this compose file, e.g.:
-      #   SAP_BASE_URL=https://s4hana.ereztech.com:443/sap/opu/odata/sap
-      SAP_BASE_URL: ${SAP_BASE_URL:-}
-      SAP_USER: ${SAP_USER:-}
-      SAP_PASSWORD: ${SAP_PASSWORD:-}
-      SAP_CLIENT: ${SAP_CLIENT:-}
-      SAP_VERIFY_SSL: ${SAP_VERIFY_SSL:-true}
     ports:
       - "8080:8000"
     volumes:
