@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}Equipment — EreZtech ELN{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Lab equipment</h1>
+    <div class="sub">Home Assistant connection — cameras &amp; sensors grouped by lab hood</div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h2>Home Assistant connection</h2>
+    {% if cfg.url %}
+    <p class="small">
+      <span class="mono">{{ cfg.url }}</span>
+      <span class="pill" style="background: {{ '#0aa574' if connected else '#cf2e2e' }};">
+        {{ 'connected' if connected else 'not reachable' }}</span>
+      {% if cfg.auth_mode == 'login' and cfg.ha_user %}
+      · signed in as <strong>{{ cfg.ha_user }}</strong>
+      <form method="post" style="display:inline">
+        <input type="hidden" name="action" value="signout">
+        <button class="linklike" type="submit">sign out</button>
+      </form>
+      {% elif cfg.token %} · using long-lived token{% endif %}
+    </p>
+    {% if error %}<p class="small" style="color: var(--danger);">{{ error }}</p>{% endif %}
+    {% endif %}
+
+    <h3>Sign in with a Home Assistant account</h3>
+    <form method="post" class="form-grid">
+      <input type="hidden" name="action" value="login">
+      <label class="span2">URL
+        <input type="url" name="url" value="{{ cfg.url }}" placeholder="http://homeassistant.local:8123" required>
+      </label>
+      <label>Username
+        <input type="text" name="ha_username" value="{{ cfg.ha_user or '' }}" autocomplete="off" required>
+      </label>
+      <label>Password
+        <input type="password" name="ha_password" autocomplete="off" required>
+      </label>
+      <div class="span2 form-actions">
+        <button class="btn btn-orange" type="submit">Sign in</button>
+        <span class="muted small">The password is exchanged for session tokens and never stored.</span>
+      </div>
+    </form>
+
+    <details style="margin-top: 12px;">
+      <summary class="small" style="cursor:pointer; color: var(--purple);">…or use a long-lived access token</summary>
+      <form method="post" class="form-grid">
+        <input type="hidden" name="action" value="connection">
+        <label class="span2">URL
+          <input type="url" name="url" value="{{ cfg.url }}" placeholder="http://homeassistant.local:8123">
+        </label>
+        <label class="span2">Long-lived access token {% if cfg.token %}<span class="muted">(saved — leave blank to keep)</span>{% endif %}
+          <input type="password" name="token" autocomplete="off">
+        </label>
+        <label>Sensor poll interval (s)
+          <input type="number" name="poll_seconds" min="2" value="{{ cfg.poll_seconds }}">
+        </label>
+        <div class="span2 form-actions">
+          <button class="btn" type="submit">Save connection</button>
+        </div>
+      </form>
+    </details>
+  </div>
+
+  <div class="card">
+    <h2>Lab hoods</h2>
+    <form method="post" class="filter-row">
+      <input type="hidden" name="action" value="add_hood">
+      <input type="search" name="hood_name" placeholder="New hood name, e.g. Hood 3" required>
+      <button class="btn" type="submit">Add hood</button>
+    </form>
+    {% if not cfg.hoods %}<p class="muted">No hoods defined yet.</p>{% endif %}
+    <p class="small muted">Assign each hood the cameras and sensors physically installed in it —
+      entries then pick equipment per hood.</p>
+  </div>
+</div>
+
+<div class="card">
+  <h2>IP cameras</h2>
+  <p class="small muted">Cameras with a direct network feed (MJPEG stream and/or JPEG snapshot URL)
+    — no Home Assistant needed. Once added, assign them to a hood below.</p>
+  {% if cfg.ip_cameras %}
+  <table class="table small">
+    <thead><tr><th>Name</th><th>ID</th><th>Stream URL</th><th>Snapshot URL</th><th></th></tr></thead>
+    <tbody>
+    {% for c in cfg.ip_cameras %}
+    <tr>
+      <td>{{ c.label }}</td>
+      <td class="mono">{{ c.id }}</td>
+      <td class="mono">{{ c.stream_url }}</td>
+      <td class="mono">{{ c.snapshot_url }}</td>
+      <td>
+        <form method="post" onsubmit="return confirm('Remove camera {{ c.label }}?')">
+          <input type="hidden" name="action" value="delete_ipcam">
+          <input type="hidden" name="cam_id" value="{{ c.id }}">
+          <button class="linklike" type="submit">remove</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  <form method="post" class="form-grid">
+    <input type="hidden" name="action" value="add_ipcam">
+    <label>Camera name
+      <input type="text" name="cam_label" placeholder="Hood 3 overhead" required>
+    </label>
+    <label>Stream URL (MJPEG)
+      <input type="url" name="cam_stream_url" placeholder="http://10.70.11.42/mjpeg">
+    </label>
+    <label class="span2">Snapshot URL (optional — single JPEG)
+      <input type="url" name="cam_snapshot_url" placeholder="http://10.70.11.42/snapshot.jpg">
+    </label>
+    <div class="span2 form-actions">
+      <button class="btn btn-orange" type="submit">Add IP camera</button>
+    </div>
+  </form>
+</div>
+
+{% for hood in cfg.hoods %}
+<div class="card">
+  <div class="page-head" style="margin-bottom: 8px;">
+    <h2 style="margin:0;">{{ hood.name }}</h2>
+    <form method="post" onsubmit="return confirm('Remove hood {{ hood.name }}?')">
+      <input type="hidden" name="action" value="delete_hood">
+      <input type="hidden" name="hood_name" value="{{ hood.name }}">
+      <button class="btn btn-danger btn-sm" type="submit">Remove hood</button>
+    </form>
+  </div>
+  {% if connected or cfg.ip_cameras %}
+  <form method="post" class="grid-2">
+    <input type="hidden" name="action" value="assign">
+    <input type="hidden" name="hood_name" value="{{ hood.name }}">
+    <div>
+      <h3>Cameras</h3>
+      {% set assigned_cams = hood.cameras | map(attribute='entity') | list %}
+      {% for cam in cameras %}
+      <label class="check-label" style="margin-top:6px;">
+        <input type="checkbox" name="cameras" value="{{ cam.entity }}|{{ cam.label }}"
+               {{ 'checked' if cam.entity in assigned_cams }}>
+        {{ cam.label }} <span class="mono muted small">{{ cam.entity }}</span>
+      </label>
+      {% else %}<p class="muted small">No cameras found — connect Home Assistant or add an IP camera.</p>{% endfor %}
+    </div>
+    <div>
+      <h3>Sensors</h3>
+      {% if not connected %}<p class="muted small">Connect Home Assistant to list sensors.</p>{% endif %}
+      {% set assigned_sensors = hood.sensors | map(attribute='entity') | list %}
+      {% for s in sensors %}
+      <label class="check-label" style="margin-top:6px;">
+        <input type="checkbox" name="sensors" value="{{ s.entity }}|{{ s.label }}|{{ s.unit }}"
+               {{ 'checked' if s.entity in assigned_sensors }}>
+        {{ s.label }} <span class="mono muted small">{{ s.entity }} · {{ s.state }} {{ s.unit }}</span>
+      </label>
+      {% else %}<p class="muted small">No sensors found in Home Assistant.</p>{% endfor %}
+      <h3 style="margin-top:14px;">Custom sensor</h3>
+      <div class="filter-row">
+        <input type="text" name="custom_sensor" placeholder="sensor.my_custom_entity">
+        <input type="text" name="custom_label" placeholder="Label">
+        <input type="text" name="custom_unit" placeholder="Unit" size="6">
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-orange" type="submit">Save hood assignment</button>
+      </div>
+    </div>
+  </form>
+  {% else %}
+  <table class="table kv small">
+    <tr><th>Cameras</th><td>{% for c in hood.cameras %}{{ c.label }} <span class="mono muted">({{ c.entity }})</span>{{ '; ' if not loop.last }}{% else %}—{% endfor %}</td></tr>
+    <tr><th>Sensors</th><td>{% for s in hood.sensors %}{{ s.label }} <span class="mono muted">({{ s.entity }})</span>{{ '; ' if not loop.last }}{% else %}—{% endfor %}</td></tr>
+  </table>
+  <p class="muted small">Connect Home Assistant to edit assignments.</p>
+  {% endif %}
+</div>
+{% endfor %}
+{% endblock %}

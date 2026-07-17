@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Structure editor — {{ subtitle }} — EreZtech ELN{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Structure editor</h1>
+    <div class="sub">{{ subtitle }}</div>
+  </div>
+</div>
+
+<div class="card sketcher-card">
+  <iframe id="ketcher-frame" src="{{ url_for('static', filename='ketcher/index.html') }}" title="Ketcher chemical structure editor"></iframe>
+  <form method="post" id="structure-form" action="{{ action_url }}" class="sketcher-actions">
+    <input type="hidden" name="idx" value="{{ idx if idx is not none else '' }}">
+    <input type="hidden" name="molfile" id="f-molfile">
+    <input type="hidden" name="smiles" id="f-smiles">
+    <input type="hidden" name="svg" id="f-svg">
+    <input type="text" name="caption" value="{{ caption }}" placeholder="Caption">
+    <button class="btn btn-orange" type="submit" id="save-structure-btn" disabled>Save structure</button>
+    <a class="btn btn-ghost" href="{{ cancel_url }}">Cancel</a>
+    <span class="muted small" id="sketcher-status">Loading sketcher…</span>
+  </form>
+</div>
+
+<script>window.INITIAL_MOLFILE = {{ molfile | tojson }};</script>
+{% endblock %}

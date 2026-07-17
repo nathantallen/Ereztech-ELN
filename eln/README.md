@@ -1,0 +1,154 @@
+# EreZtech Electronic Lab Notebook
+
+An electronic lab notebook (ELN) for air-sensitive organometallic synthesis,
+built for EreZtech's electronics-precursor R&D and production labs. Runs as a
+single Docker image; all records are stored as **human-readable files** in a
+storage location you assign (NAS share, SharePoint-synced folder, or local disk).
+
+## Features
+
+- **Notebook entries** with structured sections (Objective, Procedure,
+  Observations & Data, Results & Conclusions), Markdown formatting,
+  atmosphere/technique field (N₂/Ar glovebox, Schlenk line, …) and tags.
+- **Built-in chemical structure editor** ([Ketcher](https://github.com/epam/ketcher),
+  bundled — works offline). Structures are saved as `.mol` files with a rendered
+  SVG and SMILES string alongside.
+- **Reaction setup & stoichiometry** — define the reaction by drawing each
+  component; molecular weight and formula are calculated from the structure,
+  and density / b.p. are looked up from a local, self-learning properties
+  database (`data/properties.json`). Set the scale (mg → kg, or mmol/mol) of
+  the limiting component and every mass, volume and theoretical yield updates
+  live, formatted in grams or kilograms as appropriate.
+- **Lab operations mode** — a "Start lab work" button starts the run timer;
+  every observation, photo and recording is stamped with wall-clock time *and*
+  elapsed time (t+HH:MM:SS) in an append-only `observations.md`. A "Finish &
+  save observation" button timestamps and stores each note. End of work is
+  recorded the same way, and a signed entry can't be produced while work is
+  still running.
+- **Home Assistant cameras & sensors, grouped by lab hood** — an admin assigns
+  each hood its cameras and sensors (temperature, pressure, or custom
+  entities). An entry picks its hood, camera and sensors during setup, with a
+  live MJPEG preview and selectable recording frame rate / resolution.
+  During the run: one-click photo capture, start/stop MP4 recording (ffmpeg in
+  the container), and continuous sensor logging to per-entity CSVs plotted
+  live in a compact strip at the top of the page — expandable to full screen.
+- **Raw material batch recording** — materials catalog (CAS, formula, hazards,
+  air-sensitivity, storage requirements) with per-lot batch records (purity,
+  container, location, status) and Certificate-of-Analysis attachments. Entries
+  reference the exact lots consumed.
+- **Data file attachments** — attach video (inline playback), sensor logs
+  (CSV/TSV with inline preview), spectra, images or any other file to an entry.
+- **Sign & witness workflow** — drafts are editable; signing (with password
+  confirmation) locks the entry; a second scientist witnesses it. Every entry
+  carries an append-only `audit.log`.
+- **Users & roles** — admin / scientist / viewer. Users are disabled, never
+  deleted, so signatures stay valid.
+
+## Quick start
+
+```bash
+cd eln
+docker compose up --build
+```
+
+Open http://localhost:8091 and sign in with `admin` / `ereztech` (a fresh data
+directory is seeded with the admin account and a few example records — change
+the password under Users).
+
+## Assigning the storage location
+
+Everything the ELN writes lives under one directory, mounted at `/data` in the
+container. Point it wherever you want the notebook to live:
+
+```bash
+# Local folder (default): ./data next to docker-compose.yml
+docker compose up
+
+# NAS share already mounted on the host
+ELN_DATA_DIR=/mnt/nas/lab-notebook docker compose up -d
+
+# SharePoint / OneDrive-synced folder on the host
+ELN_DATA_DIR="$HOME/EreZtech/Shared Documents/Lab Notebook" docker compose up -d
+```
+
+To mount an SMB/NAS share directly on a Linux host first:
+
+```bash
+sudo mount -t cifs //nas.ereztech.local/lab-notebook /mnt/nas/lab-notebook \
+  -o credentials=/etc/smb-eln.cred,uid=$(id -u),file_mode=0664,dir_mode=0775
+```
+
+For SharePoint, sync the document library to the host with OneDrive and point
+`ELN_DATA_DIR` at the synced folder; the notebook's plain-text files then index
+and preview naturally in SharePoint.
+
+## Storage format (human-readable)
+
+```
+data/
+├─ users.json                    accounts & roles (hashed passwords)
+├─ properties.json               physical-properties DB (seeded, self-learning)
+├─ equipment.json                Home Assistant URL/token + hood assignments
+├─ notebook/
+│  └─ ELN-2026-0001/
+│     ├─ entry.md                YAML frontmatter (incl. reaction & stoichiometry,
+│     │                          equipment, run times) + Markdown sections
+│     ├─ observations.md         append-only timestamped operational log
+│     ├─ audit.log               append-only event history
+│     ├─ structures/             .mol files (+ .svg renders)
+│     ├─ sensors/                one CSV per logged sensor entity
+│     ├─ photos/                 camera snapshots taken during the run
+│     ├─ recordings/             MP4 camera recordings
+│     └─ attachments/            uploaded videos, sensor logs, spectra, …
+└─ materials/
+   └─ trimethylgallium/
+      ├─ material.md             catalog record
+      ├─ batches/tmg-2606-a.md   one file per lot
+      └─ attachments/            certificates of analysis
+```
+
+The files are the system of record — no database. Back up, diff, index or read
+them directly from the share without this application.
+
+## Configuration
+
+| Variable            | Default        | Purpose                                   |
+|---------------------|----------------|-------------------------------------------|
+| `ELN_DATA_DIR`      | `./data`       | Host folder mounted as the notebook store |
+| `ELN_SECRET_KEY`    | change-me      | Flask session key — set in production     |
+| `ELN_MAX_UPLOAD_MB` | `4096`         | Maximum attachment size (MB)              |
+| `ELN_HA_URL`        | —              | Home Assistant URL (or set via Equipment page) |
+| `ELN_HA_TOKEN`      | —              | HA long-lived access token (or via Equipment page) |
+
+## Home Assistant setup
+
+1. In the ELN as an admin, open **Equipment** and sign in with a Home
+   Assistant username and password (e.g. `http://homeassistant.local:8123`).
+   The ELN runs HA's own login flow server-side: the password is exchanged
+   for a refresh token and **never stored**; short-lived access tokens are
+   refreshed automatically. Alternatively, expand *"…or use a long-lived
+   access token"* and paste a token (required if the HA account uses
+   multi-factor authentication).
+2. Once *connected*, the page lists every `camera.*` and `sensor.*` entity.
+   Add your lab hoods and tick the cameras/sensors installed in each one
+   (custom entities can be added by id). Entries then choose their equipment
+   per hood; all HA credentials stay server-side (camera streams are proxied).
+
+### Demo without a real Home Assistant
+
+```bash
+docker compose --profile demo up --build -d
+```
+
+starts `mock_ha/` — a stand-in serving two hood cameras (animated synthetic
+frames) and four sensors (smooth synthetic signals). Point Equipment at
+`http://mockha:8123` with any token.
+
+## Development
+
+```bash
+cd eln
+docker compose up --build          # rebuild after code changes
+```
+
+The image bundles Ketcher 3.17.0 (Apache-2.0) under `app/static/ketcher/`.

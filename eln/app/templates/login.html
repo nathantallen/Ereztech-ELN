@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Sign in — EreZtech ELN{% endblock %}
+{% block content %}
+<div class="login-wrap">
+  <div class="card login-card">
+    <div class="login-brand">
+      <img src="{{ url_for('static', filename='img/ereztech-logo.svg') }}" alt="EreZtech" class="login-logo">
+      <div class="brand-sub">Electronic Lab Notebook</div>
+    </div>
+    <form method="post">
+      <label>Username
+        <input type="text" name="username" autofocus autocomplete="username" required>
+      </label>
+      <label>Password
+        <input type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <button class="btn btn-orange btn-block" type="submit">Sign in</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

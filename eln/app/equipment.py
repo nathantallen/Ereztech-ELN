@@ -1,0 +1,192 @@
+"""Lab equipment: Home Assistant connection settings, hood grouping admin UI,
+and authenticated proxies for camera snapshots / MJPEG streams (the HA token
+never reaches the browser)."""
+import requests
+from flask import (Blueprint, Response, abort, current_app, flash, redirect,
+                   render_template, request, stream_with_context, url_for)
+from flask_login import current_user, login_required
+
+from . import ha
+from .storage import slugify
+
+bp = Blueprint("equipment", __name__, url_prefix="/equipment")
+
+
+def _storage():
+    return current_app.extensions["storage"]
+
+
+@bp.route("/", methods=["GET", "POST"])
+@login_required
+def config_page():
+    if not current_user.is_admin:
+        abort(403)
+    storage = _storage()
+    cfg = ha.load_config(storage)
+    if request.method == "POST":
+        action = request.form.get("action", "save")
+        if action == "connection":
+            cfg["url"] = request.form.get("url", "").strip()
+            token = request.form.get("token", "").strip()
+            if token:
+                cfg["token"] = token
+                cfg["auth_mode"] = "token"
+            cfg["poll_seconds"] = max(2, int(request.form.get("poll_seconds", "5") or 5))
+            ha.save_config(storage, cfg)
+            flash("Connection settings saved.", "success")
+        elif action == "login":
+            url = request.form.get("url", "").strip() or cfg.get("url", "")
+            username = request.form.get("ha_username", "").strip()
+            password = request.form.get("ha_password", "")
+            client_id = request.url_root
+            try:
+                tok = ha.password_login(url, username, password, client_id)
+            except ValueError as e:
+                flash(str(e), "error")
+                return redirect(url_for("equipment.config_page"))
+            import time as _time
+            cfg.update({
+                "url": url,
+                "auth_mode": "login",
+                "client_id": client_id,
+                "ha_user": username,
+                "refresh_token": tok["refresh_token"],
+                "access_token": tok["access_token"],
+                "access_expires": _time.time() + tok.get("expires_in", 1800),
+            })
+            ha.save_config(storage, cfg)
+            flash("Signed in to Home Assistant as %s. The password was not stored — "
+                  "only the session tokens." % username, "success")
+        elif action == "signout":
+            for k in ("refresh_token", "access_token", "access_expires", "ha_user",
+                      "client_id"):
+                cfg.pop(k, None)
+            cfg["auth_mode"] = "token" if cfg.get("token") else ""
+            ha.save_config(storage, cfg)
+            flash("Signed out of Home Assistant.", "success")
+        elif action == "add_ipcam":
+            label = request.form.get("cam_label", "").strip()
+            stream_url = request.form.get("cam_stream_url", "").strip()
+            snapshot_url = request.form.get("cam_snapshot_url", "").strip()
+            if not label or not (stream_url or snapshot_url):
+                flash("An IP camera needs a name and at least one feed URL.", "error")
+            else:
+                cam_id = "ipcam." + slugify(label)
+                n, base = 1, cam_id
+                while ha.find_ip_camera(cfg, cam_id):
+                    n += 1
+                    cam_id = "%s-%d" % (base, n)
+                cfg["ip_cameras"].append({"id": cam_id, "label": label,
+                                          "stream_url": stream_url,
+                                          "snapshot_url": snapshot_url})
+                ha.save_config(storage, cfg)
+                flash("IP camera added — assign it to a hood below.", "success")
+        elif action == "delete_ipcam":
+            cam_id = request.form.get("cam_id", "")
+            cfg["ip_cameras"] = [c for c in cfg["ip_cameras"] if c.get("id") != cam_id]
+            for hood in cfg["hoods"]:
+                hood["cameras"] = [c for c in hood.get("cameras", [])
+                                   if c.get("entity") != cam_id]
+            ha.save_config(storage, cfg)
+            flash("IP camera removed.", "success")
+        elif action == "add_hood":
+            name = request.form.get("hood_name", "").strip()
+            if name and not ha.find_hood(cfg, name):
+                cfg["hoods"].append({"name": name, "cameras": [], "sensors": []})
+                ha.save_config(storage, cfg)
+                flash("Hood added.", "success")
+        elif action == "delete_hood":
+            name = request.form.get("hood_name", "")
+            cfg["hoods"] = [h for h in cfg["hoods"] if h.get("name") != name]
+            ha.save_config(storage, cfg)
+            flash("Hood removed.", "success")
+        elif action == "assign":
+            hood = ha.find_hood(cfg, request.form.get("hood_name", ""))
+            if hood is not None:
+                hood["cameras"] = []
+                hood["sensors"] = []
+                for cam in request.form.getlist("cameras"):
+                    entity, _, label = cam.partition("|")
+                    hood["cameras"].append({"entity": entity, "label": label or entity})
+                for s in request.form.getlist("sensors"):
+                    entity, _, rest = s.partition("|")
+                    label, _, unit = rest.partition("|")
+                    hood["sensors"].append({"entity": entity, "label": label or entity,
+                                            "unit": unit})
+                custom = request.form.get("custom_sensor", "").strip()
+                if custom:
+                    label = request.form.get("custom_label", "").strip() or custom
+                    unit = request.form.get("custom_unit", "").strip()
+                    hood["sensors"].append({"entity": custom, "label": label,
+                                            "unit": unit, "kind": "custom"})
+                ha.save_config(storage, cfg)
+                flash("Hood '%s' updated." % hood["name"], "success")
+        return redirect(url_for("equipment.config_page"))
+
+    connected, cameras, sensors, error = False, [], [], None
+    if ha.configured(cfg):
+        client = ha.HAClient(cfg, storage)
+        try:
+            states = client.states()
+            connected = True
+            for st in states:
+                eid = st.get("entity_id", "")
+                attrs = st.get("attributes", {})
+                friendly = attrs.get("friendly_name", eid)
+                if eid.startswith("camera."):
+                    cameras.append({"entity": eid, "label": friendly})
+                elif eid.startswith("sensor."):
+                    sensors.append({"entity": eid, "label": friendly,
+                                    "unit": attrs.get("unit_of_measurement", ""),
+                                    "state": st.get("state", "")})
+        except requests.RequestException as e:
+            error = str(e)
+    # IP cameras are assignable to hoods alongside HA cameras
+    cameras = [{"entity": c["id"], "label": c.get("label", c["id"]) + " (IP)"}
+               for c in cfg.get("ip_cameras", [])] + cameras
+    return render_template("equipment.html", cfg=cfg, connected=connected,
+                           cameras=cameras, sensors=sensors, error=error)
+
+
+@bp.route("/snapshot/<entity>")
+@login_required
+def snapshot(entity):
+    cfg = ha.load_config(_storage())
+    if not entity.startswith(("camera.", "ipcam.")) or not ha.camera_usable(cfg, entity):
+        abort(404)
+    try:
+        data, ctype = ha.camera_snapshot(cfg, _storage(), entity)
+    except requests.RequestException as e:
+        # surface the reason (network / auth) so the UI can show why, not a blank box
+        return Response(str(e), status=502, headers={"X-Camera-Error": str(e)[:200]})
+    resp = Response(data, content_type=ctype)
+    resp.headers["Cache-Control"] = "no-store"     # each poll must be a fresh frame
+    return resp
+
+
+@bp.route("/stream/<entity>")
+@login_required
+def stream(entity):
+    cfg = ha.load_config(_storage())
+    if not entity.startswith(("camera.", "ipcam.")) or not ha.camera_usable(cfg, entity):
+        abort(404)
+    try:
+        upstream = ha.camera_stream(cfg, _storage(), entity)
+        if upstream is None:
+            # no browser-displayable stream (RTSP / snapshot-only): tell the client
+            # to fall back to polling /snapshot instead
+            return Response("no direct stream", status=409)
+        upstream.raise_for_status()
+    except requests.RequestException as e:
+        return Response(str(e), status=502)
+
+    def gen():
+        try:
+            for chunk in upstream.iter_content(chunk_size=8192):
+                yield chunk
+        finally:
+            upstream.close()
+
+    return Response(stream_with_context(gen()),
+                    content_type=upstream.headers.get("Content-Type",
+                                                      "multipart/x-mixed-replace"))

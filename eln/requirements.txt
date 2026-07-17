@@ -1,0 +1,7 @@
+Flask==3.0.3
+Flask-Login==0.6.3
+PyYAML==6.0.2
+Markdown==3.7
+gunicorn==23.0.0
+requests==2.32.3
+tzdata==2024.1

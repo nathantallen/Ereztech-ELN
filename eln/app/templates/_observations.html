@@ -1,0 +1,15 @@
+{% if observations %}
+{% for o in observations %}
+<div class="obs obs-{{ o.kind }}">
+  <div class="obs-head">
+    <span class="obs-elapsed mono" title="Elapsed since start of lab work">t+{{ o.elapsed }}</span>
+    <span class="muted small">{{ o.at | nicedate }}</span>
+    <span class="small"><strong>{{ o.by }}</strong></span>
+    {% if o.kind != 'note' %}<span class="obs-kind">{{ o.kind }}</span>{% endif %}
+  </div>
+  <div class="obs-body md-body">{{ o.text | markdown }}</div>
+</div>
+{% endfor %}
+{% else %}
+<p class="muted">No observations recorded yet.</p>
+{% endif %}

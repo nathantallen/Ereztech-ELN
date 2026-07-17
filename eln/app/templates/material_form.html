@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit material' if meta else 'New material' }} — EreZtech ELN{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ 'Edit ' + meta.name if meta else 'New material' }}</h1>
+</div>
+<form method="post" class="card form-grid">
+  <label class="span2">Name
+    <input type="text" name="name" value="{{ meta.name if meta }}" required placeholder="e.g. Trimethylgallium (TMGa)">
+  </label>
+  <label>CAS number
+    <input type="text" name="cas" value="{{ meta.cas if meta }}" placeholder="1445-79-0">
+  </label>
+  <label>Formula
+    <input type="text" name="formula" value="{{ meta.formula if meta }}" placeholder="Ga(CH3)3">
+  </label>
+  <label>Default supplier
+    <input type="text" name="supplier" value="{{ meta.supplier if meta }}">
+  </label>
+  <label class="check-label">
+    <input type="checkbox" name="air_sensitive" {{ 'checked' if meta and meta.air_sensitive }}>
+    Air / moisture sensitive
+  </label>
+  <label class="span2">Hazards
+    <input type="text" name="hazards" value="{{ meta.hazards if meta }}" placeholder="Pyrophoric; reacts violently with water">
+  </label>
+  <label class="span2">Storage requirements
+    <input type="text" name="storage" value="{{ meta.storage if meta }}" placeholder="SS bubbler, N2 glovebox / gas cabinet">
+  </label>
+  <label class="span2">Notes
+    <textarea name="notes" rows="4">{{ notes }}</textarea>
+  </label>
+  <div class="span2 form-actions">
+    <button class="btn btn-orange" type="submit">Save material</button>
+    <a class="btn btn-ghost" href="{{ url_for('materials.view', slug=meta.slug) if meta else url_for('materials.list_materials') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

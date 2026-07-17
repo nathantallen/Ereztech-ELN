@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — EreZtech ELN{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Lab Notebook</h1>
+    <div class="sub">Air-sensitive organometallic synthesis — experiments, batches &amp; data</div>
+  </div>
+  {% if can_edit %}
+  <a class="btn btn-orange" href="{{ url_for('entries.new_entry') }}">+ New experiment</a>
+  {% endif %}
+</div>
+
+<div class="stat-row">
+  <div class="stat-tile"><div class="stat-num">{{ stats.entries }}</div><div class="stat-label">Entries</div></div>
+  <div class="stat-tile"><div class="stat-num">{{ stats.drafts }}</div><div class="stat-label">Drafts</div></div>
+  <div class="stat-tile"><div class="stat-num">{{ stats.witnessed }}</div><div class="stat-label">Witnessed</div></div>
+  <div class="stat-tile"><div class="stat-num">{{ stats.materials }}</div><div class="stat-label">Materials</div></div>
+  <div class="stat-tile"><div class="stat-num">{{ stats.batches }}</div><div class="stat-label">Batches</div></div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h2>Recent entries</h2>
+    {% if recent %}
+    <table class="table">
+      <thead><tr><th>ID</th><th>Title</th><th>Author</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for e in recent %}
+        <tr>
+          <td class="mono"><a href="{{ url_for('entries.view', eid=e.id) }}">{{ e.id }}</a></td>
+          <td>{{ e.title }}</td>
+          <td><a href="{{ url_for('entries.list_entries', author=e.author) }}" title="Open {{ e.author }}'s lab book">{{ e.author }}</a></td>
+          <td><span class="pill" style="background: {{ status_colors.get(e.status, '#8a8797') }};">{{ e.status }}</span></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="muted">No entries yet. Create your first experiment.</p>
+    {% endif %}
+  </div>
+  <div class="card">
+    <h2>Raw materials</h2>
+    {% if materials %}
+    <table class="table">
+      <thead><tr><th>Material</th><th>CAS</th><th>Batches</th><th></th></tr></thead>
+      <tbody>
+      {% for m in materials %}
+        <tr>
+          <td><a href="{{ url_for('materials.view', slug=m.slug) }}">{{ m.name }}</a></td>
+          <td class="mono">{{ m.cas }}</td>
+          <td>{{ m._batch_count }}</td>
+          <td>{% if m.air_sensitive %}<span class="pill pill-air">air-sensitive</span>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="muted">No materials recorded yet.</p>
+    {% endif %}
+    <p style="margin-bottom:0"><a href="{{ url_for('materials.list_materials') }}">All materials →</a></p>
+  </div>
+</div>
+{% endblock %}

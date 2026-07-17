@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}EreZtech ELN{% endblock %}</title>
+  <link rel="icon" href="{{ url_for('static', filename='img/favicon-32.png') }}" sizes="32x32">
+  <link rel="icon" href="{{ url_for('static', filename='img/favicon-192.png') }}" sizes="192x192">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/favicon-192.png') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script>window.ELN_TZ = {{ (timezone or "") | tojson }};</script>
+  <script src="{{ url_for('static', filename='js/localtime.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/eln.js') }}" defer></script>
+</head>
+<body>
+{% if current_user.is_authenticated %}
+<header class="topbar">
+  <a class="brand" href="{{ url_for('main.dashboard') }}">
+    <img class="brand-logo" src="{{ url_for('static', filename='img/ereztech-logo.svg') }}" alt="EreZtech">
+    <span class="brand-sub">Lab Notebook</span>
+  </a>
+  <nav>
+    <a href="{{ url_for('main.dashboard') }}" class="{{ 'active' if request.endpoint == 'main.dashboard' }}">Dashboard</a>
+    <a href="{{ url_for('entries.list_entries') }}" class="{{ 'active' if request.blueprint == 'entries' }}">Notebook</a>
+    <a href="{{ url_for('materials.list_materials') }}" class="{{ 'active' if request.blueprint == 'materials' }}">Raw Materials</a>
+    <a href="{{ url_for('main.settings') }}" class="{{ 'active' if request.endpoint == 'main.settings' }}">Storage</a>
+    {% if is_admin %}
+    <a href="{{ url_for('equipment.config_page') }}" class="{{ 'active' if request.blueprint == 'equipment' }}">Equipment</a>
+    <a href="{{ url_for('admin.list_users') }}" class="{{ 'active' if request.blueprint == 'admin' }}">Users</a>
+    {% endif %}
+  </nav>
+  <div class="userbox">
+    <span class="user-name">{{ current_user.full_name }}</span>
+    <span class="user-role" style="background: {{ role_colors.get(current_user.role, '#F7941E') }};">{{ current_user.role }}</span>
+    <a class="logout" href="{{ url_for('auth.logout') }}">Sign out</a>
+  </div>
+</header>
+{% endif %}
+<main class="container">
+  {% if storage_fallback %}
+  <div class="flash flash-error">
+    ⚠ The assigned storage location <span class="mono">{{ storage_fallback }}</span> is
+    not reachable right now, so the notebook is running on a fallback copy. Data you
+    create may not reach the intended location — restore the mount before working, and
+    do not delete any copies.{% if is_admin %} Check the <a href="{{ url_for('main.settings') }}">Storage</a> page.{% endif %}
+  </div>
+  {% endif %}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+<footer class="footer">Ere<span style="color: var(--orange); font-weight: 600;">Z</span>tech Electronic Lab Notebook — Bridging Chemical Gaps</footer>
+</body>
+</html>

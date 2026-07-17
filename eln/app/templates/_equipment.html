@@ -1,0 +1,60 @@
+{# Equipment selection: lab hood -> camera + sensors + recording settings. #}
+{% set locked = meta.status != 'draft' %}
+{% set eq = meta.equipment or {} %}
+<div class="card" id="equipment">
+  <h2>Lab equipment</h2>
+  {% if not ha_configured %}
+  <p class="muted">Home Assistant is not connected yet.
+    {% if is_admin %}<a href="{{ url_for('equipment.config_page') }}">Configure it under Equipment</a>.{% else %}Ask an administrator to configure it.{% endif %}
+    The lab timer and observations work without it; cameras and sensors need the connection.</p>
+  {% elif can_edit and not locked %}
+  <form method="post" action="{{ url_for('entries.save_equipment', eid=meta.id) }}" class="form-grid" id="equipment-form">
+    <label>Lab hood
+      <select name="hood" id="eq-hood">
+        <option value="">— none —</option>
+        {% for h in equipment_cfg.hoods %}
+        <option value="{{ h.name }}" {{ 'selected' if eq.hood == h.name }}>{{ h.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Camera
+      <select name="camera" id="eq-camera" data-current="{{ eq.camera or '' }}">
+        <option value="">— none —</option>
+      </select>
+    </label>
+    <div class="span2">
+      <label>Sensors to log during the reaction</label>
+      <div id="eq-sensors" class="sensor-checks" data-current="{{ (eq.sensors or []) | map(attribute='entity') | join(',') }}"></div>
+    </div>
+    <label>Recording frame rate
+      <select name="rec_fps">
+        {% for f in recording_fps %}
+        <option value="{{ f }}" {{ 'selected' if (eq.recording or {}).get('fps', 5) == f }}>{{ f }} fps</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Recording resolution
+      <select name="rec_resolution">
+        {% for r in recording_resolutions %}
+        <option value="{{ r }}" {{ 'selected' if (eq.recording or {}).get('resolution', '1280x720') == r }}>{{ r }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <div class="span2 form-actions">
+      <button class="btn btn-orange" type="submit">Save equipment</button>
+      <button class="btn btn-ghost" type="button" id="eq-preview-btn">Live camera preview</button>
+    </div>
+    <div class="span2" id="eq-preview" hidden>
+      <img id="eq-preview-img" class="camera-preview" alt="Live camera preview">
+    </div>
+  </form>
+  <script>window.EQUIPMENT_CFG = {{ {'hoods': equipment_cfg.hoods} | tojson }};</script>
+  {% else %}
+  <table class="table kv small">
+    <tr><th>Hood</th><td>{{ eq.hood or '—' }}</td></tr>
+    <tr><th>Camera</th><td class="mono">{{ eq.camera or '—' }}</td></tr>
+    <tr><th>Sensors</th><td>{% for s in eq.sensors or [] %}{{ s.label }} <span class="mono muted">({{ s.entity }}{{ ', ' + s.unit if s.unit }})</span>{{ '; ' if not loop.last }}{% else %}—{% endfor %}</td></tr>
+    <tr><th>Recording</th><td>{{ (eq.recording or {}).get('fps', 5) }} fps, {{ (eq.recording or {}).get('resolution', '—') }}</td></tr>
+  </table>
+  {% endif %}
+</div>

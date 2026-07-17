@@ -1,0 +1,46 @@
+{# Operations log card — sits in place of the old "Observations & Data" section. #}
+{% set locked = meta.status != 'draft' %}
+{% set running = ops.started_at and not ops.ended_at %}
+{% set eq = meta.equipment or {} %}
+<div class="card" id="operations">
+  <h2>Operations log</h2>
+  {% if legacy_obs %}
+  <details class="legacy-obs">
+    <summary class="small">Legacy “Observations &amp; Data” notes (recorded before the operations log)</summary>
+    <div class="md-body">{{ legacy_obs | markdown }}</div>
+  </details>
+  {% endif %}
+  {% if not ops.started_at %}
+    {% if can_edit and not locked %}
+    <p class="small muted">Start the lab timer when physical work begins — every observation,
+      photo and recording is then timestamped against it{% if eq.sensors and ha_configured %},
+      and sensor logging starts automatically{% endif %}.</p>
+    <form method="post" action="{{ url_for('entries.ops_start', eid=meta.id) }}">
+      <button class="btn btn-orange" type="submit">▶ Start lab work</button>
+    </form>
+    {% else %}
+    <p class="muted">Lab work has not been performed on this entry.</p>
+    {% endif %}
+  {% else %}
+    <p class="small muted">
+      Started {{ ops.started_at | nicedate }} by {{ ops.started_by }}{% if ops.ended_at %} ·
+      ended {{ ops.ended_at | nicedate }} by {{ ops.ended_by }}{% endif %}.
+    </p>
+    {% if ops.ended_at and meta.equipment and meta.equipment.sensors %}
+    <div class="ops-plot-wrap ops-plot-static" id="ops-plot-wrap" data-eid="{{ meta.id }}">
+      <canvas id="ops-plot" width="860" height="200"></canvas>
+      <div class="ops-plot-legend" id="ops-plot-legend"></div>
+      <button type="button" class="ops-fs-btn" id="ops-fullscreen" title="Full screen">⛶</button>
+    </div>
+    {% endif %}
+    <div id="observations-list" class="obs-list">
+      {% include '_observations.html' %}
+    </div>
+    {% if running and can_edit %}
+    <div class="obs-composer">
+      <textarea id="obs-text" rows="3" placeholder="Observation… (timestamped when you click Finish)"></textarea>
+      <button type="button" class="btn btn-orange" id="obs-save">✓ Finish &amp; save observation</button>
+    </div>
+    {% endif %}
+  {% endif %}
+</div>
