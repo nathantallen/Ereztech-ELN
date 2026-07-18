@@ -8,6 +8,79 @@
   var statusEl = document.getElementById("ha-status");
   var errorEl = document.getElementById("ha-error");
 
+  function initCameraPresets() {
+    var preset = document.getElementById("cam-preset");
+    var host = document.getElementById("cam-host");
+    var channel = document.getElementById("cam-channel");
+    var subtype = document.getElementById("cam-subtype");
+    var stream = document.getElementById("cam-stream-url");
+    var snapshot = document.getElementById("cam-snapshot-url");
+    var apply = document.getElementById("apply-camera-preset");
+    var hint = document.getElementById("camera-preset-hint");
+    if (!preset || !host || !channel || !subtype || !stream || !snapshot || !apply) return;
+
+    function cleanHost(value) {
+      return (value || "").trim()
+        .replace(/^[a-z]+:\/\//i, "")
+        .replace(/\/.*$/, "")
+        .replace(/\/$/, "");
+    }
+
+    function applyPreset() {
+      var cameraHost = cleanHost(host.value);
+      var cameraChannel = Math.max(1, parseInt(channel.value, 10) || 1);
+      var cameraSubtype = subtype.value === "0" ? "0" : "1";
+      if (preset.value === "manual") {
+        hint.textContent = "Enter the stream and snapshot URLs manually below.";
+        stream.focus();
+        return;
+      }
+      if (!cameraHost) {
+        hint.textContent = "Enter the camera IP address or hostname first.";
+        host.focus();
+        return;
+      }
+
+      var streamUrl = "", snapshotUrl = "";
+      if (preset.value === "amcrest-http") {
+        streamUrl = "http://" + cameraHost + "/cgi-bin/mjpg/video.cgi?channel=" +
+          cameraChannel + "&subtype=" + cameraSubtype;
+        snapshotUrl = "http://" + cameraHost + "/cgi-bin/snapshot.cgi?channel=" + cameraChannel;
+      } else if (preset.value === "amcrest-rtsp") {
+        streamUrl = "rtsp://" + cameraHost + ":554/cam/realmonitor?channel=" +
+          cameraChannel + "&subtype=" + cameraSubtype;
+        snapshotUrl = "http://" + cameraHost + "/cgi-bin/snapshot.cgi?channel=" + cameraChannel;
+      } else if (preset.value === "hikvision-rtsp") {
+        var hikChannel = String(cameraChannel) + (cameraSubtype === "0" ? "01" : "02");
+        streamUrl = "rtsp://" + cameraHost + ":554/Streaming/Channels/" + hikChannel;
+        snapshotUrl = "http://" + cameraHost + "/ISAPI/Streaming/channels/" + hikChannel + "/picture";
+      } else if (preset.value === "axis-http") {
+        streamUrl = "http://" + cameraHost + "/axis-cgi/mjpg/video.cgi?resolution=1280x720";
+        snapshotUrl = "http://" + cameraHost + "/axis-cgi/jpg/image.cgi";
+      } else if (preset.value === "generic-http") {
+        streamUrl = "http://" + cameraHost + "/mjpeg";
+        snapshotUrl = "http://" + cameraHost + "/snapshot.jpg";
+      } else if (preset.value === "generic-rtsp") {
+        streamUrl = "rtsp://" + cameraHost + ":554/stream1";
+      }
+      stream.value = streamUrl;
+      snapshot.value = snapshotUrl;
+      hint.textContent = "Preset applied. You can edit either URL before adding the camera.";
+    }
+
+    apply.addEventListener("click", applyPreset);
+    preset.addEventListener("change", function () {
+      hint.textContent = preset.value === "manual"
+        ? "Enter the stream and snapshot URLs manually below."
+        : "Enter the camera address, then apply the preset URLs.";
+    });
+    host.addEventListener("keydown", function (event) {
+      if (event.key === "Enter") { event.preventDefault(); applyPreset(); }
+    });
+  }
+
+  initCameraPresets();
+
   function setStatus(text, color) {
     if (!statusEl) return;
     statusEl.textContent = text;

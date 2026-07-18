@@ -105,11 +105,38 @@
   {% endif %}
   <form method="post" class="form-grid">
     <input type="hidden" name="action" value="add_ipcam">
+    <label>Camera preset
+      <select id="cam-preset">
+        <option value="manual">Manual URLs</option>
+        <option value="amcrest-http">Amcrest / Dahua — HTTP MJPEG</option>
+        <option value="amcrest-rtsp">Amcrest / Dahua — RTSP</option>
+        <option value="hikvision-rtsp">Hikvision — RTSP</option>
+        <option value="axis-http">Axis — HTTP MJPEG</option>
+        <option value="generic-http">Generic — HTTP MJPEG</option>
+        <option value="generic-rtsp">Generic — RTSP</option>
+      </select>
+    </label>
+    <label>Camera address
+      <input type="text" id="cam-host" placeholder="192.168.1.254">
+    </label>
+    <label>Channel
+      <input type="number" id="cam-channel" min="1" value="1">
+    </label>
+    <label>Stream quality
+      <select id="cam-subtype">
+        <option value="0">Main stream — highest quality</option>
+        <option value="1" selected>Sub stream — faster preview</option>
+      </select>
+    </label>
+    <div class="span2 form-actions camera-preset-actions">
+      <button class="btn btn-ghost" type="button" id="apply-camera-preset">Apply preset URLs</button>
+      <span class="muted small" id="camera-preset-hint">Choose a preset and enter the camera's IP address or hostname.</span>
+    </div>
     <label>Camera name
       <input type="text" name="cam_label" placeholder="Hood 3 overhead" required>
     </label>
-    <label>Stream URL (MJPEG)
-      <input type="url" name="cam_stream_url" placeholder="http://10.70.11.42/mjpeg">
+    <label>Stream URL (MJPEG or RTSP)
+      <input type="url" name="cam_stream_url" id="cam-stream-url" placeholder="http://10.70.11.42/mjpeg">
     </label>
     <label>Camera username
       <input type="text" name="cam_username" autocomplete="username" placeholder="admin">
@@ -118,7 +145,7 @@
       <input type="password" name="cam_password" autocomplete="new-password">
     </label>
     <label class="span2">Snapshot URL (optional — single JPEG)
-      <input type="url" name="cam_snapshot_url" placeholder="http://10.70.11.42/snapshot.jpg">
+      <input type="url" name="cam_snapshot_url" id="cam-snapshot-url" placeholder="http://10.70.11.42/snapshot.jpg">
     </label>
     <p class="span2 small muted">Credentials are stored in the server-side equipment configuration and are never included in browser camera URLs.</p>
     <div class="span2 form-actions">
