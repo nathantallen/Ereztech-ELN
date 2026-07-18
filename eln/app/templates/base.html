@@ -36,7 +36,7 @@
   </nav>
   <div class="userbox">
     <span class="user-name">{{ current_user.full_name }}</span>
-    <span class="user-role" style="background: {{ role_colors.get(current_user.role, '#F7941E') }};">{{ current_user.role }}</span>
+    <span class="user-role" style="background: {{ role_colors.get(current_user.role, '#F7941E') }};">{{ role_labels.get(current_user.role, current_user.role) }}</span>
     <form method="post" action="{{ url_for('auth.logout') }}" class="logout-form" style="display:inline">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
       <button class="logout" type="submit" style="background:none;border:0;font:inherit;cursor:pointer">Sign out</button>

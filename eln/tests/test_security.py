@@ -2,7 +2,7 @@ import os
 import tempfile
 import unittest
 
-from app import create_app
+from app import User, create_app
 from app.svg import sanitize_svg
 
 
@@ -55,6 +55,18 @@ class SecurityTests(unittest.TestCase):
         second = create_app().config["SECRET_KEY"]
         self.assertEqual(first, second)
         self.assertGreaterEqual(len(first), 64)
+
+    def test_roles_are_persistent_and_permission_driven(self):
+        storage = self.app.extensions["storage"]
+        roles = storage.get_roles()
+        self.assertTrue(storage.role_can_admin("admin"))
+        roles.append({"key": "operator", "label": "Operator", "color": "#123456",
+                      "can_admin": False, "can_edit": True})
+        storage.save_roles(roles)
+        saved = storage.find_role("operator")
+        user = User({"username": "op", "role": "operator", "_role": saved})
+        self.assertTrue(user.can_edit)
+        self.assertFalse(user.is_admin)
 
 
 if __name__ == "__main__":

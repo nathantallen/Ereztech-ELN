@@ -144,7 +144,7 @@ form.inline { display: inline; }
 label { display: block; font-weight: 600; font-size: 12px; color: var(--indigo); margin: 12px 0 4px; }
 input[type="text"], input[type="password"], input[type="date"], input[type="url"],
 input[type="search"], input[type="number"], input[type="email"], input[type="tel"],
-select, textarea {
+input[type="color"], select, textarea {
   width: 100%;
   padding: 8px 10px;
   border: 1px solid var(--border);
@@ -172,6 +172,9 @@ textarea {
 .checkbox-line { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; }
 .checkbox-line input { width: auto; }
 .checkbox-line label { margin: 0; }
+.role-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.role-card { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px 10px; padding: 12px; border: 1px solid var(--border); border-radius: 9px; }
+.role-card .muted { grid-column: 1 / -1; }
 
 /* ---------- Flash messages ---------- */
 .flash { padding: 10px 16px; border-radius: 8px; margin-bottom: 14px; font-size: 13px; font-weight: 500; }
@@ -828,7 +831,7 @@ td.today .day-num {
 @media (hover: none) and (pointer: coarse) {
   input[type="text"], input[type="password"], input[type="date"], input[type="url"],
   input[type="search"], input[type="number"], input[type="email"], input[type="tel"],
-  select, textarea {
+  input[type="color"], select, textarea {
     min-height: 44px;
     font-size: 16px;
   }
@@ -850,7 +853,7 @@ td.today .day-num {
 
   /* 16px prevents Safari from zooming the viewport when a field receives focus. */
   input[type="text"], input[type="password"], input[type="date"], input[type="url"],
-  input[type="search"], input[type="number"], select, textarea {
+  input[type="search"], input[type="number"], input[type="color"], select, textarea {
     min-height: 44px;
     font-size: 16px;
   }

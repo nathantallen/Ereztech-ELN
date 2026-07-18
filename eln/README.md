@@ -41,8 +41,9 @@ storage location you assign (NAS share, SharePoint-synced folder, or local disk)
 - **Sign & witness workflow** — drafts are editable; signing (with password
   confirmation) locks the entry; a second scientist witnesses it. Every entry
   carries an append-only `audit.log`.
-- **Users & roles** — admin / scientist / viewer. Users are disabled, never
-  deleted, so signatures stay valid.
+- **Users & customizable roles** — administrators can create roles with their
+  own name, color, notebook-edit access, and administration access. Users are
+  disabled, never deleted, so signatures stay valid.
 
 ## Quick start
 

@@ -63,6 +63,8 @@ def login():
         if rec and rec.get("active", True) and check_password_hash(rec["password_hash"], password):
             _succeeded(key)
             from . import User
+            rec = dict(rec)
+            rec["_role"] = _storage().find_role(rec.get("role")) or {}
             login_user(User(rec))
             return redirect(_safe_next(request.args.get("next")) or url_for("entries.list_entries"))
         _failed(key)

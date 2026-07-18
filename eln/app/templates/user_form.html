@@ -16,7 +16,7 @@
   <label>Role
     <select name="role">
       {% for r in roles %}
-      <option value="{{ r }}" {{ 'selected' if user and user.role == r }}>{{ r }}</option>
+      <option value="{{ r.key }}" {{ 'selected' if user and user.role == r.key }}>{{ r.label }}</option>
       {% endfor %}
     </select>
   </label>

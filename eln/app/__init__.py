@@ -12,7 +12,6 @@ from markupsafe import Markup, escape
 from .storage import Storage, ENTRY_STATUSES
 
 STATUS_COLORS = {"draft": "#8a8797", "signed": "#F7941E", "witnessed": "#0aa574"}
-ROLE_COLORS = {"admin": "#7a00df", "scientist": "#04194e", "viewer": "#8a8797"}
 MONTHS = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
@@ -32,6 +31,7 @@ class User(UserMixin):
         self.username = record["username"]
         self.full_name = record.get("full_name", record["username"])
         self.role = record.get("role", "viewer")
+        self.role_record = record.get("_role") or {}
         self.active = record.get("active", True)
 
     @property
@@ -40,11 +40,11 @@ class User(UserMixin):
 
     @property
     def is_admin(self):
-        return self.role == "admin"
+        return bool(self.role_record.get("can_admin"))
 
     @property
     def can_edit(self):
-        return self.role in ("admin", "scientist")
+        return bool(self.role_record.get("can_edit")) or self.is_admin
 
 
 def create_app():
@@ -127,6 +127,8 @@ def create_app():
         # resolve via app.extensions so it follows a runtime location change
         rec = app.extensions["storage"].find_user(username)
         if rec and rec.get("active", True):
+            rec = dict(rec)
+            rec["_role"] = app.extensions["storage"].find_role(rec.get("role")) or {}
             return User(rec)
         return None
 
@@ -160,11 +162,13 @@ def create_app():
         if not token:
             token = secrets.token_urlsafe(32)
             session["_csrf_token"] = token
+        roles = app.extensions["storage"].get_roles()
         return {
             "is_admin": current_user.is_authenticated and current_user.is_admin,
             "can_edit": current_user.is_authenticated and current_user.can_edit,
             "status_colors": STATUS_COLORS,
-            "role_colors": ROLE_COLORS,
+            "role_colors": {r["key"]: r.get("color", "#8a8797") for r in roles},
+            "role_labels": {r["key"]: r.get("label", r["key"]) for r in roles},
             "entry_statuses": ENTRY_STATUSES,
             "storage_fallback": app.config.get("STORAGE_FALLBACK"),
             "timezone": app.config.get("TIMEZONE") or "",

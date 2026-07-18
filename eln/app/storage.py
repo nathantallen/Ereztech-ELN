@@ -34,6 +34,14 @@ _LOCK = threading.RLock()
 
 ENTRY_SECTIONS = ["Objective", "Procedure", "Results & Conclusions"]
 ENTRY_STATUSES = ["draft", "signed", "witnessed"]
+DEFAULT_ROLES = [
+    {"key": "admin", "label": "Administrator", "color": "#7a00df",
+     "can_admin": True, "can_edit": True},
+    {"key": "scientist", "label": "Scientist", "color": "#04194e",
+     "can_admin": False, "can_edit": True},
+    {"key": "viewer", "label": "Viewer", "color": "#8a8797",
+     "can_admin": False, "can_edit": False},
+]
 BATCH_STATUSES = ["In Stock", "Open", "Depleted", "Quarantined"]
 ATMOSPHERES = ["N2 glovebox", "Ar glovebox", "Ar Schlenk line", "Vacuum line", "Fume hood (air)", "Other"]
 
@@ -119,6 +127,7 @@ class Storage:
         self.notebook_dir = os.path.join(self.root, "notebook")
         self.materials_dir = os.path.join(self.root, "materials")
         self.users_file = os.path.join(self.root, "users.json")
+        self.roles_file = os.path.join(self.root, "roles.json")
         from .chem import PropertyDB
         self.properties = PropertyDB(os.path.join(self.root, "properties.json"))
         # eid -> containing folder; an entry never moves once created, so this
@@ -140,6 +149,7 @@ class Storage:
         os.makedirs(self.notebook_dir, exist_ok=True)
         os.makedirs(self.materials_dir, exist_ok=True)
         self.properties.ensure()
+        self.ensure_roles()
         self._migrate_notebook_by_user()
         if not os.path.exists(self.users_file):
             from .seed import seed_initial_data
@@ -236,6 +246,33 @@ class Storage:
             os.replace(tmp, path)
 
     # ---------- users ----------
+
+    def ensure_roles(self):
+        if not os.path.exists(self.roles_file):
+            self.save_roles(copy.deepcopy(DEFAULT_ROLES))
+
+    def get_roles(self):
+        with _LOCK:
+            try:
+                with open(self.roles_file, "r", encoding="utf-8") as f:
+                    roles = json.load(f).get("roles", [])
+            except (OSError, ValueError):
+                roles = []
+            return roles or copy.deepcopy(DEFAULT_ROLES)
+
+    def save_roles(self, roles):
+        with _LOCK:
+            tmp = self.roles_file + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump({"roles": roles}, f, indent=2, ensure_ascii=False)
+            os.replace(tmp, self.roles_file)
+
+    def find_role(self, key):
+        return next((r for r in self.get_roles() if r.get("key") == key), None)
+
+    def role_can_admin(self, key):
+        role = self.find_role(key) or {}
+        return bool(role.get("can_admin"))
 
     def get_users(self):
         with _LOCK:

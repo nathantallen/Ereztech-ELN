@@ -6,7 +6,7 @@ from werkzeug.security import generate_password_hash
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
-ROLES = ("admin", "scientist", "viewer")
+ROLE_KEY_RE = re.compile(r"[a-z0-9_-]+")
 # a username also becomes a lab-book folder name, so keep it to a safe charset
 USERNAME_RE = re.compile(r"[a-z0-9._-]+")
 
@@ -24,7 +24,72 @@ def _require_admin():
 @login_required
 def list_users():
     _require_admin()
-    return render_template("users.html", users=_storage().get_users())
+    storage = _storage()
+    return render_template("users.html", users=storage.get_users(), roles=storage.get_roles())
+
+
+def _active_admin_count(users, roles, exclude_username=None):
+    admin_roles = {r["key"] for r in roles if r.get("can_admin")}
+    return sum(1 for u in users if u.get("active", True)
+               and u.get("role") in admin_roles
+               and u.get("username") != exclude_username)
+
+
+@bp.route("/roles/new", methods=["GET", "POST"])
+@bp.route("/roles/<key>/edit", methods=["GET", "POST"])
+@login_required
+def role_form(key=None):
+    _require_admin()
+    storage = _storage()
+    roles = storage.get_roles()
+    role = next((r for r in roles if r.get("key") == key), None) if key else None
+    if key and not role:
+        abort(404)
+    if request.method == "POST":
+        new_key = key or request.form.get("key", "").strip().lower()
+        label = request.form.get("label", "").strip()
+        color = request.form.get("color", "#8a8797").strip()
+        can_admin = bool(request.form.get("can_admin"))
+        can_edit = bool(request.form.get("can_edit")) or can_admin
+        if not ROLE_KEY_RE.fullmatch(new_key) or not label:
+            flash("Role key and display name are required. Keys may use letters, numbers, dash and underscore.", "error")
+            return render_template("role_form.html", role=role)
+        if not re.fullmatch(r"#[0-9A-Fa-f]{6}", color):
+            color = "#8a8797"
+        if not role and any(r.get("key") == new_key for r in roles):
+            flash("That role key already exists.", "error")
+            return render_template("role_form.html", role=role)
+        updated = {"key": new_key, "label": label, "color": color,
+                   "can_admin": can_admin, "can_edit": can_edit}
+        candidate = [updated if r.get("key") == key else r for r in roles] if role else roles + [updated]
+        if _active_admin_count(storage.get_users(), candidate) == 0:
+            flash("At least one active user must retain an administrator-capable role.", "error")
+            return render_template("role_form.html", role=role)
+        storage.save_roles(candidate)
+        flash("Role saved.", "success")
+        return redirect(url_for("admin.list_users"))
+    return render_template("role_form.html", role=role)
+
+
+@bp.route("/roles/<key>/delete", methods=["POST"])
+@login_required
+def delete_role(key):
+    _require_admin()
+    storage = _storage()
+    roles = storage.get_roles()
+    role = next((r for r in roles if r.get("key") == key), None)
+    if not role:
+        abort(404)
+    if any(u.get("role") == key for u in storage.get_users()):
+        flash("That role is assigned to one or more users and cannot be deleted.", "error")
+        return redirect(url_for("admin.list_users"))
+    candidate = [r for r in roles if r.get("key") != key]
+    if not candidate:
+        flash("At least one role is required.", "error")
+        return redirect(url_for("admin.list_users"))
+    storage.save_roles(candidate)
+    flash("Role deleted.", "success")
+    return redirect(url_for("admin.list_users"))
 
 
 @bp.route("/users/new", methods=["GET", "POST"])
@@ -34,13 +99,15 @@ def user_form(username=None):
     _require_admin()
     storage = _storage()
     users = storage.get_users()
+    roles = storage.get_roles()
+    role_keys = {r["key"] for r in roles}
     user = next((u for u in users if u["username"] == username), None) if username else None
     if username and not user:
         abort(404)
     if request.method == "POST":
         full_name = request.form.get("full_name", "").strip()
         role = request.form.get("role", "viewer")
-        role = role if role in ROLES else "viewer"
+        role = role if role in role_keys else ("viewer" if "viewer" in role_keys else roles[0]["key"])
         password = request.form.get("password", "")
         active = bool(request.form.get("active"))
         if user:
@@ -49,13 +116,10 @@ def user_form(username=None):
                 return redirect(url_for("admin.list_users"))
             # Guard against locking everyone out of administration: refuse an edit
             # that removes the last active admin (by demotion OR deactivation).
-            was_admin = user.get("role") == "admin" and user.get("active", True)
-            still_admin = role == "admin" and active
+            was_admin = storage.role_can_admin(user.get("role")) and user.get("active", True)
+            still_admin = storage.role_can_admin(role) and active
             if was_admin and not still_admin:
-                other_admins = sum(
-                    1 for u in users
-                    if u["username"] != user["username"]
-                    and u.get("role") == "admin" and u.get("active", True))
+                other_admins = _active_admin_count(users, roles, user["username"])
                 if other_admins == 0:
                     flash("You can't remove the last administrator. Promote "
                           "another user to admin first.", "error")
@@ -87,4 +151,4 @@ def user_form(username=None):
         storage.save_users(users)
         flash("User saved.", "success")
         return redirect(url_for("admin.list_users"))
-    return render_template("user_form.html", user=user, roles=ROLES)
+    return render_template("user_form.html", user=user, roles=roles)
