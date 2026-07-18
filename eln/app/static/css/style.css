@@ -48,8 +48,6 @@ a:hover { text-decoration: underline; }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
 .brand:hover { text-decoration: none; }
 .brand-logo { height: 34px; width: auto; display: block; }
-.brand-mark { color: #fff; font-size: 22px; font-weight: 700; letter-spacing: 0.5px; }
-.brand-mark .z { color: var(--orange); }
 .brand-sub {
   color: var(--lavender);
   font-size: 11px;
@@ -88,11 +86,18 @@ a:hover { text-decoration: underline; }
 /* ---------- Layout ---------- */
 .container { max-width: 1240px; margin: 0 auto; padding: 24px; width: 100%; flex: 1; }
 .footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
   text-align: center;
-  color: var(--muted);
+  background: var(--indigo);
+  color: var(--lavender);
   font-size: 12px;
   padding: 18px;
 }
+.footer-logo { width: 87px; height: 40px; object-fit: contain; }
 .page-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
 .page-head h1 { margin: 0; font-size: 22px; font-weight: 600; color: var(--indigo); }
 .page-head .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }

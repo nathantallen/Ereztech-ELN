@@ -65,9 +65,17 @@ body.print-doc {
   padding-bottom: 12px;
   margin-bottom: 18px;
 }
-.doc-wordmark { font-size: 22px; font-weight: 700; color: var(--indigo); letter-spacing: 0.3px; }
-.doc-wordmark .z { color: var(--orange); }
-.doc-wordmark .sub {
+.doc-brand { display: flex; flex-direction: column; align-items: flex-start; }
+.doc-logo-plate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--indigo);
+  border-radius: 4px;
+  padding: 4px 10px;
+}
+.doc-logo-plate img { display: block; width: 87px; height: 40px; object-fit: contain; }
+.doc-brand-sub {
   display: block;
   font-size: 10px;
   font-weight: 500;

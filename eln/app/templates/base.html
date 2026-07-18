@@ -57,6 +57,9 @@
   {% endwith %}
   {% block content %}{% endblock %}
 </main>
-<footer class="footer">Ere<span style="color: var(--orange); font-weight: 600;">Z</span>tech Electronic Lab Notebook — Bridging Chemical Gaps</footer>
+<footer class="footer">
+  <img class="footer-logo" src="{{ url_for('static', filename='img/ereztech-logo.svg') }}" alt="EreZtech">
+  <span>Electronic Lab Notebook — Bridging Chemical Gaps</span>
+</footer>
 </body>
 </html>
