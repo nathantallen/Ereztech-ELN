@@ -101,7 +101,7 @@ def parse_sections(body):
 
 def compose_sections(sections):
     """Compose the standard sections, then preserve any legacy/extra headings
-    (e.g. 'Observations & Data' from entries created before the operations log)."""
+    (e.g. 'Observations & Data' from entries created before Actions and Observations)."""
     parts = []
     for heading in ENTRY_SECTIONS:
         parts.append("## %s\n\n%s\n" % (heading, (sections.get(heading) or "").strip()))
@@ -396,6 +396,14 @@ class Storage:
             blocks.append(current)
         for b in blocks:
             b["text"] = b["text"].strip()
+            if b["kind"] == "photo":
+                # Photo observations historically store a Markdown link. Expose
+                # its target separately so the log can render a thumbnail while
+                # remaining compatible with existing notebook files.
+                match = re.search(r"\[([^\]]+)\]\(([^)]+)\)", b["text"])
+                if match:
+                    b["photo_name"] = match.group(1)
+                    b["photo_url"] = match.group(2)
         return blocks
 
     # ---------- sensor logs (one CSV per entity, human-readable) ----------

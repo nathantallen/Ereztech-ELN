@@ -120,7 +120,7 @@ body.print-doc {
 .summary-table th, .summary-table td { border: 1px solid var(--border); padding: 5px 8px; text-align: left; }
 .summary-table th { background: #f3f1f8; color: var(--indigo); }
 
-/* the operations log & audit trail must print in full, not as scroll-boxes */
+/* Actions and Observations plus the audit trail must print in full, not as scroll-boxes */
 .doc-section .obs-list,
 .doc-section .audit-log { max-height: none; overflow: visible; border: none; padding: 0; }
 .doc-section .audit-log { font-size: 12px; }
@@ -138,3 +138,5 @@ body.print-doc {
   .doc-section > h2 { break-after: avoid; }
   a { color: var(--text); text-decoration: none; }
 }
+
+.doc-section .obs-photo-thumb { width: 120px; height: 82px; object-fit: cover; }

@@ -1,7 +1,7 @@
 // Rewrite UTC <time class="lt"> stamps to the viewer's LOCAL timezone, formatted
 // for easy reading (e.g. "Jul 16, 2026, 3:58:02 PM CDT"). Timestamps are stored
 // and served in UTC; only the display is localized. Exposed as window.localizeTimes
-// so content loaded later (the live operations log) can be localized too.
+// so content loaded later (live Actions and Observations) can be localized too.
 (function () {
   "use strict";
 

@@ -145,10 +145,10 @@
     {% else %}<p class="muted">—</p>{% endif %}
   </div>
 
-  {# ---------- operations log ---------- #}
+  {# ---------- actions and observations ---------- #}
   {% if ops.started_at or observations or legacy_obs %}
   <div class="doc-section">
-    <h2>Operations log</h2>
+    <h2>Actions and Observations</h2>
     {% if ops_history %}
     <table class="summary-table" style="margin-bottom:12px;">
       <thead><tr><th>Session</th><th>Started</th><th>Started by</th><th>Ended</th><th>Ended by</th></tr></thead>

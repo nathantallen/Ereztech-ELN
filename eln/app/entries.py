@@ -949,7 +949,7 @@ def ops_start(eid):
     sensors = (meta.get("equipment") or {}).get("sensors") or []
     if sensors and ha.configured(cfg):
         ha.start_sensor_logging(storage, cfg, eid, sensors)
-    flash(("Operations log restarted — session %d is now running." % session
+    flash(("Actions and Observations restarted — session %d is now running." % session
            if restarting else "Lab work started — observations are now timestamped."), "success")
     return redirect(url_for("entries.view", eid=eid) + "#operations")
 

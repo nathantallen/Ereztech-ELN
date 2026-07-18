@@ -653,6 +653,9 @@ td.today .day-num {
 .obs-elapsed { background: var(--indigo); color: var(--orange); font-weight: 700; border-radius: 6px; padding: 1px 8px; font-size: 12px; }
 .obs-kind { background: var(--lavender); color: var(--indigo); border-radius: 6px; padding: 1px 8px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
 .obs-system .obs-body { color: var(--muted); }
+.obs-photo-body { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.obs-photo-link { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #fff; }
+.obs-photo-thumb { display: block; width: 160px; height: 110px; object-fit: cover; }
 .obs-composer { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
 .obs-composer textarea { flex: 1; min-width: 260px; }
 
