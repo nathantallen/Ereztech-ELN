@@ -12,6 +12,8 @@ collide on shared ids (glyph-0-1, clip-0, …).
 import re
 import xml.etree.ElementTree as ET
 
+import defusedxml.ElementTree as safe_ET
+
 _ALLOWED_ELEMENTS = {
     "svg", "g", "defs", "symbol", "use", "path", "line", "polyline",
     "polygon", "rect", "circle", "ellipse", "text", "tspan", "clipPath",
@@ -30,7 +32,9 @@ def sanitize_svg(svg):
     if not svg:
         return svg
     try:
-        root = ET.fromstring(svg)
+        # defused parser: rejects DTD entity tricks (billion laughs) up front;
+        # its exceptions subclass ValueError so the except below covers them
+        root = safe_ET.fromstring(svg)
     except (ET.ParseError, ValueError):
         return ""
     if _local_name(root.tag) != "svg":

@@ -16,3 +16,6 @@ __pycache__/
 .DS_Store
 .claude/settings.local.json
 deploy/*.bundle
+
+# Database dumps — never commit (contain user password hashes)
+*.sql

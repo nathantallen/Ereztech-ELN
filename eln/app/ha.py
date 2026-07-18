@@ -18,6 +18,7 @@ Config lives in <data>/equipment.json so it travels with the notebook:
 import datetime
 import json
 import os
+import re
 import subprocess
 import threading
 import time
@@ -53,6 +54,11 @@ def save_config(storage, cfg):
         tmp = path + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(cfg, f, indent=2, ensure_ascii=False)
+        try:
+            # holds camera passwords + HA tokens — owner-only, like the secret key
+            os.chmod(tmp, 0o600)
+        except OSError:
+            pass    # network mounts (SMB/NFS) may not support chmod
         os.replace(tmp, path)
 
 
@@ -215,6 +221,12 @@ def _mjpeg_first_frame(url, timeout=10, username="", password=""):
     raise requests.RequestException("no JPEG frame found in stream")
 
 
+def scrub_userinfo(text):
+    """Mask user:pass@ userinfo in any URLs embedded in `text` (ffmpeg error
+    output echoes the input URL, which may carry camera credentials)."""
+    return re.sub(r"(\w+://)[^/@\s]+@", r"\1***@", text or "")
+
+
 def _ffmpeg_grab(url, timeout=20):
     """Grab a single JPEG frame from an RTSP (or any ffmpeg-readable) URL."""
     cmd = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-rtsp_transport", "tcp",
@@ -225,8 +237,23 @@ def _ffmpeg_grab(url, timeout=20):
         raise requests.RequestException("camera did not respond (rtsp timeout)")
     if out.returncode != 0 or not out.stdout:
         raise requests.RequestException(
-            "ffmpeg could not read the camera: " + (out.stderr[-200:].decode("utf-8", "replace")))
+            "ffmpeg could not read the camera: "
+            + scrub_userinfo(out.stderr[-300:].decode("utf-8", "replace"))[-200:])
     return out.stdout
+
+
+def _read_capped(r, limit=10_000_000):
+    """Read a requests response body with a hard size cap (a hostile or
+    misconfigured snapshot endpoint must not exhaust the worker's memory)."""
+    buf = b""
+    try:
+        for chunk in r.iter_content(65536):
+            buf += chunk
+            if len(buf) > limit:
+                raise requests.RequestException("snapshot larger than %d bytes" % limit)
+    finally:
+        r.close()
+    return buf
 
 
 def _url_with_creds(url, username="", password=""):
@@ -258,9 +285,10 @@ def camera_snapshot(cfg, storage, entity):
         password = cam.get("password", "")
         snap = cam.get("snapshot_url", "")
         if _is_http(snap):                        # Amcrest CGI snapshot (Digest)
-            r = _cam_http_get(snap, timeout=15, username=username, password=password)
+            r = _cam_http_get(snap, timeout=15, stream=True,
+                              username=username, password=password)
             r.raise_for_status()
-            return r.content, r.headers.get("Content-Type", "image/jpeg")
+            return _read_capped(r), r.headers.get("Content-Type", "image/jpeg")
         stream = cam.get("stream_url", "")
         if _is_rtsp(stream):                      # grab a frame off the RTSP feed
             return _ffmpeg_grab(_url_with_creds(stream, username, password)), "image/jpeg"
@@ -316,9 +344,9 @@ class HAClient:
 
     def snapshot(self, entity):
         r = requests.get(self.url + "/api/camera_proxy/" + entity,
-                         headers=self.headers, timeout=15)
+                         headers=self.headers, timeout=15, stream=True)
         r.raise_for_status()
-        return r.content, r.headers.get("Content-Type", "image/jpeg")
+        return _read_capped(r), r.headers.get("Content-Type", "image/jpeg")
 
     def stream(self, entity):
         return requests.get(self.url + "/api/camera_proxy_stream/" + entity,

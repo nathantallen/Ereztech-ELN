@@ -966,17 +966,19 @@ def ops_end(eid):
     storage = _storage()
     rec_file = ha.stop_recording(eid)   # blocks while ffmpeg finalizes
     ha.stop_sensor_logging(eid)
-    # reload after the slow teardown so we don't clobber concurrent edits
-    meta, body, ops = _ops_guard(eid)
-    if rec_file:
-        _register_recording(storage, meta, eid, rec_file)
-    elapsed = _elapsed_since(ops.get("started_at"))
-    meta["operations"]["ended_at"] = utcnow()
-    meta["operations"]["ended_by"] = current_user.username
-    storage.save_entry(eid, meta, body)
-    storage.append_observation(eid, current_user.username, "system",
-                               "**Lab work ended.**", elapsed)
-    storage.audit(eid, current_user.username, "ended lab work", "duration " + elapsed)
+    # exempt from the request-wide mutation lock (the ffmpeg join above can
+    # take ~45s); serialize only the read-modify-write, like ops_photo
+    with storage.mutation_lock():
+        meta, body, ops = _ops_guard(eid)
+        if rec_file:
+            _register_recording(storage, meta, eid, rec_file)
+        elapsed = _elapsed_since(ops.get("started_at"))
+        meta["operations"]["ended_at"] = utcnow()
+        meta["operations"]["ended_by"] = current_user.username
+        storage.save_entry(eid, meta, body)
+        storage.append_observation(eid, current_user.username, "system",
+                                   "**Lab work ended.**", elapsed)
+        storage.audit(eid, current_user.username, "ended lab work", "duration " + elapsed)
     flash("Lab work ended after %s." % elapsed, "success")
     return redirect(url_for("entries.view", eid=eid) + "#operations")
 
@@ -1084,17 +1086,19 @@ def ops_record_stop(eid):
     rel = ha.stop_recording(eid)   # blocks while ffmpeg finalizes
     if not rel:
         return jsonify({"ok": False, "error": "No recording running."}), 409
-    # reload: the entry may have been edited while the recording was closing
-    meta, body, ops = _ops_guard(eid)
-    _register_recording(storage, meta, eid, rel)
-    storage.save_entry(eid, meta, body)
-    elapsed = _elapsed_since(ops.get("started_at"))
-    storage.append_observation(eid, current_user.username, "system",
-                               "**Recording stopped**: [%s](%s)" %
-                               (os.path.basename(rel),
-                                url_for("entries.serve_file", eid=eid, relpath=rel)),
-                               elapsed)
-    storage.audit(eid, current_user.username, "stopped recording", rel)
+    # exempt from the request-wide mutation lock (stop_recording joins ffmpeg
+    # for up to 45s); serialize only the read-modify-write, like ops_photo
+    with storage.mutation_lock():
+        meta, body, ops = _ops_guard(eid)
+        _register_recording(storage, meta, eid, rel)
+        storage.save_entry(eid, meta, body)
+        elapsed = _elapsed_since(ops.get("started_at"))
+        storage.append_observation(eid, current_user.username, "system",
+                                   "**Recording stopped**: [%s](%s)" %
+                                   (os.path.basename(rel),
+                                    url_for("entries.serve_file", eid=eid, relpath=rel)),
+                                   elapsed)
+        storage.audit(eid, current_user.username, "stopped recording", rel)
     return jsonify({"ok": True, "file": rel})
 
 

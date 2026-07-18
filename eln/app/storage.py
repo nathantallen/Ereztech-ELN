@@ -32,6 +32,15 @@ import yaml
 
 _LOCK = threading.RLock()
 
+
+def _chmod_private(path):
+    """Owner-only permissions for files holding secrets (password hashes,
+    tokens). Best-effort: network mounts (SMB/NFS) may not support chmod."""
+    try:
+        os.chmod(path, 0o600)
+    except OSError:
+        pass
+
 ENTRY_SECTIONS = ["Objective", "Procedure", "Results & Conclusions"]
 ENTRY_STATUSES = ["draft", "signed", "witnessed"]
 DEFAULT_ROLES = [
@@ -265,6 +274,7 @@ class Storage:
             tmp = self.roles_file + ".tmp"
             with open(tmp, "w", encoding="utf-8") as f:
                 json.dump({"roles": roles}, f, indent=2, ensure_ascii=False)
+            _chmod_private(tmp)
             os.replace(tmp, self.roles_file)
 
     def find_role(self, key):
@@ -287,6 +297,7 @@ class Storage:
             tmp = self.users_file + ".tmp"
             with open(tmp, "w", encoding="utf-8") as f:
                 json.dump({"users": users}, f, indent=2)
+            _chmod_private(tmp)    # password hashes — owner-only
             os.replace(tmp, self.users_file)
 
     def find_user(self, username):
@@ -369,8 +380,11 @@ class Storage:
                 entries.append(copy.deepcopy(meta))
             except Exception:
                 continue
-        for stale in set(self._entry_meta_cache) - live_paths:
-            self._entry_meta_cache.pop(stale, None)
+        # under the lock: a concurrent writer inserting mid-iteration would
+        # raise "dictionary changed size during iteration" and 500 the listing
+        with _LOCK:
+            for stale in set(self._entry_meta_cache) - live_paths:
+                self._entry_meta_cache.pop(stale, None)
         entries.sort(key=lambda m: str(m.get("created", "")), reverse=True)
         return entries
 

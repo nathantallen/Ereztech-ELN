@@ -106,8 +106,13 @@ def user_form(username=None):
         abort(404)
     if request.method == "POST":
         full_name = request.form.get("full_name", "").strip()
-        role = request.form.get("role", "viewer")
-        role = role if role in role_keys else ("viewer" if "viewer" in role_keys else roles[0]["key"])
+        role = request.form.get("role", "")
+        if role not in role_keys:
+            # fail closed: never silently substitute a role (the first role in
+            # the file is admin — a stale form must not grant permissions)
+            flash("Unknown role %r — it may have been renamed or deleted. "
+                  "Reload the page and try again." % role, "error")
+            return redirect(url_for("admin.list_users"))
         password = request.form.get("password", "")
         active = bool(request.form.get("active"))
         if user:

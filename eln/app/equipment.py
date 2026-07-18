@@ -182,8 +182,10 @@ def snapshot(entity):
     try:
         data, ctype = ha.camera_snapshot(cfg, _storage(), entity)
     except requests.RequestException as e:
-        # surface the reason (network / auth) so the UI can show why, not a blank box
-        return Response(str(e), status=502, headers={"X-Camera-Error": str(e)[:200]})
+        # surface the reason (network / auth) so the UI can show why, not a blank
+        # box — with URL userinfo masked and newlines stripped (header safety)
+        msg = " ".join(ha.scrub_userinfo(str(e)).split())[:200]
+        return Response(msg, status=502, headers={"X-Camera-Error": msg})
     resp = Response(data, content_type=ctype)
     resp.headers["Cache-Control"] = "no-store"     # each poll must be a fresh frame
     return resp

@@ -107,11 +107,15 @@ def create_app():
             return None
         supplied = request.form.get("_csrf_token") or request.headers.get("X-CSRF-Token")
         expected = session.get("_csrf_token")
-        if not expected or not supplied or not secrets.compare_digest(expected, supplied):
+        # compare as bytes: compare_digest raises TypeError on non-ASCII str
+        if not expected or not supplied or not secrets.compare_digest(
+                expected.encode("utf-8"), supplied.encode("utf-8")):
             abort(400, description="Invalid or missing CSRF token.")
-        # Photo capture performs slow camera I/O before its short atomic update;
-        # the route acquires the lock itself only for that final update.
-        if request.endpoint == "entries.ops_photo":
+        # These routes perform slow camera/ffmpeg I/O (photo capture, recording
+        # finalize — up to 45s) before a short atomic update; each acquires the
+        # lock itself only around that final read-modify-write.
+        if request.endpoint in ("entries.ops_photo", "entries.ops_end",
+                                "entries.ops_record_stop"):
             return None
         # The app uses file-backed read-modify-write records. One worker serves
         # multiple threads, so hold the shared re-entrant lock for the complete
