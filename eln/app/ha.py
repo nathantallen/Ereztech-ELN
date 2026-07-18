@@ -21,7 +21,7 @@ import os
 import subprocess
 import threading
 import time
-from urllib.parse import unquote, urlsplit, urlunsplit
+from urllib.parse import quote, unquote, urlsplit, urlunsplit
 
 import requests
 from requests.auth import HTTPBasicAuth, HTTPDigestAuth
@@ -179,10 +179,12 @@ def _split_creds(url):
     return url, None
 
 
-def _cam_http_get(url, stream=False, timeout=15):
+def _cam_http_get(url, stream=False, timeout=15, username="", password=""):
     """GET an http(s) camera URL. If it carries credentials, try Digest first
     (Amcrest, Dahua, Hikvision, Axis all use Digest), then fall back to Basic."""
     clean, creds = _split_creds(url)
+    if username:
+        creds = (username, password or "")
     if not creds:
         return requests.get(clean, stream=stream, timeout=timeout)
     r = requests.get(clean, auth=HTTPDigestAuth(*creds), stream=stream, timeout=timeout)
@@ -192,9 +194,10 @@ def _cam_http_get(url, stream=False, timeout=15):
     return r
 
 
-def _mjpeg_first_frame(url, timeout=10):
+def _mjpeg_first_frame(url, timeout=10, username="", password=""):
     """Pull a single JPEG frame out of an MJPEG (multipart) HTTP stream."""
-    r = _cam_http_get(url, stream=True, timeout=timeout)
+    r = _cam_http_get(url, stream=True, timeout=timeout,
+                      username=username, password=password)
     r.raise_for_status()
     buf = b""
     try:
@@ -226,6 +229,19 @@ def _ffmpeg_grab(url, timeout=20):
     return out.stdout
 
 
+def _url_with_creds(url, username="", password=""):
+    """Add separately stored credentials to a URL for tools such as ffmpeg.
+    Existing userinfo URLs remain supported for older camera records."""
+    if not username or not url:
+        return url
+    p = urlsplit(url)
+    host = p.hostname or ""
+    if p.port:
+        host += ":%d" % p.port
+    userinfo = "%s:%s@" % (quote(username, safe=""), quote(password or "", safe=""))
+    return urlunsplit((p.scheme, userinfo + host, p.path, p.query, p.fragment))
+
+
 def _is_http(url):
     return bool(url) and url.lower().startswith(("http://", "https://"))
 
@@ -238,16 +254,18 @@ def camera_snapshot(cfg, storage, entity):
     """One still frame from either an IP camera or an HA camera."""
     cam = find_ip_camera(cfg, entity)
     if cam:
+        username = cam.get("username", "")
+        password = cam.get("password", "")
         snap = cam.get("snapshot_url", "")
         if _is_http(snap):                        # Amcrest CGI snapshot (Digest)
-            r = _cam_http_get(snap, timeout=15)
+            r = _cam_http_get(snap, timeout=15, username=username, password=password)
             r.raise_for_status()
             return r.content, r.headers.get("Content-Type", "image/jpeg")
         stream = cam.get("stream_url", "")
         if _is_rtsp(stream):                      # grab a frame off the RTSP feed
-            return _ffmpeg_grab(stream), "image/jpeg"
+            return _ffmpeg_grab(_url_with_creds(stream, username, password)), "image/jpeg"
         if _is_http(stream):                      # pull one frame from HTTP MJPEG
-            return _mjpeg_first_frame(stream), "image/jpeg"
+            return _mjpeg_first_frame(stream, username=username, password=password), "image/jpeg"
         raise requests.RequestException("camera has no usable snapshot source")
     return HAClient(cfg, storage).snapshot(entity)
 
@@ -260,7 +278,9 @@ def camera_stream(cfg, storage, entity):
     if cam:
         stream = cam.get("stream_url", "")
         if _is_http(stream):
-            return _cam_http_get(stream, stream=True, timeout=15)
+            return _cam_http_get(stream, stream=True, timeout=15,
+                                 username=cam.get("username", ""),
+                                 password=cam.get("password", ""))
         return None                               # RTSP / snapshot-only → poll snapshots
     return HAClient(cfg, storage).stream(entity)
 
@@ -459,7 +479,9 @@ def _record_snapshots(storage, cfg, eid, camera, fps, resolution, outfile, stop)
 def _record_loop(storage, cfg, eid, camera, fps, resolution, outfile, stop):
     cam = find_ip_camera(cfg, camera)
     if cam and _is_rtsp(cam.get("stream_url", "")):
-        _record_rtsp(cam["stream_url"], fps, resolution, outfile, stop)
+        stream_url = _url_with_creds(cam["stream_url"], cam.get("username", ""),
+                                     cam.get("password", ""))
+        _record_rtsp(stream_url, fps, resolution, outfile, stop)
     else:
         _record_snapshots(storage, cfg, eid, camera, fps, resolution, outfile, stop)
 

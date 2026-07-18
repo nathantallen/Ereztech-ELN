@@ -111,9 +111,16 @@
     <label>Stream URL (MJPEG)
       <input type="url" name="cam_stream_url" placeholder="http://10.70.11.42/mjpeg">
     </label>
+    <label>Camera username
+      <input type="text" name="cam_username" autocomplete="username" placeholder="admin">
+    </label>
+    <label>Camera password
+      <input type="password" name="cam_password" autocomplete="new-password">
+    </label>
     <label class="span2">Snapshot URL (optional — single JPEG)
       <input type="url" name="cam_snapshot_url" placeholder="http://10.70.11.42/snapshot.jpg">
     </label>
+    <p class="span2 small muted">Credentials are stored in the server-side equipment configuration and are never included in browser camera URLs.</p>
     <div class="span2 form-actions">
       <button class="btn btn-orange" type="submit">Add IP camera</button>
     </div>

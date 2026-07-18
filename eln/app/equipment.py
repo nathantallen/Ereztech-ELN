@@ -72,6 +72,8 @@ def config_page():
             label = request.form.get("cam_label", "").strip()
             stream_url = request.form.get("cam_stream_url", "").strip()
             snapshot_url = request.form.get("cam_snapshot_url", "").strip()
+            username = request.form.get("cam_username", "").strip()
+            password = request.form.get("cam_password", "")
             if not label or not (stream_url or snapshot_url):
                 flash("An IP camera needs a name and at least one feed URL.", "error")
             else:
@@ -82,7 +84,9 @@ def config_page():
                     cam_id = "%s-%d" % (base, n)
                 cfg["ip_cameras"].append({"id": cam_id, "label": label,
                                           "stream_url": stream_url,
-                                          "snapshot_url": snapshot_url})
+                                          "snapshot_url": snapshot_url,
+                                          "username": username,
+                                          "password": password})
                 ha.save_config(storage, cfg)
                 flash("IP camera added — assign it to a hood below.", "success")
         elif action == "delete_ipcam":
