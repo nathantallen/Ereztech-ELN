@@ -145,7 +145,13 @@ input:focus, select:focus, textarea:focus {
   border-color: var(--purple);
   box-shadow: 0 0 0 3px rgba(122, 0, 223, 0.12);
 }
-textarea { min-height: 80px; resize: vertical; }
+textarea {
+  min-width: min(180px, 100%);
+  max-width: 100%;
+  min-height: 80px;
+  resize: both;
+  overflow: auto;
+}
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
 @media (max-width: 700px) { .form-row { grid-template-columns: 1fr; } }
 .form-actions { margin-top: 20px; display: flex; gap: 10px; }
