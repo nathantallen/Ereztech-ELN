@@ -246,7 +246,7 @@ def switch(app, target, make_subdir=None):
 
     target_is_store = os.path.isfile(os.path.join(target_abs, "users.json"))
     if not target_is_store and _dir_has_content(target_abs):
-        return False, ("That folder isn't empty and isn't an existing EreZtech "
+        return False, ("That folder isn't empty and isn't an existing Ereztech "
                        "notebook. Choose an empty folder, or create a new subfolder "
                        "in it.")
 

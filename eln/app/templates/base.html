@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token }}">
-  <title>{% block title %}EreZtech ELN{% endblock %}</title>
+  <title>{% block title %}Ereztech ELN{% endblock %}</title>
   <link rel="icon" href="{{ url_for('static', filename='img/favicon-32.png') }}" sizes="32x32">
   <link rel="icon" href="{{ url_for('static', filename='img/favicon-192.png') }}" sizes="192x192">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/favicon-192.png') }}">
@@ -19,7 +19,7 @@
 {% if current_user.is_authenticated %}
 <header class="topbar">
   <a class="brand" href="{{ url_for('entries.list_entries') }}">
-    <img class="brand-logo" src="{{ url_for('static', filename='img/ereztech-logo.svg') }}" alt="EreZtech">
+    <img class="brand-logo" src="{{ url_for('static', filename='img/ereztech-logo.svg') }}" alt="Ereztech">
     <span class="brand-sub">Lab Notebook</span>
   </a>
   <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav">
@@ -69,7 +69,7 @@
   {% block content %}{% endblock %}
 </main>
 <footer class="footer">
-  <img class="footer-logo" src="{{ url_for('static', filename='img/ereztech-logo.svg') }}" alt="EreZtech">
+  <img class="footer-logo" src="{{ url_for('static', filename='img/ereztech-logo.svg') }}" alt="Ereztech">
   <span>Electronic Lab Notebook — Bridging Chemical Gaps</span>
 </footer>
 </body>

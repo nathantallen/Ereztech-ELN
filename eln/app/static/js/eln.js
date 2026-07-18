@@ -1,4 +1,4 @@
-// EreZtech ELN client-side glue: entry-form material rows + Ketcher sketcher bridge.
+// Ereztech ELN client-side glue: entry-form material rows + Ketcher sketcher bridge.
 (function () {
   "use strict";
 

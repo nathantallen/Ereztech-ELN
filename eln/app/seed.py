@@ -30,40 +30,40 @@ def seed_initial_data(storage):
         "role": "admin",
         "active": True,
     }])
-    print("\n*** EreZtech ELN first-run administrator credentials ***")
+    print("\n*** Ereztech ELN first-run administrator credentials ***")
     print("Username: admin")
     print("Password: %s" % initial_password)
     print("Store this password securely; it will not be shown again.\n")
 
     materials = [
         dict(slug="trimethylgallium", name="Trimethylgallium (TMGa)", cas="1445-79-0",
-             formula="Ga(CH3)3", supplier="EreZtech", air_sensitive=True,
+             formula="Ga(CH3)3", supplier="Ereztech", air_sensitive=True,
              hazards="Pyrophoric; reacts violently with water",
              storage="Stainless bubbler, N2 glovebox / gas cabinet",
              notes="MOCVD gallium precursor. Handle only under inert atmosphere."),
         dict(slug="trimethylaluminum", name="Trimethylaluminum (TMA)", cas="75-24-1",
-             formula="Al2(CH3)6", supplier="EreZtech", air_sensitive=True,
+             formula="Al2(CH3)6", supplier="Ereztech", air_sensitive=True,
              hazards="Pyrophoric; water-reactive",
              storage="Stainless bubbler, gas cabinet",
              notes="ALD aluminum precursor for Al2O3 deposition."),
         dict(slug="diethylzinc", name="Diethylzinc (DEZ)", cas="557-20-0",
-             formula="Zn(C2H5)2", supplier="EreZtech", air_sensitive=True,
+             formula="Zn(C2H5)2", supplier="Ereztech", air_sensitive=True,
              hazards="Pyrophoric; water-reactive",
              storage="Stainless bubbler, N2 glovebox",
              notes="ZnO ALD/MOCVD precursor."),
     ]
     batches = {
-        "trimethylgallium": dict(lot="TMG-2606-A", supplier="EreZtech (in-house)",
+        "trimethylgallium": dict(lot="TMG-2606-A", supplier="Ereztech (in-house)",
                                  received="2026-06-02", purity="99.9999% (6N)",
                                  quantity="250 g", container="SS-316 bubbler #14",
                                  location="Gas cabinet 2, slot A", status="Open",
                                  notes="Adduct-purified lot. ICP-MS metals < 50 ppb each."),
-        "trimethylaluminum": dict(lot="TMA-2605-C", supplier="EreZtech (in-house)",
+        "trimethylaluminum": dict(lot="TMA-2605-C", supplier="Ereztech (in-house)",
                                   received="2026-05-18", purity="99.999% (5N)",
                                   quantity="500 g", container="SS-316 bubbler #7",
                                   location="Gas cabinet 1, slot C", status="In Stock",
                                   notes=""),
-        "diethylzinc": dict(lot="DEZ-2604-B", supplier="EreZtech (in-house)",
+        "diethylzinc": dict(lot="DEZ-2604-B", supplier="Ereztech (in-house)",
                             received="2026-04-27", purity="99.9999% (6N)",
                             quantity="100 g", container="SS-316 ampoule",
                             location="N2 glovebox 3", status="Open",

@@ -1,6 +1,6 @@
-# EreZtech Electronic Lab Notebook (ELN)
+# Ereztech Electronic Lab Notebook (ELN)
 
-An electronic lab notebook for air-sensitive organometallic synthesis (EreZtech
+An electronic lab notebook for air-sensitive organometallic synthesis (Ereztech
 makes electronics-industry organometallic precursors — MOCVD/ALD sources like
 TMGa, TMA, DEZ). Flask + a **file-based** store (no database), runs entirely in
 Docker. This `eln/` project is separate from the parent `erezops/` operations app.

@@ -1,4 +1,4 @@
-"""File-based storage for the EreZtech ELN.
+"""File-based storage for the Ereztech ELN.
 
 Everything lives under one data directory (a mounted NAS / SharePoint-synced
 folder). All records are human-readable: Markdown with YAML frontmatter for

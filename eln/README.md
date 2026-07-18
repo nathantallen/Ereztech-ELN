@@ -1,7 +1,7 @@
-# EreZtech Electronic Lab Notebook
+# Ereztech Electronic Lab Notebook
 
 An electronic lab notebook (ELN) for air-sensitive organometallic synthesis,
-built for EreZtech's electronics-precursor R&D and production labs. Runs as a
+built for Ereztech's electronics-precursor R&D and production labs. Runs as a
 single Docker image; all records are stored as **human-readable files** in a
 storage location you assign (NAS share, SharePoint-synced folder, or local disk).
 
@@ -74,7 +74,7 @@ docker compose up
 ELN_DATA_DIR=/mnt/nas/lab-notebook docker compose up -d
 
 # SharePoint / OneDrive-synced folder on the host
-ELN_DATA_DIR="$HOME/EreZtech/Shared Documents/Lab Notebook" docker compose up -d
+ELN_DATA_DIR="$HOME/Ereztech/Shared Documents/Lab Notebook" docker compose up -d
 ```
 
 To mount an SMB/NAS share directly on a Linux host first:
