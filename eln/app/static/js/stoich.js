@@ -174,6 +174,55 @@
 
     var previewBtn = document.getElementById("eq-preview-btn");
     var pollTimer = null;
+    var previewWrap = document.getElementById("eq-preview");
+    var resizeHandle = previewWrap && previewWrap.querySelector(".camera-resize-handle");
+    if (resizeHandle) {
+      function beginResize(startX, startY) {
+        var startRect = previewWrap.getBoundingClientRect();
+        return function resize(clientX, clientY) {
+          var maxWidth = previewWrap.parentElement.clientWidth;
+          var minWidth = Math.min(280, maxWidth);
+          var width = Math.max(minWidth,
+            Math.min(maxWidth, startRect.width + clientX - startX));
+          var height = Math.max(180,
+            Math.min(window.innerHeight * 0.75,
+              startRect.height + clientY - startY));
+          previewWrap.style.width = Math.round(width) + "px";
+          previewWrap.style.height = Math.round(height) + "px";
+        };
+      }
+
+      resizeHandle.addEventListener("mousedown", function (event) {
+        event.preventDefault();
+        var resize = beginResize(event.clientX, event.clientY);
+        function move(moveEvent) { resize(moveEvent.clientX, moveEvent.clientY); }
+        function finish() {
+          window.removeEventListener("mousemove", move);
+          window.removeEventListener("mouseup", finish);
+        }
+        window.addEventListener("mousemove", move);
+        window.addEventListener("mouseup", finish);
+      });
+
+      resizeHandle.addEventListener("touchstart", function (event) {
+        if (!event.touches.length) return;
+        event.preventDefault();
+        var resize = beginResize(event.touches[0].clientX, event.touches[0].clientY);
+        function move(moveEvent) {
+          if (!moveEvent.touches.length) return;
+          moveEvent.preventDefault();
+          resize(moveEvent.touches[0].clientX, moveEvent.touches[0].clientY);
+        }
+        function finish() {
+          window.removeEventListener("touchmove", move);
+          window.removeEventListener("touchend", finish);
+          window.removeEventListener("touchcancel", finish);
+        }
+        window.addEventListener("touchmove", move, { passive: false });
+        window.addEventListener("touchend", finish);
+        window.addEventListener("touchcancel", finish);
+      });
+    }
     function stopPreview(img, wrap, msg) {
       if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
       img.src = "";

@@ -44,8 +44,9 @@
       <button class="btn btn-orange" type="submit">Save equipment</button>
       <button class="btn btn-ghost" type="button" id="eq-preview-btn">Live camera preview</button>
     </div>
-    <div class="span2" id="eq-preview" hidden>
+    <div class="span2 camera-preview-wrap" id="eq-preview" title="Drag the lower-right corner to resize" hidden>
       <img id="eq-preview-img" class="camera-preview" alt="Live camera preview">
+      <button class="camera-resize-handle" type="button" aria-label="Resize camera preview" title="Drag to resize">↘</button>
     </div>
   </form>
   <script>window.EQUIPMENT_CFG = {{ {'hoods': equipment_cfg.hoods} | tojson }};</script>
