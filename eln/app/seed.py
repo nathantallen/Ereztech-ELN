@@ -33,7 +33,9 @@ def seed_initial_data(storage):
     print("\n*** Ereztech ELN first-run administrator credentials ***")
     print("Username: admin")
     print("Password: %s" % initial_password)
-    print("Store this password securely; it will not be shown again.\n")
+    # flush=True: under gunicorn stdout is block-buffered, so without it these
+    # lines sit in the buffer and never reach `docker logs` at install time
+    print("Store this password securely; it will not be shown again.\n", flush=True)
 
     materials = [
         dict(slug="trimethylgallium", name="Trimethylgallium (TMGa)", cas="1445-79-0",
