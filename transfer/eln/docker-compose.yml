@@ -1,0 +1,36 @@
+services:
+  eln:
+    build: .
+    image: ereztech-eln
+    ports:
+      - "8091:8091"
+    environment:
+      - ELN_SECRET_KEY=${ELN_SECRET_KEY:-}
+      - ELN_MAX_UPLOAD_MB=${ELN_MAX_UPLOAD_MB:-512}
+      # Folders the in-app "Change location" browser is allowed to walk. Mount
+      # your NAS/SharePoint shares under one of these (e.g. /nas) below.
+      - ELN_BROWSE_ROOTS=${ELN_BROWSE_ROOTS:-/nas:/data}
+    volumes:
+      # Initial storage location (used until an admin re-points it in the app).
+      - ${ELN_DATA_DIR:-./data}:/data
+      # Tiny persistent volume for the storage-location pointer, so the chosen
+      # folder is remembered across restarts (lives outside the movable data dir).
+      - eln_config:/config
+      # Network storage made browsable in-app. Point ELN_NAS_DIR at a mounted
+      # NAS/SharePoint share on the host; browse to it under /nas in Storage.
+      - ${ELN_NAS_DIR:-./nas}:/nas
+    restart: unless-stopped
+
+  # Demo-only stand-in for Home Assistant (fake hood cameras + sensors).
+  # Start with: docker compose --profile demo up -d
+  # Then point Equipment -> URL at http://mockha:8123 with any token.
+  mockha:
+    build: ./mock_ha
+    image: ereztech-eln-mockha
+    profiles: ["demo"]
+    ports:
+      - "8123:8123"
+    restart: unless-stopped
+
+volumes:
+  eln_config:

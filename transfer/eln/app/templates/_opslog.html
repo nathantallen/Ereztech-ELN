@@ -1,0 +1,69 @@
+{# Actions and Observations card — replaces the old "Observations & Data" section. #}
+{% set locked = meta.status != 'draft' %}
+{% set running = ops.started_at and not ops.ended_at %}
+{% set eq = meta.equipment or {} %}
+<div class="card" id="operations">
+  <h2>Actions and Observations</h2>
+  {% if legacy_obs %}
+  <details class="legacy-obs">
+    <summary class="small">Legacy “Observations &amp; Data” notes (recorded before Actions and Observations)</summary>
+    <div class="md-body">{{ legacy_obs | markdown }}</div>
+  </details>
+  {% endif %}
+  {% if not ops.started_at %}
+    {% if can_edit and not locked %}
+    <p class="small muted">Start the lab timer when physical work begins — every observation,
+      photo and recording is then timestamped against it{% if eq.sensors and ha_configured %},
+      and sensor logging starts automatically{% endif %}.</p>
+    <form method="post" action="{{ url_for('entries.ops_start', eid=meta.id) }}">
+      <button class="btn btn-orange" type="submit">▶ Start lab work</button>
+    </form>
+    {% else %}
+    <p class="muted">Lab work has not been performed on this entry.</p>
+    {% endif %}
+  {% else %}
+    {% set history = meta.operations_history or [] %}
+    {% if history %}
+    <details class="ops-history">
+      <summary class="small">{{ history|length }} previous operations session{{ '' if history|length == 1 else 's' }}</summary>
+      {% for session in history %}
+      <div class="ops-history-row small">
+        <strong>Session {{ session.session or loop.index }}</strong> —
+        {{ session.started_at | nicedate }} by {{ session.started_by }}{% if session.ended_at %} ·
+        ended {{ session.ended_at | nicedate }} by {{ session.ended_by }}{% endif %}
+      </div>
+      {% endfor %}
+    </details>
+    {% endif %}
+    <p class="small muted">
+      <strong>Session {{ ops.session or (history|length + 1) }}</strong> ·
+      started {{ ops.started_at | nicedate }} by {{ ops.started_by }}{% if ops.ended_at %} ·
+      ended {{ ops.ended_at | nicedate }} by {{ ops.ended_by }}{% endif %}.
+    </p>
+    {% if ops.ended_at and meta.equipment and meta.equipment.sensors %}
+    <div class="ops-plot-wrap ops-plot-static" id="ops-plot-wrap" data-eid="{{ meta.id }}">
+      <canvas id="ops-plot" width="860" height="200"></canvas>
+      <div class="ops-plot-legend" id="ops-plot-legend"></div>
+      <button type="button" class="ops-fs-btn" id="ops-fullscreen" title="Full screen">⛶</button>
+    </div>
+    {% endif %}
+    <div id="observations-list" class="obs-list">
+      {% include '_observations.html' %}
+    </div>
+    {% if running and can_edit %}
+    <div class="obs-composer">
+      <textarea id="obs-text" rows="3" name="observation" autocomplete="off"
+                aria-label="Observation"
+                placeholder="Observation… (timestamped when you click Finish)"></textarea>
+      <button type="button" class="btn btn-orange" id="obs-save">✓ Finish &amp; save observation</button>
+    </div>
+    {% endif %}
+    {% if ops.ended_at and can_edit and not locked %}
+    <form method="post" action="{{ url_for('entries.ops_start', eid=meta.id) }}" class="ops-restart"
+          onsubmit="return confirm('Restart Actions and Observations? The previous session will remain in the entry history.')">
+      <button class="btn btn-orange" type="submit">↻ Restart Actions and Observations</button>
+      <span class="small muted">Starts a new timer session; previous observations and session times are preserved.</span>
+    </form>
+    {% endif %}
+  {% endif %}
+</div>

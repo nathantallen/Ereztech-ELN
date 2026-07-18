@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Storage — EreZtech ELN{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Storage</h1>
+    <div class="sub">Where your notebook lives — every record is a human-readable file</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Time zone</h2>
+  {% if is_admin %}
+  <form method="post" action="{{ url_for('main.set_timezone') }}" class="tz-form">
+    <select name="timezone" id="tz-select">
+      <option value="" {{ 'selected' if not timezone }}>Auto — each viewer's local time</option>
+      {% for tz in tz_options %}
+      <option value="{{ tz }}" {{ 'selected' if timezone == tz }}>{{ tz.replace('_', ' ') }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn btn-orange" type="submit">Save time zone</button>
+    <div class="muted small tz-note">Timestamps are stored in UTC and shown in this zone.
+      <span id="tz-preview"></span></div>
+  </form>
+  <script>
+    (function () {
+      var sel = document.getElementById("tz-select");
+      var out = document.getElementById("tz-preview");
+      if (!sel || !out) return;
+      function preview() {
+        var opts = { year: "numeric", month: "short", day: "numeric",
+                     hour: "numeric", minute: "2-digit", second: "2-digit", timeZoneName: "short" };
+        if (sel.value) opts.timeZone = sel.value;
+        try { out.textContent = "Right now: " + new Date().toLocaleString(undefined, opts); }
+        catch (e) { out.textContent = ""; }
+      }
+      sel.addEventListener("change", preview);
+      preview();
+    })();
+  </script>
+  {% else %}
+  <p class="small muted">Timestamps display in
+    {% if timezone %}<strong>{{ timezone.replace('_',' ') }}</strong>{% else %}your local time{% endif %}.
+    Only an administrator can change the time zone.</p>
+  {% endif %}
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h2>Data location</h2>
+    <table class="table kv">
+      <tr><th>Path (in container)</th><td class="mono">{{ data_dir }}</td></tr>
+      {% if disk %}
+      <tr><th>Volume free space</th><td>{{ '%.1f' | format(disk.free_gb) }} GB of {{ '%.1f' | format(disk.total_gb) }} GB</td></tr>
+      {% endif %}
+      <tr><th>Max upload size</th><td>{{ max_upload_mb }} MB <span class="muted">(ELN_MAX_UPLOAD_MB)</span></td></tr>
+    </table>
+    <table class="table small">
+      <thead><tr><th>Item</th><th>Present</th></tr></thead>
+      <tbody>
+      {% for t in tree %}
+      <tr><td class="mono">{{ t.name }}</td><td>{{ '✔' if t.exists else '—' }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% if is_admin %}
+    <button class="btn btn-orange" type="button" id="change-location-btn">Change location…</button>
+    <p class="small muted" style="margin-bottom:0">Browse to any mounted folder — a NAS share, a
+      SharePoint/OneDrive-synced folder, or a local disk — and assign it as the notebook's storage.
+      An empty target has the current notebook copied into it; a folder that already holds an
+      EreZtech notebook is adopted as-is.</p>
+    {% else %}
+    <p class="small muted" style="margin-bottom:0">Only an administrator can change the storage location.</p>
+    {% endif %}
+  </div>
+  <div class="card">
+    <h2>File format</h2>
+    <p class="small">Everything is stored as plain, human-readable files — the notebook remains
+    fully legible without this application:</p>
+    <pre class="tree">data/
+├─ users.json                  accounts &amp; roles
+├─ properties.json             physical-properties DB (self-learning)
+├─ equipment.json              Home Assistant + hood assignments
+├─ notebook/
+│  └─ ELN-2026-0001/
+│     ├─ entry.md              YAML header (reaction, stoichiometry,
+│     │                        equipment, run times) + Markdown sections
+│     ├─ observations.md       timestamped actions and observations
+│     ├─ audit.log             append-only event history
+│     ├─ structures/           .mol (+ rendered .svg)
+│     ├─ sensors/              one CSV per logged sensor
+│     ├─ photos/  recordings/  camera captures during the run
+│     └─ attachments/          videos, sensor logs, spectra…
+└─ materials/
+   └─ trimethylgallium/
+      ├─ material.md
+      ├─ batches/tmg-2606-a.md
+      └─ attachments/          certificates of analysis</pre>
+    <p class="small muted">Because records are plain text, the share can be indexed, backed up,
+    diffed and read directly from SharePoint or the NAS.</p>
+    <p class="small muted">Location pointer stored in <span class="mono">{{ config_dir }}</span>,
+      so the chosen folder is remembered across restarts.</p>
+  </div>
+</div>
+
+{% if is_admin %}
+<div class="dlg-backdrop" id="browse-modal" hidden>
+  <div class="dlg" role="dialog" aria-modal="true" aria-label="Choose storage location" tabindex="-1">
+    <div class="dlg-titlebar">
+      <div class="dlg-lights"><span></span><span></span><span></span></div>
+      <div class="dlg-title">Choose storage location</div>
+      <button class="dlg-x" type="button" id="browse-close" aria-label="Cancel">✕</button>
+    </div>
+    <div class="dlg-toolbar">
+      <button class="dlg-btn" type="button" id="browse-up" title="Up (Backspace)">↑</button>
+      <nav class="dlg-crumbs" id="browse-crumbs"></nav>
+    </div>
+    <div class="dlg-body">
+      <aside class="dlg-sidebar">
+        <div class="dlg-side-head">Locations</div>
+        <ul class="dlg-side-list" id="browse-sidebar"></ul>
+      </aside>
+      <ul class="dlg-list" id="browse-list" tabindex="0"></ul>
+    </div>
+    <form method="post" action="{{ url_for('main.set_location') }}" class="dlg-footer" id="browse-form">
+      <input type="hidden" name="path" id="browse-path">
+      <button class="dlg-btn" type="button" id="browse-newfolder-btn">New Folder</button>
+      <span class="dlg-status" id="browse-status"></span>
+      <button class="btn btn-ghost" type="button" id="browse-cancel">Cancel</button>
+      <button class="btn btn-orange" type="submit" id="browse-choose" disabled>Choose</button>
+    </form>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='js/storage_browse.js') }}" defer></script>
+{% endif %}
+{% endblock %}
