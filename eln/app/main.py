@@ -29,12 +29,8 @@ def _storage():
 
 @bp.route("/")
 @login_required
-def dashboard():
-    storage = _storage()
-    entries = storage.list_entries()[:8]
-    materials = storage.list_materials()
-    return render_template("dashboard.html", stats=storage.stats(),
-                           recent=entries, materials=materials[:6])
+def home():
+    return redirect(url_for("entries.list_entries"))
 
 
 @bp.route("/settings")

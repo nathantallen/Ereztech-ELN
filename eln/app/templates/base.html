@@ -17,7 +17,7 @@
 <body>
 {% if current_user.is_authenticated %}
 <header class="topbar">
-  <a class="brand" href="{{ url_for('main.dashboard') }}">
+  <a class="brand" href="{{ url_for('entries.list_entries') }}">
     <img class="brand-logo" src="{{ url_for('static', filename='img/ereztech-logo.svg') }}" alt="EreZtech">
     <span class="brand-sub">Lab Notebook</span>
   </a>
@@ -25,7 +25,6 @@
     <span aria-hidden="true">☰</span><span class="sr-only">Open navigation</span>
   </button>
   <nav id="main-nav">
-    <a href="{{ url_for('main.dashboard') }}" class="{{ 'active' if request.endpoint == 'main.dashboard' }}">Dashboard</a>
     <a href="{{ url_for('entries.list_entries') }}" class="{{ 'active' if request.blueprint == 'entries' }}">Notebook</a>
     <a href="{{ url_for('materials.list_materials') }}" class="{{ 'active' if request.blueprint == 'materials' }}">Raw Materials</a>
     <a href="{{ url_for('main.settings') }}" class="{{ 'active' if request.endpoint == 'main.settings' }}">Storage</a>
