@@ -2,6 +2,8 @@ import os
 import tempfile
 import unittest
 
+from flask import render_template
+
 from app import User, create_app
 from app.svg import sanitize_svg
 
@@ -67,6 +69,17 @@ class SecurityTests(unittest.TestCase):
         user = User({"username": "op", "role": "operator", "_role": saved})
         self.assertTrue(user.can_edit)
         self.assertFalse(user.is_admin)
+
+    def test_running_operations_bar_includes_assigned_camera(self):
+        meta = {"id": "ELN-2026-0001", "equipment": {"camera": "ipcam.hood-one"}}
+        ops = {"started_at": "2026-07-18T12:00:00Z"}
+        with self.app.test_request_context("/entries/ELN-2026-0001"):
+            html = render_template("_operations.html", meta=meta, ops=ops,
+                                   ha_configured=True, recording={"active": False})
+        self.assertIn('id="ops-camera"', html)
+        self.assertIn('/equipment/stream/ipcam.hood-one', html)
+        self.assertIn('/equipment/snapshot/ipcam.hood-one', html)
+        self.assertIn('id="ops-camera-toggle"', html)
 
 
 if __name__ == "__main__":

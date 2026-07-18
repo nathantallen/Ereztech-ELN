@@ -197,11 +197,61 @@
     });
   }
 
+  function initLiveCamera(bar) {
+    var wrap = document.getElementById("ops-camera");
+    var img = document.getElementById("ops-camera-img");
+    if (!wrap || !img) return;
+    var pollTimer = null;
+
+    function pollSnapshots() {
+      if (pollTimer) return;
+      function tick() { img.src = img.dataset.snapshot + "?t=" + Date.now(); }
+      tick();
+      pollTimer = setInterval(tick, 1500);
+    }
+
+    img.onerror = function () {
+      img.onerror = null;
+      pollSnapshots();
+    };
+    img.src = img.dataset.stream;
+
+    var toggle = document.getElementById("ops-camera-toggle");
+    if (toggle) toggle.addEventListener("click", function () {
+      var collapsed = wrap.classList.toggle("collapsed");
+      toggle.textContent = collapsed ? "+" : "−";
+      toggle.title = collapsed ? "Show camera" : "Hide camera";
+      toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    });
+
+    var handle = wrap.querySelector(".ops-camera-resize");
+    if (handle) handle.addEventListener("pointerdown", function (event) {
+      event.preventDefault();
+      var startX = event.clientX, startY = event.clientY;
+      var startWidth = wrap.offsetWidth, startHeight = wrap.offsetHeight;
+      handle.setPointerCapture(event.pointerId);
+      function move(moveEvent) {
+        var maxWidth = Math.max(180, window.innerWidth - 32);
+        wrap.style.width = Math.min(maxWidth, Math.max(160, startWidth + moveEvent.clientX - startX)) + "px";
+        wrap.style.height = Math.min(420, Math.max(100, startHeight + moveEvent.clientY - startY)) + "px";
+      }
+      function finish() {
+        handle.removeEventListener("pointermove", move);
+        handle.removeEventListener("pointerup", finish);
+        handle.removeEventListener("pointercancel", finish);
+      }
+      handle.addEventListener("pointermove", move);
+      handle.addEventListener("pointerup", finish);
+      handle.addEventListener("pointercancel", finish);
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     var bar = document.getElementById("ops-bar");
     if (bar) {
       initTimer(bar);
       initCameraButtons(bar);
+      initLiveCamera(bar);
     }
     initPlot();
     initComposer();

@@ -649,6 +649,18 @@ td.today .day-num {
 .ops-plot-full canvas { height: calc(100vh - 90px) !important; flex: 1; }
 .ops-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .ops-actions .btn { white-space: nowrap; }
+.ops-camera {
+  position: relative; flex: 0 0 auto; width: 240px; height: 140px;
+  min-width: 160px; min-height: 100px; max-width: min(520px, calc(100vw - 32px));
+  max-height: 420px; overflow: hidden; resize: both;
+  border: 1px solid rgba(255,255,255,0.28); border-radius: 8px; background: #05020d;
+}
+.ops-camera img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.ops-camera-label { position: absolute; left: 6px; top: 5px; padding: 2px 6px; border-radius: 5px; background: rgba(15,0,55,.78); color: #fff; font-size: 10px; }
+.ops-camera-toggle { position: absolute; right: 5px; top: 5px; width: 30px; height: 30px; border: 0; border-radius: 6px; background: rgba(15,0,55,.86); color: #fff; font-size: 20px; cursor: pointer; }
+.ops-camera .ops-camera-resize { width: 34px; height: 34px; }
+.ops-camera.collapsed { width: 132px !important; height: 36px !important; min-height: 36px; resize: none; }
+.ops-camera.collapsed img, .ops-camera.collapsed .ops-camera-resize { display: none; }
 .btn-danger-solid { background: var(--danger); color: #fff; }
 .btn-danger-solid:hover { background: #a82222; }
 .ops-msg { flex-basis: 100%; color: var(--lavender); min-height: 0; }
@@ -914,10 +926,11 @@ td.today .day-num {
     resize: vertical;
   }
 
-  .ops-bar { position: static; gap: 10px; padding: 12px; }
-  .ops-clock { width: 100%; }
+  .ops-bar { position: sticky; top: 0; gap: 8px; padding: 9px; max-height: 52vh; overflow-y: auto; }
+  .ops-clock { width: auto; flex: 1; }
   .ops-clock-time { font-size: 23px; }
-  .ops-plot-wrap { min-width: 0; flex-basis: 100%; }
+  .ops-plot-wrap { min-width: 0; flex-basis: 100%; order: 4; }
+  .ops-camera { width: 180px; height: 106px; min-width: 150px; min-height: 90px; }
   .ops-actions { width: 100%; }
   .ops-actions form, .ops-actions .btn { flex: 1 1 140px; }
   .ops-actions form .btn { width: 100%; }

@@ -18,6 +18,18 @@
     <button type="button" class="ops-fs-btn" id="ops-fullscreen" title="Full screen">⛶</button>
   </div>
   {% endif %}
+  {% if eq.camera and ha_configured %}
+  <div class="ops-camera" id="ops-camera" data-camera="{{ eq.camera }}">
+    <img id="ops-camera-img" alt="Live view from the assigned lab camera"
+         data-stream="{{ url_for('equipment.stream', entity=eq.camera) }}"
+         data-snapshot="{{ url_for('equipment.snapshot', entity=eq.camera) }}">
+    <span class="ops-camera-label">Live camera</span>
+    <button type="button" class="ops-camera-toggle" id="ops-camera-toggle"
+            aria-expanded="true" title="Hide camera">−</button>
+    <button type="button" class="camera-resize-handle ops-camera-resize"
+            aria-label="Resize live camera">↘</button>
+  </div>
+  {% endif %}
   <div class="ops-actions">
     {% if eq.camera and ha_configured %}
     <button type="button" class="btn" id="ops-photo">📷 Photo</button>
