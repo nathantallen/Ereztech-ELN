@@ -2,6 +2,24 @@
 (function () {
   "use strict";
 
+  // ---------- mobile keyboard and dictation hints ----------
+  function initDictationFields() {
+    var literalNames = /(?:^|_)(?:cas|formula|username|url|host|entity|lot|unit|token|password)(?:$|_)/i;
+    document.querySelectorAll('input[type="text"], input[type="search"], input[type="url"], textarea')
+      .forEach(function (field) {
+        if (field.readOnly || field.disabled || field.dataset.dictation === "off") return;
+        var literal = field.type === "url" || literalNames.test(field.name || field.id || "");
+        field.setAttribute("inputmode", field.type === "url" ? "url" : "text");
+        field.setAttribute("autocapitalize", literal ? "none" : "sentences");
+        field.setAttribute("spellcheck", literal ? "false" : "true");
+        // autocorrect is understood by iOS/iPadOS even though it is not yet a
+        // universal HTML attribute. Disable it for chemical IDs and formulas.
+        field.setAttribute("autocorrect", literal ? "off" : "on");
+        field.setAttribute("enterkeyhint",
+          field.type === "search" ? "search" : (field.tagName === "TEXTAREA" ? "enter" : "next"));
+      });
+  }
+
   // Add the per-session CSRF token to every server-rendered POST form. This
   // keeps older templates protected without duplicating hidden markup.
   document.addEventListener("DOMContentLoaded", function () {
@@ -138,7 +156,7 @@
     document.querySelectorAll("form input[type=password], form input[autocomplete=username]")
       .forEach(function (el) {
         el.addEventListener("keydown", function (ev) {
-          if (ev.key === "Enter" && el.form) {
+          if (ev.key === "Enter" && !ev.isComposing && el.form) {
             ev.preventDefault();
             el.form.requestSubmit();
           }
@@ -174,6 +192,7 @@
   }
 
   document.addEventListener("DOMContentLoaded", function () {
+    initDictationFields();
     initEntryForm();
     initSketcher();
     initTechnique();

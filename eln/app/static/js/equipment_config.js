@@ -75,7 +75,10 @@
         : "Enter the camera address, then apply the preset URLs.";
     });
     host.addEventListener("keydown", function (event) {
-      if (event.key === "Enter") { event.preventDefault(); applyPreset(); }
+      if (event.key === "Enter" && !event.isComposing) {
+        event.preventDefault();
+        applyPreset();
+      }
     });
   }
 

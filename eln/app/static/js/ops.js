@@ -158,7 +158,7 @@
       });
     });
     text.addEventListener("keydown", function (ev) {
-      if ((ev.metaKey || ev.ctrlKey) && ev.key === "Enter") btn.click();
+      if (!ev.isComposing && (ev.metaKey || ev.ctrlKey) && ev.key === "Enter") btn.click();
     });
   }
 

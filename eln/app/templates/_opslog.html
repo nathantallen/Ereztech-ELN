@@ -52,7 +52,9 @@
     </div>
     {% if running and can_edit %}
     <div class="obs-composer">
-      <textarea id="obs-text" rows="3" placeholder="Observation… (timestamped when you click Finish)"></textarea>
+      <textarea id="obs-text" rows="3" name="observation" autocomplete="off"
+                aria-label="Observation"
+                placeholder="Observation… (timestamped when you click Finish)"></textarea>
       <button type="button" class="btn btn-orange" id="obs-save">✓ Finish &amp; save observation</button>
     </div>
     {% endif %}
