@@ -2,6 +2,21 @@
 (function () {
   "use strict";
 
+  // Add the per-session CSRF token to every server-rendered POST form. This
+  // keeps older templates protected without duplicating hidden markup.
+  document.addEventListener("DOMContentLoaded", function () {
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    if (!meta) return;
+    document.querySelectorAll('form[method="post"], form[method="POST"]').forEach(function (form) {
+      if (form.querySelector('input[name="_csrf_token"]')) return;
+      var input = document.createElement("input");
+      input.type = "hidden";
+      input.name = "_csrf_token";
+      input.value = meta.content;
+      form.appendChild(input);
+    });
+  });
+
   // ---------- entry form: dynamic raw-material rows ----------
   function fillLots(matSelect, lotSelect, keep) {
     var map = window.MATERIALS_MAP || {};

@@ -162,7 +162,10 @@
     if (!name) return;
     fetch("/settings/mkdir", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content,
+      },
       body: JSON.stringify({ parent: cur.path, name: name }),
     }).then(function (r) { return r.json(); })
       .then(function (res) {

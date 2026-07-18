@@ -10,31 +10,56 @@ Namespacing then prefixes every id so several drawings inlined on one page don't
 collide on shared ids (glyph-0-1, clip-0, …).
 """
 import re
+import xml.etree.ElementTree as ET
 
-# paired <script>…</script> / <foreignObject>…</foreignObject> (content included)
-_PAIRED = re.compile(
-    r"<\s*(script|foreignObject)\b[^>]*>.*?<\s*/\s*\1\s*>",
-    re.IGNORECASE | re.DOTALL)
-# any stray/self-closing script|foreignObject tag left behind
-_STRAY_TAG = re.compile(r"<\s*/?\s*(?:script|foreignObject)\b[^>]*>",
-                        re.IGNORECASE)
-# inline event handlers: on<something>="…" / on…='…' / on…=value
-_ON_ATTR = re.compile(r"\son[a-zA-Z]+\s*=\s*(?:\"[^\"]*\"|'[^']*'|[^\s>]+)",
-                      re.IGNORECASE)
-# javascript: / data:text/html in (xlink:)href — neutralize to an empty target
-_JS_URI = re.compile(
-    r"((?:xlink:)?href)\s*=\s*([\"'])\s*(?:javascript:|data\s*:\s*text/html)[^\"']*\2",
-    re.IGNORECASE)
+_ALLOWED_ELEMENTS = {
+    "svg", "g", "defs", "symbol", "use", "path", "line", "polyline",
+    "polygon", "rect", "circle", "ellipse", "text", "tspan", "clipPath",
+    "mask", "pattern", "linearGradient", "radialGradient", "stop", "title",
+    "desc", "style",
+}
+_URI_ATTRIBUTES = {"href", "{http://www.w3.org/1999/xlink}href"}
+
+
+def _local_name(tag):
+    return tag.rsplit("}", 1)[-1]
 
 
 def sanitize_svg(svg):
+    """Parse SVG as XML and remove active/unknown content and unsafe URLs."""
     if not svg:
         return svg
-    svg = _PAIRED.sub("", svg)
-    svg = _STRAY_TAG.sub("", svg)
-    svg = _ON_ATTR.sub("", svg)
-    svg = _JS_URI.sub(r'\1=\2\2', svg)
-    return svg
+    try:
+        root = ET.fromstring(svg)
+    except (ET.ParseError, ValueError):
+        return ""
+    if _local_name(root.tag) != "svg":
+        return ""
+
+    def clean(parent):
+        for child in list(parent):
+            if _local_name(child.tag) not in _ALLOWED_ELEMENTS:
+                parent.remove(child)
+                continue
+            clean(child)
+        for attr, value in list(parent.attrib.items()):
+            local = _local_name(attr).lower()
+            normalized = re.sub(r"\s+", "", value or "").lower()
+            if local.startswith("on"):
+                del parent.attrib[attr]
+            elif attr in _URI_ATTRIBUTES and not (normalized.startswith("#") or normalized == ""):
+                del parent.attrib[attr]
+            elif local == "style" and ("url(" in normalized or "expression(" in normalized):
+                del parent.attrib[attr]
+        if _local_name(parent.tag) == "style" and parent.text:
+            css = re.sub(r"\s+", "", parent.text).lower()
+            if "url(" in css or "@import" in css or "expression(" in css:
+                parent.text = ""
+
+    clean(root)
+    ET.register_namespace("", "http://www.w3.org/2000/svg")
+    ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
+    return ET.tostring(root, encoding="unicode")
 
 
 def namespace_svg(svg, uid):

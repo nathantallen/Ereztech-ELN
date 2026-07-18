@@ -21,10 +21,12 @@ globally-unique ids (ELN-YEAR-SEQ) so cross-references resolve regardless of who
 owns them.
 """
 import datetime
+import copy
 import json
 import os
 import re
 import threading
+from contextlib import contextmanager
 
 import yaml
 
@@ -122,6 +124,15 @@ class Storage:
         # eid -> containing folder; an entry never moves once created, so this
         # is safe to cache and just saves rescanning user folders on read paths
         self._entry_dir_cache = {}
+        # path -> (mtime_ns, size, parsed metadata). Entry list pages only need
+        # frontmatter, so unchanged YAML is not reparsed on every request.
+        self._entry_meta_cache = {}
+
+    @contextmanager
+    def mutation_lock(self):
+        """Serialize read-modify-write requests within the Gunicorn worker."""
+        with _LOCK:
+            yield
 
     # ---------- layout / seed ----------
 
@@ -306,12 +317,23 @@ class Storage:
 
     def list_entries(self):
         entries = []
+        live_paths = set()
         for eid, path in self._iter_entry_paths():
+            live_paths.add(path)
             try:
-                meta, _ = load_md(path)
-                entries.append(meta)
+                stat = os.stat(path)
+                cached = self._entry_meta_cache.get(path)
+                signature = (stat.st_mtime_ns, stat.st_size)
+                if cached and cached[:2] == signature:
+                    meta = cached[2]
+                else:
+                    meta, _ = load_md(path)
+                    self._entry_meta_cache[path] = (signature[0], signature[1], meta)
+                entries.append(copy.deepcopy(meta))
             except Exception:
                 continue
+        for stale in set(self._entry_meta_cache) - live_paths:
+            self._entry_meta_cache.pop(stale, None)
         entries.sort(key=lambda m: str(m.get("created", "")), reverse=True)
         return entries
 
@@ -328,6 +350,7 @@ class Storage:
             os.makedirs(d, exist_ok=True)
             dump_md(os.path.join(d, "entry.md"), meta, body)
             self._entry_dir_cache[eid] = d
+            self._entry_meta_cache.pop(os.path.join(d, "entry.md"), None)
 
     def create_entry(self, meta, body):
         with _LOCK:

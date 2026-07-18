@@ -1,9 +1,11 @@
 import datetime
 import os
 import re
+import secrets
 
+import bleach
 import markdown as md
-from flask import Flask, request
+from flask import Flask, abort, g, request, session
 from flask_login import LoginManager, UserMixin, current_user
 from markupsafe import Markup, escape
 
@@ -48,9 +50,24 @@ class User(UserMixin):
 def create_app():
     from . import location
     app = Flask(__name__)
-    app.config["SECRET_KEY"] = os.environ.get("ELN_SECRET_KEY", "eln-dev-secret-change-me")
+    configured_secret = (os.environ.get("ELN_SECRET_KEY") or "").strip()
+    if configured_secret in ("", "change-me-in-production", "eln-dev-secret-change-me"):
+        secret_file = os.path.join(location.config_dir(), "secret_key")
+        try:
+            with open(secret_file, "r", encoding="utf-8") as f:
+                configured_secret = f.read().strip()
+        except OSError:
+            configured_secret = ""
+        if not configured_secret:
+            configured_secret = secrets.token_hex(32)
+            tmp = secret_file + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                f.write(configured_secret)
+            os.chmod(tmp, 0o600)
+            os.replace(tmp, secret_file)
+    app.config["SECRET_KEY"] = configured_secret
     app.config["DATA_DIR"] = location.get_data_dir()   # honours the assignable pointer
-    app.config["MAX_CONTENT_LENGTH"] = int(os.environ.get("ELN_MAX_UPLOAD_MB", "4096")) * 1024 * 1024
+    app.config["MAX_CONTENT_LENGTH"] = int(os.environ.get("ELN_MAX_UPLOAD_MB", "512")) * 1024 * 1024
 
     # If a storage location was assigned but is not currently reachable (e.g. the
     # NAS is not mounted yet), we fall back to the default dir — but make that
@@ -83,6 +100,27 @@ def create_app():
                 and request.endpoint != "main.set_location":
             return ("Storage is being relocated — please retry in a moment.", 503)
         return None
+
+    @app.before_request
+    def _protect_mutations():
+        if request.method not in ("POST", "PUT", "PATCH", "DELETE"):
+            return None
+        supplied = request.form.get("_csrf_token") or request.headers.get("X-CSRF-Token")
+        expected = session.get("_csrf_token")
+        if not expected or not supplied or not secrets.compare_digest(expected, supplied):
+            abort(400, description="Invalid or missing CSRF token.")
+        # The app uses file-backed read-modify-write records. One worker serves
+        # multiple threads, so hold the shared re-entrant lock for the complete
+        # mutation to prevent one request overwriting another request's changes.
+        guard = app.extensions["storage"].mutation_lock()
+        guard.__enter__()
+        g._mutation_guard = guard
+
+    @app.teardown_request
+    def _release_mutation_lock(_error):
+        guard = getattr(g, "_mutation_guard", None)
+        if guard is not None:
+            guard.__exit__(None, None, None)
 
     @login_manager.user_loader
     def load_user(username):
@@ -118,6 +156,10 @@ def create_app():
 
     @app.context_processor
     def inject_globals():
+        token = session.get("_csrf_token")
+        if not token:
+            token = secrets.token_urlsafe(32)
+            session["_csrf_token"] = token
         return {
             "is_admin": current_user.is_authenticated and current_user.is_admin,
             "can_edit": current_user.is_authenticated and current_user.can_edit,
@@ -126,6 +168,7 @@ def create_app():
             "entry_statuses": ENTRY_STATUSES,
             "storage_fallback": app.config.get("STORAGE_FALLBACK"),
             "timezone": app.config.get("TIMEZONE") or "",
+            "csrf_token": token,
         }
 
     # entry ids in free text become links to that entry; the lookbehind keeps
@@ -136,7 +179,15 @@ def create_app():
     def render_markdown(text):
         html = md.markdown(text or "", extensions=["tables", "fenced_code", "nl2br"])
         html = eln_ref.sub(r'<a class="entry-ref" href="/entries/\1">\1</a>', html)
-        return Markup(html)
+        tags = set(bleach.sanitizer.ALLOWED_TAGS) | {
+            "p", "br", "hr", "pre", "h1", "h2", "h3", "h4", "h5", "h6",
+            "table", "thead", "tbody", "tr", "th", "td", "del",
+        }
+        attrs = dict(bleach.sanitizer.ALLOWED_ATTRIBUTES)
+        attrs["a"] = ["href", "title", "class"]
+        clean = bleach.clean(html, tags=tags, attributes=attrs,
+                             protocols={"http", "https", "mailto"}, strip=True)
+        return Markup(clean)
 
     @app.template_filter("nicedate")
     def nicedate(value):

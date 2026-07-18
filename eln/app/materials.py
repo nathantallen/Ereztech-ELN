@@ -219,6 +219,9 @@ def batch_attach(slug, lot_slug):
     att_dir = os.path.join(storage.material_dir(slug), "attachments", lot_slug)
     os.makedirs(att_dir, exist_ok=True)
     name = secure_filename(f.filename)
+    if not name:
+        flash("That filename contains no usable characters.", "error")
+        return redirect(url_for("materials.view", slug=slug))
     f.save(os.path.join(att_dir, name))
     meta.setdefault("attachments", []).append({
         "file": "attachments/%s/%s" % (lot_slug, name),

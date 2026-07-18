@@ -7,8 +7,9 @@ Docker. This `eln/` project is separate from the parent `erezops/` operations ap
 
 ## Run / develop
 
-- `docker compose up --build` → http://localhost:8091, login **admin / ereztech**
-  on a fresh store. Rebuild after code changes: `docker compose build eln && docker compose up -d eln`.
+- `docker compose up --build` → http://localhost:8091. A fresh store generates
+  an `admin` password and prints it once in `docker compose logs eln`. Rebuild
+  after code changes: `docker compose build eln && docker compose up -d eln`.
 - **Offline / home development:** `docker compose --profile demo up --build` also
   starts `mock_ha/` — a stand-in Home Assistant at `http://mockha:8123` serving
   fake hood cameras + sensors, plus a **Digest-auth Amcrest-style camera** at
@@ -19,7 +20,7 @@ Docker. This `eln/` project is separate from the parent `erezops/` operations ap
   pointing at the mock's CGI URLs.
 - On a fresh machine the `eln_config` Docker volume is empty, so there's no stored
   storage-location pointer → it defaults to `./data` (bind mount) and seeds a fresh
-  admin/ereztech notebook. That's the intended home-dev state.
+  notebook with a generated admin password. That's the intended home-dev state.
 - If Ketcher fails to load: it's vendored under `app/static/ketcher/` (EPAM
   Ketcher 3.17, Apache-2.0, ~115 MB). It ships in the repo; no build step.
 

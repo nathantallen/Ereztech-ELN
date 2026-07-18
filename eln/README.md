@@ -51,9 +51,14 @@ cd eln
 docker compose up --build
 ```
 
-Open http://localhost:8091 and sign in with `admin` / `ereztech` (a fresh data
-directory is seeded with the admin account and a few example records — change
-the password under Users).
+Open http://localhost:8091 and sign in as `admin`. On a fresh data directory,
+the generated one-time administrator password is printed in the container log:
+
+```bash
+docker compose logs eln
+```
+
+Store it in your password manager, then change it under **Users**.
 
 ## Assigning the storage location
 
@@ -115,8 +120,8 @@ them directly from the share without this application.
 | Variable            | Default        | Purpose                                   |
 |---------------------|----------------|-------------------------------------------|
 | `ELN_DATA_DIR`      | `./data`       | Host folder mounted as the notebook store |
-| `ELN_SECRET_KEY`    | change-me      | Flask session key — set in production     |
-| `ELN_MAX_UPLOAD_MB` | `4096`         | Maximum attachment size (MB)              |
+| `ELN_SECRET_KEY`    | generated      | Flask session key (persisted in `/config`) |
+| `ELN_MAX_UPLOAD_MB` | `512`          | Maximum attachment size (MB)              |
 | `ELN_HA_URL`        | —              | Home Assistant URL (or set via Equipment page) |
 | `ELN_HA_TOKEN`      | —              | HA long-lived access token (or via Equipment page) |
 

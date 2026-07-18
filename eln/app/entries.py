@@ -2,6 +2,7 @@ import csv
 import datetime
 import io
 import os
+import uuid
 
 import requests
 from flask import (Blueprint, abort, current_app, flash, jsonify, redirect,
@@ -428,6 +429,8 @@ def attach(eid):
         if not f or not f.filename:
             continue
         name = secure_filename(f.filename)
+        if not name:
+            continue
         target = os.path.join(att_dir, name)
         base, ext = os.path.splitext(name)
         n = 1
@@ -1017,7 +1020,7 @@ def ops_photo(eid):
     stamp = utcnow().replace(":", "").replace("-", "")
     photo_dir = os.path.join(storage.entry_dir(eid), "photos")
     os.makedirs(photo_dir, exist_ok=True)
-    name = "photo-%s.jpg" % stamp
+    name = "photo-%s-%s.jpg" % (stamp, uuid.uuid4().hex[:10])
     with open(os.path.join(photo_dir, name), "wb") as f:
         f.write(data)
     rel = "photos/" + name

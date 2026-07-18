@@ -5,8 +5,8 @@ services:
     ports:
       - "8091:8091"
     environment:
-      - ELN_SECRET_KEY=${ELN_SECRET_KEY:-change-me-in-production}
-      - ELN_MAX_UPLOAD_MB=${ELN_MAX_UPLOAD_MB:-4096}
+      - ELN_SECRET_KEY=${ELN_SECRET_KEY:-}
+      - ELN_MAX_UPLOAD_MB=${ELN_MAX_UPLOAD_MB:-512}
       # Folders the in-app "Change location" browser is allowed to walk. Mount
       # your NAS/SharePoint shares under one of these (e.g. /nas) below.
       - ELN_BROWSE_ROOTS=${ELN_BROWSE_ROOTS:-/nas:/data}

@@ -6,9 +6,13 @@
   var COLORS = ["#F7941E", "#7a00df", "#0aa574", "#04194e", "#cf2e2e"];
 
   function post(url, data) {
+    var csrf = document.querySelector('meta[name="csrf-token"]');
     return fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "X-CSRF-Token": csrf ? csrf.content : "",
+      },
       body: data ? new URLSearchParams(data).toString() : "",
     }).then(function (resp) {
       return resp.json().catch(function () { return { ok: false, error: "HTTP " + resp.status }; });
