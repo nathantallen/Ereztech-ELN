@@ -542,10 +542,21 @@ td.today .day-num {
 .scale-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
 .scale-row input { width: 110px; }
 .scale-row select { width: auto; }
+.table.stoich {
+  width: max-content;
+  min-width: 100%;
+}
 .table.stoich th { white-space: nowrap; }
 .table.stoich td { padding: 6px 4px; }
 .table.stoich input, .table.stoich select { padding: 5px 6px; font-size: 12px; min-width: 54px; }
-.table.stoich .f-name { min-width: 130px; }
+.table.stoich .f-role { width: 130px; min-width: 130px; }
+.table.stoich .f-name { width: 260px; min-width: 260px; }
+.table.stoich .f-cas { width: 125px; min-width: 125px; }
+.table.stoich th:nth-child(1), .table.stoich td:nth-child(1) { min-width: 130px; }
+.table.stoich th:nth-child(2), .table.stoich td:nth-child(2) { min-width: 260px; }
+.table.stoich th:nth-child(3), .table.stoich td:nth-child(3) { min-width: 125px; }
+.table.stoich-readonly th:nth-child(-n+3),
+.table.stoich-readonly td:nth-child(-n+3) { white-space: nowrap; }
 .table.stoich .calc { font-size: 12px; white-space: nowrap; color: var(--indigo); font-weight: 600; }
 .table.stoich .center { text-align: center; }
 .th-sub { font-size: 9px; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--muted); }
