@@ -293,14 +293,17 @@ def print_view(eid):
         c["svg_scheme"] = _ns_svg(raw_svg, "psch%d" % i)
         components.append(c)
     observations = storage.read_observations(eid)
+    ops = meta.get("operations") or {}
     # per-sensor summary: the live plot can't be printed, so distil each logged
-    # sensor to count / min / max / last for the archived record
+    # sensor to count / min / max / last for the latest operations session.
     sensor_summary = []
     for s in storage.read_sensor_series(eid):
-        vals = [v for _, v in (s.get("points") or [])]
+        pts = [p for p in (s.get("points") or [])
+               if (not ops.get("started_at") or p[0] >= ops["started_at"])
+               and (not ops.get("ended_at") or p[0] <= ops["ended_at"])]
+        vals = [v for _, v in pts]
         if not vals:
             continue
-        pts = s["points"]
         sensor_summary.append({
             "label": s.get("label") or s.get("entity"), "unit": s.get("unit", ""),
             "n": len(vals), "min": min(vals), "max": max(vals), "last": vals[-1],
@@ -314,7 +317,8 @@ def print_view(eid):
                            sensor_summary=sensor_summary,
                            legacy_obs=sections.get("Observations & Data", ""),
                            equipment=meta.get("equipment") or {},
-                           ops=meta.get("operations") or {},
+                           ops=ops,
+                           ops_history=meta.get("operations_history") or [],
                            audit=storage.read_audit(eid),
                            mentions=mentions, referenced_by=referenced_by,
                            repeats=repeats, generated_at=utcnow(),
@@ -926,16 +930,27 @@ def ops_start(eid):
     if ops.get("started_at") and not ops.get("ended_at"):
         return redirect(url_for("entries.view", eid=eid))
     storage = _storage()
-    meta["operations"] = {"started_at": utcnow(), "started_by": current_user.username}
+    restarting = bool(ops.get("started_at") and ops.get("ended_at"))
+    history = list(meta.get("operations_history") or [])
+    if restarting:
+        history.append(dict(ops))
+        meta["operations_history"] = history
+    session = len(history) + 1
+    meta["operations"] = {"started_at": utcnow(), "started_by": current_user.username,
+                          "session": session}
     storage.save_entry(eid, meta, body)
     storage.append_observation(eid, current_user.username, "system",
-                               "**Lab work started.**", "00:00:00")
-    storage.audit(eid, current_user.username, "started lab work")
+                               ("**Lab work restarted — session %d.**" % session
+                                if restarting else "**Lab work started.**"), "00:00:00")
+    storage.audit(eid, current_user.username,
+                  "restarted lab work" if restarting else "started lab work",
+                  "session %d" % session)
     cfg = ha.load_config(storage)
     sensors = (meta.get("equipment") or {}).get("sensors") or []
     if sensors and ha.configured(cfg):
         ha.start_sensor_logging(storage, cfg, eid, sensors)
-    flash("Lab work started — observations are now timestamped.", "success")
+    flash(("Operations log restarted — session %d is now running." % session
+           if restarting else "Lab work started — observations are now timestamped."), "success")
     return redirect(url_for("entries.view", eid=eid) + "#operations")
 
 
@@ -1081,9 +1096,16 @@ def ops_record_stop(eid):
 def ops_sensors(eid):
     meta, _ = _get_or_404(eid)
     ops = meta.get("operations") or {}
+    started = ops.get("started_at", "")
+    ended = ops.get("ended_at", "")
+    series = _storage().read_sensor_series(eid)
+    if started:
+        for sensor in series:
+            sensor["points"] = [p for p in sensor.get("points", [])
+                                if p[0] >= started and (not ended or p[0] <= ended)]
     return jsonify({"started": ops.get("started_at", ""),
                     "ended": ops.get("ended_at", ""),
-                    "series": _storage().read_sensor_series(eid)})
+                    "series": series})
 
 
 @bp.route("/<eid>/reopen", methods=["POST"])

@@ -149,8 +149,17 @@
   {% if ops.started_at or observations or legacy_obs %}
   <div class="doc-section">
     <h2>Operations log</h2>
+    {% if ops_history %}
+    <table class="summary-table" style="margin-bottom:12px;">
+      <thead><tr><th>Session</th><th>Started</th><th>Started by</th><th>Ended</th><th>Ended by</th></tr></thead>
+      <tbody>{% for session in ops_history %}
+      <tr><td>{{ session.session or loop.index }}</td><td>{{ session.started_at | nicedate }}</td>
+        <td>{{ session.started_by }}</td><td>{{ session.ended_at | nicedate }}</td><td>{{ session.ended_by }}</td></tr>
+      {% endfor %}</tbody>
+    </table>
+    {% endif %}
     {% if ops.started_at %}
-    <p class="muted" style="font-size:12px;">Started {{ ops.started_at | nicedate }} by {{ ops.started_by }}{% if ops.ended_at %} · ended {{ ops.ended_at | nicedate }} by {{ ops.ended_by }}{% endif %}.</p>
+    <p class="muted" style="font-size:12px;"><strong>Session {{ ops.session or ((ops_history|length) + 1) }}</strong> · started {{ ops.started_at | nicedate }} by {{ ops.started_by }}{% if ops.ended_at %} · ended {{ ops.ended_at | nicedate }} by {{ ops.ended_by }}{% endif %}.</p>
     {% endif %}
     {% if sensor_summary %}
     <table class="summary-table" style="margin-bottom:12px;">

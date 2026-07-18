@@ -663,6 +663,11 @@ td.today .day-num {
 .legacy-obs { margin-bottom: 12px; border: 1px dashed var(--border); border-radius: 8px; padding: 8px 12px; }
 .legacy-obs summary { cursor: pointer; color: var(--purple); }
 .legacy-obs .md-body { margin-top: 8px; }
+.ops-history { margin-bottom: 12px; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
+.ops-history summary { cursor: pointer; color: var(--purple); font-weight: 600; }
+.ops-history-row { padding: 7px 0; border-bottom: 1px dashed var(--border); }
+.ops-history-row:last-child { border-bottom: 0; }
+.ops-restart { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
 
 /* personal lab book tabs */
 .book-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
