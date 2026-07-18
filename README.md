@@ -1,4 +1,4 @@
-# EreZtech Operations
+# Ereztech Operations
 
 A chemical production scheduling and R&D project management app, styled to match
 ereztech.com (deep indigo `#0F0037`, orange `#F7941E`, Poppins).
