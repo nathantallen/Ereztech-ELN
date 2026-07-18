@@ -8,17 +8,7 @@ from werkzeug.utils import secure_filename
 
 from .chem import formula_and_mw, pubchem_lookup
 from .storage import BATCH_STATUSES, slugify, utcnow
-
-
-def _ns_svg(svg, uid):
-    """Namespace SVG ids so several structures can be inlined on one page."""
-    if not svg:
-        return svg
-    for i in set(re.findall(r'id="([^"]+)"', svg)):
-        svg = svg.replace('id="%s"' % i, 'id="%s-%s"' % (uid, i))
-        svg = svg.replace('href="#%s"' % i, 'href="#%s-%s"' % (uid, i))
-        svg = svg.replace('url(#%s)' % i, 'url(#%s-%s)' % (uid, i))
-    return svg
+from .svg import namespace_svg as _ns_svg, sanitize_svg
 
 bp = Blueprint("materials", __name__, url_prefix="/materials")
 
@@ -85,6 +75,10 @@ def new_material():
 
 
 def _material_svg(slug, uid):
+    # A hand-edited / corrupted material.md may carry a missing or invalid slug;
+    # material_dir() would raise (ValueError/TypeError) and 500 the whole catalog.
+    if not slug or not re.fullmatch(r"[a-z0-9-]+", slug):
+        return ""
     path = os.path.join(_storage().material_dir(slug), "structure.svg")
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -135,7 +129,7 @@ def save_structure(slug):
     d = storage.material_dir(slug)
     with open(os.path.join(d, "structure.mol"), "w", encoding="utf-8") as f:
         f.write(molfile)
-    svg = request.form.get("svg", "")
+    svg = sanitize_svg(request.form.get("svg", ""))
     if svg.strip():
         with open(os.path.join(d, "structure.svg"), "w", encoding="utf-8") as f:
             f.write(svg)

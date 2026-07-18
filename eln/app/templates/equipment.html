@@ -14,8 +14,7 @@
     {% if cfg.url %}
     <p class="small">
       <span class="mono">{{ cfg.url }}</span>
-      <span class="pill" style="background: {{ '#0aa574' if connected else '#cf2e2e' }};">
-        {{ 'connected' if connected else 'not reachable' }}</span>
+      <span class="pill" id="ha-status" style="background: var(--hold);">checking…</span>
       {% if cfg.auth_mode == 'login' and cfg.ha_user %}
       · signed in as <strong>{{ cfg.ha_user }}</strong>
       <form method="post" style="display:inline">
@@ -24,7 +23,7 @@
       </form>
       {% elif cfg.token %} · using long-lived token{% endif %}
     </p>
-    {% if error %}<p class="small" style="color: var(--danger);">{{ error }}</p>{% endif %}
+    <p class="small" id="ha-error" style="color: var(--danger);" hidden></p>
     {% endif %}
 
     <h3>Sign in with a Home Assistant account</h3>
@@ -122,6 +121,8 @@
 </div>
 
 {% for hood in cfg.hoods %}
+{% set assigned_cams = hood.cameras | map(attribute='entity') | list %}
+{% set assigned_sensors = hood.sensors | map(attribute='entity') | list %}
 <div class="card">
   <div class="page-head" style="margin-bottom: 8px;">
     <h2 style="margin:0;">{{ hood.name }}</h2>
@@ -131,32 +132,43 @@
       <button class="btn btn-danger btn-sm" type="submit">Remove hood</button>
     </form>
   </div>
-  {% if connected or cfg.ip_cameras %}
-  <form method="post" class="grid-2">
+  <form method="post" class="grid-2 hood-assign"
+        data-assigned-cameras="{{ assigned_cams | join(',') }}"
+        data-assigned-sensors="{{ assigned_sensors | join(',') }}">
     <input type="hidden" name="action" value="assign">
     <input type="hidden" name="hood_name" value="{{ hood.name }}">
     <div>
       <h3>Cameras</h3>
-      {% set assigned_cams = hood.cameras | map(attribute='entity') | list %}
-      {% for cam in cameras %}
-      <label class="check-label" style="margin-top:6px;">
-        <input type="checkbox" name="cameras" value="{{ cam.entity }}|{{ cam.label }}"
-               {{ 'checked' if cam.entity in assigned_cams }}>
-        {{ cam.label }} <span class="mono muted small">{{ cam.entity }}</span>
-      </label>
-      {% else %}<p class="muted small">No cameras found — connect Home Assistant or add an IP camera.</p>{% endfor %}
+      <div class="cam-options">
+        {# Already-assigned cameras render checked, server-side, so a save never
+           drops them even if Home Assistant is offline right now. #}
+        {% for cam in hood.cameras %}
+        <label class="check-label" style="margin-top:6px;">
+          <input type="checkbox" name="cameras" value="{{ cam.entity }}|{{ cam.label }}" checked>
+          {{ cam.label }} <span class="mono muted small">{{ cam.entity }}</span>
+        </label>
+        {% endfor %}
+        {# Available IP cameras not yet assigned. #}
+        {% for cam in ip_cameras %}{% if cam.entity not in assigned_cams %}
+        <label class="check-label" style="margin-top:6px;">
+          <input type="checkbox" name="cameras" value="{{ cam.entity }}|{{ cam.label }}">
+          {{ cam.label }} <span class="mono muted small">{{ cam.entity }}</span>
+        </label>
+        {% endif %}{% endfor %}
+      </div>
+      <p class="muted small ha-hint">Home Assistant cameras load automatically; IP cameras appear here once added above.</p>
     </div>
     <div>
       <h3>Sensors</h3>
-      {% if not connected %}<p class="muted small">Connect Home Assistant to list sensors.</p>{% endif %}
-      {% set assigned_sensors = hood.sensors | map(attribute='entity') | list %}
-      {% for s in sensors %}
-      <label class="check-label" style="margin-top:6px;">
-        <input type="checkbox" name="sensors" value="{{ s.entity }}|{{ s.label }}|{{ s.unit }}"
-               {{ 'checked' if s.entity in assigned_sensors }}>
-        {{ s.label }} <span class="mono muted small">{{ s.entity }} · {{ s.state }} {{ s.unit }}</span>
-      </label>
-      {% else %}<p class="muted small">No sensors found in Home Assistant.</p>{% endfor %}
+      <div class="sensor-options">
+        {% for s in hood.sensors %}
+        <label class="check-label" style="margin-top:6px;">
+          <input type="checkbox" name="sensors" value="{{ s.entity }}|{{ s.label }}|{{ s.unit or '' }}" checked>
+          {{ s.label }} <span class="mono muted small">{{ s.entity }}{{ ' · ' + s.unit if s.unit }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      <p class="muted small ha-hint">Home Assistant sensors load automatically.</p>
       <h3 style="margin-top:14px;">Custom sensor</h3>
       <div class="filter-row">
         <input type="text" name="custom_sensor" placeholder="sensor.my_custom_entity">
@@ -168,13 +180,9 @@
       </div>
     </div>
   </form>
-  {% else %}
-  <table class="table kv small">
-    <tr><th>Cameras</th><td>{% for c in hood.cameras %}{{ c.label }} <span class="mono muted">({{ c.entity }})</span>{{ '; ' if not loop.last }}{% else %}—{% endfor %}</td></tr>
-    <tr><th>Sensors</th><td>{% for s in hood.sensors %}{{ s.label }} <span class="mono muted">({{ s.entity }})</span>{{ '; ' if not loop.last }}{% else %}—{% endfor %}</td></tr>
-  </table>
-  <p class="muted small">Connect Home Assistant to edit assignments.</p>
-  {% endif %}
 </div>
 {% endfor %}
+
+<script>window.ELN_HA_CONFIGURED = {{ '1' if ha_configured else '0' }};</script>
+<script src="{{ url_for('static', filename='js/equipment_config.js') }}" defer></script>
 {% endblock %}

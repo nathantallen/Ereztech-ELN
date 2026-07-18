@@ -109,6 +109,13 @@ def create_app():
     from . import ha as ha_module
     ha_module.resume_pollers(app.extensions["storage"])
 
+    # On a graceful shutdown (SIGTERM from `docker stop`/redeploy → gunicorn quits
+    # the worker → interpreter exit), flush background threads so an in-progress
+    # recording's ffmpeg is signalled to finalise the mp4 moov atom instead of
+    # being killed mid-write and left unplayable.
+    import atexit
+    atexit.register(ha_module.stop_all)
+
     @app.context_processor
     def inject_globals():
         return {

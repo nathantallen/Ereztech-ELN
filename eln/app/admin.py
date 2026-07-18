@@ -47,6 +47,19 @@ def user_form(username=None):
             if user["username"] == current_user.username and not active:
                 flash("You cannot deactivate your own account.", "error")
                 return redirect(url_for("admin.list_users"))
+            # Guard against locking everyone out of administration: refuse an edit
+            # that removes the last active admin (by demotion OR deactivation).
+            was_admin = user.get("role") == "admin" and user.get("active", True)
+            still_admin = role == "admin" and active
+            if was_admin and not still_admin:
+                other_admins = sum(
+                    1 for u in users
+                    if u["username"] != user["username"]
+                    and u.get("role") == "admin" and u.get("active", True))
+                if other_admins == 0:
+                    flash("You can't remove the last administrator. Promote "
+                          "another user to admin first.", "error")
+                    return redirect(url_for("admin.list_users"))
             user["full_name"] = full_name or user["full_name"]
             user["role"] = role
             user["active"] = active

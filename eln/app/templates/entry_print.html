@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ meta.id }} — {{ meta.title }}</title>
+  <link rel="icon" href="{{ url_for('static', filename='img/favicon-32.png') }}" sizes="32x32">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/print.css') }}">
+  <script>window.ELN_TZ = {{ (timezone or "") | tojson }};</script>
+  <script src="{{ url_for('static', filename='js/localtime.js') }}" defer></script>
+</head>
+<body class="print-doc">
+{% set locked = meta.status != 'draft' %}
+
+<div class="print-toolbar">
+  <button type="button" class="btn-print" onclick="window.print()">⤓ Save as PDF</button>
+  <span class="hint">Choose “Save as PDF” as the destination in the print dialog.</span>
+  <span class="spacer"></span>
+  <a href="{{ url_for('entries.view', eid=meta.id) }}">← Back to entry</a>
+</div>
+
+<div class="sheet">
+
+  <div class="doc-head">
+    <div>
+      <div class="doc-wordmark">Ere<span class="z">Z</span>tech
+        <span class="sub">Electronic Lab Notebook</span></div>
+    </div>
+    <div class="doc-meta">
+      <div class="doc-id">{{ meta.id }}</div>
+      <div>Status: <strong>{{ meta.status }}</strong></div>
+      <div>Generated {{ generated_at | nicedate }}</div>
+    </div>
+  </div>
+
+  <h1 class="doc-title">{{ meta.title }}</h1>
+  <div class="doc-sub">
+    {% if meta.project %}{{ meta.project }} · {% endif %}
+    {{ meta.experiment_date or '—' }} · {{ meta.technique or meta.atmosphere or '—' }} · by {{ meta.author }}
+    {% for t in meta.tags or [] %}<span class="tag">{{ t }}</span>{% endfor %}
+  </div>
+
+  {# ---------- sign-off / provenance ---------- #}
+  <div class="signoff-block {{ 'is-signed' if meta.status == 'signed' }}{{ 'is-draft' if not locked }}">
+    <h2>Record status</h2>
+    {% if meta.status == 'witnessed' %}
+    <div class="signoff-grid">
+      <div><div class="who">Signed — {{ meta.signed.name }}</div><div class="when">{{ meta.signed.at | nicedate }}</div></div>
+      <div><div class="who">Witnessed — {{ meta.witnessed.name }}</div><div class="when">{{ meta.witnessed.at | nicedate }}</div></div>
+    </div>
+    <p class="muted" style="margin:8px 0 0; font-size:12px;">Permanent, witnessed record.</p>
+    {% elif meta.status == 'signed' %}
+    <div class="signoff-grid">
+      <div><div class="who">Signed — {{ meta.signed.name }}</div><div class="when">{{ meta.signed.at | nicedate }}</div></div>
+      <div><div class="who">Witness</div><div class="when">Awaiting a second signature.</div></div>
+    </div>
+    {% else %}
+    <p class="draft-note">DRAFT — not yet signed. This copy is a work in progress and is not a finalized record.</p>
+    {% endif %}
+  </div>
+
+  {# ---------- objective ---------- #}
+  <div class="doc-section">
+    <h2>Objective</h2>
+    {% if sections.get('Objective') %}
+    <div class="md-body">{{ sections.get('Objective', '') | markdown }}</div>
+    {% else %}<p class="muted">—</p>{% endif %}
+  </div>
+
+  {# ---------- reaction & stoichiometry ---------- #}
+  {% if components %}
+  <div class="doc-section">
+    <h2>Reaction &amp; stoichiometry</h2>
+    {% set left = components | selectattr('role', 'in', ['reactant', 'reagent']) | list %}
+    {% set over = components | selectattr('role', 'in', ['catalyst', 'solvent']) | list %}
+    {% set right = components | selectattr('role', 'eq', 'product') | list %}
+    <div class="scheme">
+      {% for c in left %}
+        <div class="scheme-item">
+          <div class="scheme-img">{% if c.svg_scheme %}{{ c.svg_scheme | safe }}{% else %}<span class="scheme-placeholder">{{ c.name or '?' }}</span>{% endif %}</div>
+          <div class="scheme-label">{{ c.name }}{% if c.equiv %} <span class="muted">({{ c.equiv }} equiv)</span>{% endif %}</div>
+        </div>
+        {% if not loop.last %}<div class="scheme-plus">+</div>{% endif %}
+      {% endfor %}
+      {% if left and (right or over) %}
+      <div class="scheme-arrow-block">
+        {% for c in over %}<div class="scheme-over small">{{ c.name }}</div>{% endfor %}
+        <div class="scheme-arrow">⟶</div>
+      </div>
+      {% endif %}
+      {% for c in right %}
+        <div class="scheme-item">
+          <div class="scheme-img">{% if c.svg_scheme %}{{ c.svg_scheme | safe }}{% else %}<span class="scheme-placeholder">{{ c.name or '?' }}</span>{% endif %}</div>
+          <div class="scheme-label">{{ c.name }}</div>
+        </div>
+        {% if not loop.last %}<div class="scheme-plus">+</div>{% endif %}
+      {% endfor %}
+    </div>
+    {% if reaction.scale_amount is not none %}
+    <p class="muted" style="font-size:12px; margin:0 0 8px;">Scale: {{ reaction.scale_amount }} {{ reaction.scale_unit }} of the limiting component.</p>
+    {% endif %}
+    <table class="summary-table">
+      <thead><tr><th>Role</th><th>Name</th><th>CAS</th><th>Formula</th><th>MW</th><th>d</th><th>Equiv</th><th>mmol</th><th>Amount</th><th>Volume</th></tr></thead>
+      <tbody>
+      {% for c in components %}
+      <tr>
+        <td>{{ c.role }}{% if c.limiting %} <span class="pill pill-air">limiting</span>{% endif %}</td>
+        <td>{{ c.name }}</td>
+        <td class="mono">{{ c.cas }}</td>
+        <td class="mono">{{ c.formula }}</td>
+        <td>{{ c.mw if c.mw is not none }}</td>
+        <td>{{ c.density if c.density is not none }}</td>
+        <td>{{ c.equiv }}</td>
+        <td>{{ '%.2f' | format(c.mmol) if c.mmol is not none }}</td>
+        <td>{{ '%.3f g' | format(c.mass_g) if c.mass_g is not none }}</td>
+        <td>{{ '%.2f mL' | format(c.volume_ml) if c.volume_ml is not none }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {# ---------- equipment ---------- #}
+  {% if equipment.hood or equipment.camera or equipment.sensors %}
+  <div class="doc-section">
+    <h2>Lab equipment</h2>
+    <table class="kv-table">
+      <tr><th>Hood</th><td>{{ equipment.hood or '—' }}</td></tr>
+      <tr><th>Camera</th><td class="mono">{{ equipment.camera or '—' }}</td></tr>
+      <tr><th>Sensors</th><td>{% for s in equipment.sensors or [] %}{{ s.label }} <span class="mono muted">({{ s.entity }}{{ ', ' + s.unit if s.unit }})</span>{{ '; ' if not loop.last }}{% else %}—{% endfor %}</td></tr>
+      {% if equipment.recording %}<tr><th>Recording</th><td>{{ equipment.recording.fps }} fps, {{ equipment.recording.resolution }}</td></tr>{% endif %}
+    </table>
+  </div>
+  {% endif %}
+
+  {# ---------- procedure ---------- #}
+  <div class="doc-section">
+    <h2>Procedure</h2>
+    {% if sections.get('Procedure') %}
+    <div class="md-body">{{ sections.get('Procedure', '') | markdown }}</div>
+    {% else %}<p class="muted">—</p>{% endif %}
+  </div>
+
+  {# ---------- operations log ---------- #}
+  {% if ops.started_at or observations or legacy_obs %}
+  <div class="doc-section">
+    <h2>Operations log</h2>
+    {% if ops.started_at %}
+    <p class="muted" style="font-size:12px;">Started {{ ops.started_at | nicedate }} by {{ ops.started_by }}{% if ops.ended_at %} · ended {{ ops.ended_at | nicedate }} by {{ ops.ended_by }}{% endif %}.</p>
+    {% endif %}
+    {% if sensor_summary %}
+    <table class="summary-table" style="margin-bottom:12px;">
+      <thead><tr><th>Sensor</th><th>Points</th><th>Min</th><th>Max</th><th>Last</th><th>From</th><th>To</th></tr></thead>
+      <tbody>
+      {% for s in sensor_summary %}
+      <tr>
+        <td>{{ s.label }}{% if s.unit %} <span class="muted">({{ s.unit }})</span>{% endif %}</td>
+        <td>{{ s.n }}</td>
+        <td>{{ '%.3g' | format(s.min) }}</td>
+        <td>{{ '%.3g' | format(s.max) }}</td>
+        <td>{{ '%.3g' | format(s.last) }}</td>
+        <td><time class="lt" datetime="{{ s.first_at }}">{{ s.first_at }}</time></td>
+        <td><time class="lt" datetime="{{ s.last_at }}">{{ s.last_at }}</time></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+    {% if legacy_obs %}<div class="md-body" style="margin-bottom:10px;">{{ legacy_obs | markdown }}</div>{% endif %}
+    <div class="obs-list">{% include '_observations.html' %}</div>
+  </div>
+  {% endif %}
+
+  {# ---------- results ---------- #}
+  <div class="doc-section">
+    <h2>Results &amp; Conclusions</h2>
+    {% if sections.get('Results & Conclusions') %}
+    <div class="md-body">{{ sections.get('Results & Conclusions', '') | markdown }}</div>
+    {% else %}<p class="muted">No results recorded.</p>{% endif %}
+  </div>
+
+  {# ---------- attachments ---------- #}
+  {% if meta.attachments %}
+  <div class="doc-section">
+    <h2>Attached data &amp; files</h2>
+    {% for att in meta.attachments %}
+    <div class="attachment" style="break-inside: avoid;">
+      <div class="attachment-head">
+        <span class="att-kind att-{{ att.kind }}">{{ att.kind }}</span>
+        <span class="mono">{{ att.file.split('/')[-1] }}</span>
+        <span class="muted small">{{ att.caption }}{% if att.uploaded_by %} — {{ att.uploaded_by }}, {{ att.uploaded_at | nicedate }}{% endif %}</span>
+      </div>
+      {% if att.kind == 'image' %}
+      <img class="att-image" src="{{ url_for('entries.serve_file', eid=meta.id, relpath=att.file) }}" alt="{{ att.caption }}">
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# ---------- references ---------- #}
+  {% if meta.repeat_of or repeats or mentions or referenced_by %}
+  <div class="doc-section">
+    <h2>References</h2>
+    <table class="kv-table">
+      {% if meta.repeat_of %}<tr><th>Repeat of</th><td class="mono">{{ meta.repeat_of }}</td></tr>{% endif %}
+      {% if repeats %}<tr><th>Repeated by</th><td class="mono">{{ repeats | join(', ') }}</td></tr>{% endif %}
+      {% if mentions %}<tr><th>References</th><td class="mono">{{ mentions | join(', ') }}</td></tr>{% endif %}
+      {% if referenced_by %}<tr><th>Referenced by</th><td class="mono">{{ referenced_by | join(', ') }}</td></tr>{% endif %}
+    </table>
+  </div>
+  {% endif %}
+
+  {# ---------- audit trail ---------- #}
+  <div class="doc-section">
+    <h2>Audit trail</h2>
+    <div class="audit-log">
+      {% for row in audit %}
+      <div class="audit-row">
+        <span class="small muted"><time class="lt" datetime="{{ row.at }}">{{ row.at }}</time></span>
+        — <strong>{{ row.by }}</strong> {{ row.action }}{% if row.detail %} — {{ row.detail }}{% endif %}
+      </div>
+      {% else %}
+      <p class="muted small">No events.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="gen-footer">
+    {{ meta.id }} — {{ meta.title }} · Generated by {{ generated_by }} on
+    <time class="lt" datetime="{{ generated_at }}">{{ generated_at }}</time>.
+    EreZtech Electronic Lab Notebook — the source files remain the authoritative record.
+  </div>
+
+</div>
+</body>
+</html>

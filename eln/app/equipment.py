@@ -2,8 +2,8 @@
 and authenticated proxies for camera snapshots / MJPEG streams (the HA token
 never reaches the browser)."""
 import requests
-from flask import (Blueprint, Response, abort, current_app, flash, redirect,
-                   render_template, request, stream_with_context, url_for)
+from flask import (Blueprint, Response, abort, current_app, flash, jsonify,
+                   redirect, render_template, request, stream_with_context, url_for)
 from flask_login import current_user, login_required
 
 from . import ha
@@ -31,7 +31,11 @@ def config_page():
             if token:
                 cfg["token"] = token
                 cfg["auth_mode"] = "token"
-            cfg["poll_seconds"] = max(2, int(request.form.get("poll_seconds", "5") or 5))
+            try:
+                poll = int(float(request.form.get("poll_seconds", "5") or 5))
+            except (TypeError, ValueError):
+                poll = 5
+            cfg["poll_seconds"] = max(2, poll)
             ha.save_config(storage, cfg)
             flash("Connection settings saved.", "success")
         elif action == "login":
@@ -123,29 +127,48 @@ def config_page():
                 flash("Hood '%s' updated." % hood["name"], "success")
         return redirect(url_for("equipment.config_page"))
 
-    connected, cameras, sensors, error = False, [], [], None
-    if ha.configured(cfg):
-        client = ha.HAClient(cfg, storage)
-        try:
-            states = client.states()
-            connected = True
-            for st in states:
-                eid = st.get("entity_id", "")
-                attrs = st.get("attributes", {})
-                friendly = attrs.get("friendly_name", eid)
-                if eid.startswith("camera."):
-                    cameras.append({"entity": eid, "label": friendly})
-                elif eid.startswith("sensor."):
-                    sensors.append({"entity": eid, "label": friendly,
-                                    "unit": attrs.get("unit_of_measurement", ""),
-                                    "state": st.get("state", "")})
-        except requests.RequestException as e:
-            error = str(e)
-    # IP cameras are assignable to hoods alongside HA cameras
-    cameras = [{"entity": c["id"], "label": c.get("label", c["id"]) + " (IP)"}
-               for c in cfg.get("ip_cameras", [])] + cameras
-    return render_template("equipment.html", cfg=cfg, connected=connected,
-                           cameras=cameras, sensors=sensors, error=error)
+    # Render immediately — do NOT probe Home Assistant here. A configured-but-
+    # unreachable HA (e.g. the lab server seen from an off-site machine) would
+    # block the whole page for the connect timeout, twice over (token refresh +
+    # /api/states). The connection status and HA camera/sensor lists are fetched
+    # asynchronously from /equipment/ha-state.json once the page is on screen.
+    ip_cameras = [{"entity": c["id"], "label": c.get("label", c["id"]) + " (IP)"}
+                  for c in cfg.get("ip_cameras", [])]
+    return render_template("equipment.html", cfg=cfg, ip_cameras=ip_cameras,
+                           ha_configured=ha.configured(cfg))
+
+
+@bp.route("/ha-state.json")
+@login_required
+def ha_state():
+    """Async companion to the equipment page: the (possibly slow) Home Assistant
+    reachability check + entity listing, kept off the page-render path so the page
+    itself never blocks on a dead HA."""
+    if not current_user.is_admin:
+        abort(403)
+    storage = _storage()
+    cfg = ha.load_config(storage)
+    if not ha.configured(cfg):
+        return jsonify({"configured": False, "connected": False,
+                        "cameras": [], "sensors": []})
+    try:
+        states = ha.HAClient(cfg, storage).states(timeout=(3.05, 8))
+    except requests.RequestException as e:
+        return jsonify({"configured": True, "connected": False, "error": str(e),
+                        "cameras": [], "sensors": []})
+    cameras, sensors = [], []
+    for st in states:
+        eid = st.get("entity_id", "")
+        attrs = st.get("attributes", {})
+        friendly = attrs.get("friendly_name", eid)
+        if eid.startswith("camera."):
+            cameras.append({"entity": eid, "label": friendly})
+        elif eid.startswith("sensor."):
+            sensors.append({"entity": eid, "label": friendly,
+                            "unit": attrs.get("unit_of_measurement", ""),
+                            "state": st.get("state", "")})
+    return jsonify({"configured": True, "connected": True,
+                    "cameras": cameras, "sensors": sensors})
 
 
 @bp.route("/snapshot/<entity>")

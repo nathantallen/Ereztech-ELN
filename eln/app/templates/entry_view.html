@@ -13,6 +13,7 @@
   </div>
   <div class="head-actions">
     <span class="pill pill-lg" style="background: {{ status_colors.get(meta.status, '#8a8797') }};">{{ meta.status }}</span>
+    <a class="btn btn-ghost" href="{{ url_for('entries.print_view', eid=meta.id) }}" target="_blank" rel="noopener" title="Open a print-ready page and save it as a PDF">⤓ PDF</a>
     {% if can_edit and not locked %}
     <a class="btn" href="{{ url_for('entries.edit', eid=meta.id) }}">Edit</a>
     {% endif %}

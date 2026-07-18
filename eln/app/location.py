@@ -276,7 +276,6 @@ def switch(app, target, make_subdir=None):
                         shutil.rmtree(p) if os.path.isdir(p) else os.remove(p)
                     except OSError:
                         pass
-                ha.resume_pollers(app.extensions["storage"])   # revive old store
                 return False, "Copy to new location failed (rolled back): %s" % e
 
         new_storage = Storage(target_abs)
@@ -288,7 +287,9 @@ def switch(app, target, make_subdir=None):
         set_data_dir(target_abs)
     finally:
         app.config["MAINTENANCE"] = False
-    ha.resume_pollers(new_storage)
+        # Always revive pollers — on the active store, whichever it ended up being
+        # (the new one on success; the old one still in place on any failure/return).
+        ha.resume_pollers(app.extensions["storage"])
 
     if target_is_store:
         return True, "Now using the existing notebook at %s." % target_abs

@@ -42,12 +42,18 @@ def load_config(storage):
     return cfg
 
 
+# serialises writers of equipment.json (admin edits + the background token
+# refresh) so one never clobbers another's just-written copy
+_config_lock = threading.RLock()
+
+
 def save_config(storage, cfg):
     path = os.path.join(storage.root, "equipment.json")
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, indent=2, ensure_ascii=False)
-    os.replace(tmp, path)
+    with _config_lock:
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, indent=2, ensure_ascii=False)
+        os.replace(tmp, path)
 
 
 def configured(cfg):
@@ -115,15 +121,25 @@ def access_token(storage):
                 "grant_type": "refresh_token",
                 "refresh_token": cfg.get("refresh_token", ""),
                 "client_id": cfg.get("client_id", ""),
-            }, timeout=10)
+            }, timeout=(3.05, 8))   # short connect: never hang the caller on a dead HA
             r.raise_for_status()
             tok = r.json()
         except requests.RequestException:
             return cfg.get("access_token", "")   # let the API call fail loudly
-        cfg["access_token"] = tok["access_token"]
-        cfg["access_expires"] = time.time() + tok.get("expires_in", 1800)
-        save_config(storage, cfg)
-        return cfg["access_token"]
+        new_access = tok.get("access_token")
+        if not new_access:
+            # a 2xx with no token (misconfigured proxy?) — keep the old one and
+            # let the actual API call surface the failure rather than KeyError here
+            return cfg.get("access_token", "")
+        expires = time.time() + tok.get("expires_in", 1800)
+        # merge the new token onto the FRESHEST config (re-read under the lock) so
+        # an admin edit that landed during the refresh isn't overwritten
+        with _config_lock:
+            latest = load_config(storage)
+            latest["access_token"] = new_access
+            latest["access_expires"] = expires
+            save_config(storage, latest)
+        return new_access
 
 
 def find_hood(cfg, name):
@@ -268,8 +284,8 @@ class HAClient:
         except requests.RequestException:
             return False
 
-    def states(self):
-        r = requests.get(self.url + "/api/states", headers=self.headers, timeout=10)
+    def states(self, timeout=10):
+        r = requests.get(self.url + "/api/states", headers=self.headers, timeout=timeout)
         r.raise_for_status()
         return r.json()
 

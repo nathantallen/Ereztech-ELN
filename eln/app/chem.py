@@ -10,7 +10,9 @@ import os
 import re
 import threading
 
-_LOCK = threading.Lock()
+# Reentrant so learn() can hold the lock across load+append+save while save()
+# re-acquires it (a plain Lock would deadlock on that nested acquire).
+_LOCK = threading.RLock()
 
 ATOMIC_WEIGHTS = {
     "H": 1.008, "He": 4.0026, "Li": 6.94, "Be": 9.0122, "B": 10.81, "C": 12.011,
@@ -86,9 +88,9 @@ def formula_and_mw(molfile):
     order_sum = [0.0] * len(atoms)
     for a1, a2, order in bonds:
         o = 1.5 if order == 4 else float(order)
-        if a1 < len(atoms):
+        if 0 <= a1 < len(atoms):
             order_sum[a1] += o
-        if a2 < len(atoms):
+        if 0 <= a2 < len(atoms):
             order_sum[a2] += o
     counts = {}
     for i, atom in enumerate(atoms):
@@ -98,7 +100,16 @@ def formula_and_mw(molfile):
         counts[sym] = counts.get(sym, 0) + 1
         val = DEFAULT_VALENCE.get(sym)
         if val is not None:
-            implicit = max(0, int(round(val + atom["charge"] - order_sum[i])))
+            # A positive charge raises the available valence of electronegative
+            # p-block atoms (NH4+ from N+), but LOWERS it for group-14 centres
+            # where a formal charge means a missing bond, not an extra H (R3C+ is
+            # trivalent). Using val+charge for carbon invented phantom hydrogens.
+            charge = atom["charge"]
+            if sym in ("C", "Si"):
+                eff_valence = val - abs(charge)
+            else:
+                eff_valence = val + charge
+            implicit = max(0, int(round(eff_valence - order_sum[i])))
             if implicit:
                 counts["H"] = counts.get("H", 0) + implicit
     mw = sum(ATOMIC_WEIGHTS[s] * n for s, n in counts.items())
@@ -218,9 +229,12 @@ class PropertyDB:
         """Add a user-entered record if we don't already know this substance."""
         if not record.get("name") and not record.get("cas"):
             return
-        if self.lookup(cas=record.get("cas"), name=record.get("name")):
-            return
-        props = self.load()
-        record["source"] = "user"
-        props.append(record)
-        self.save(props)
+        # Hold the lock across the whole read-modify-write so two concurrent
+        # saves can't each load the same list, append, and clobber the other.
+        with _LOCK:
+            if self.lookup(cas=record.get("cas"), name=record.get("name")):
+                return
+            props = self.load()
+            record["source"] = "user"
+            props.append(record)
+            self.save(props)

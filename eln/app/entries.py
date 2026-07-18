@@ -14,6 +14,7 @@ from . import ha
 from .chem import formula_and_mw
 from .storage import (ENTRY_SECTIONS, attachment_kind, compose_sections,
                       parse_sections, utcnow)
+from .svg import namespace_svg as _ns_svg, sanitize_svg
 
 COMPONENT_ROLES = ["reactant", "reagent", "catalyst", "solvent", "product"]
 # the setup form only asks for what exists before the run; results are written
@@ -194,10 +195,13 @@ def view(eid):
     equipment_cfg = ha.load_config(storage)
     ops = meta.get("operations") or {}
     observations = storage.read_observations(eid)
+    # one scan of every lab book, shared by the compound library and the
+    # cross-reference lookup below (avoids re-reading every entry 2-3x per view)
+    all_entries = storage.list_entries()
     # library of previously used starting materials & products (most recent wins)
     compound_library, seen_compounds = [], set()
     if meta.get("status") == "draft":
-        for other in storage.list_entries():
+        for other in all_entries:
             for c in (other.get("reaction") or {}).get("components") or []:
                 if not c.get("name") or not c.get("key"):
                     continue
@@ -216,22 +220,7 @@ def view(eid):
     # cross-references: ELN ids mentioned here, entries mentioning this one,
     # and the repeat lineage (repeat_of / repeated-by)
     own_text = (body or "") + "\n" + "\n".join(o["text"] for o in observations)
-    mentions = sorted({m for m in ELN_ID_RE.findall(own_text) if m != eid})
-    referenced_by, repeats = [], []
-    for other in storage.list_entries():
-        oid = other["id"]
-        if oid == eid:
-            continue
-        if other.get("repeat_of") == eid:
-            repeats.append(oid)
-        _, obody = storage.get_entry(oid)
-        text = (obody or "")
-        obs_path = os.path.join(storage.entry_dir(oid), "observations.md")
-        if os.path.isfile(obs_path):
-            with open(obs_path, "r", encoding="utf-8") as f:
-                text += f.read()
-        if eid in text:
-            referenced_by.append(oid)
+    mentions, referenced_by, repeats = _crossrefs(storage, eid, own_text, all_entries)
     return render_template("entry_view.html", meta=meta, sections=sections,
                            section_names=ENTRY_SECTIONS,
                            previews=previews,
@@ -263,21 +252,73 @@ def _read_rel(storage, eid, rel):
         return ""
 
 
-def _ns_svg(svg, uid):
-    """Namespace all ids in an inline SVG. Ketcher exports text as glyph paths
-    with generic ids (glyph-0-1, clip-0, ...); inlining several SVGs on one
-    page makes <use href="#..."> resolve against the FIRST svg's defs, which
-    scrambles atom labels. Prefixing every id (and its #/url() references)
-    with a per-placement uid keeps each drawing self-contained."""
-    if not svg:
-        return svg
-    import re as _re
-    ids = set(_re.findall(r'id="([^"]+)"', svg))
-    for i in ids:
-        svg = svg.replace('id="%s"' % i, 'id="%s-%s"' % (uid, i))
-        svg = svg.replace('href="#%s"' % i, 'href="#%s-%s"' % (uid, i))
-        svg = svg.replace('url(#%s)' % i, 'url(#%s-%s)' % (uid, i))
-    return svg
+def _crossrefs(storage, eid, own_text, all_entries=None):
+    """(mentions, referenced_by, repeats) for an entry: ids it names, entries that
+    name it, and drafts created as repeats of it. Pass `all_entries` to reuse a
+    list the caller already fetched instead of re-scanning every lab book."""
+    mentions = sorted({m for m in ELN_ID_RE.findall(own_text) if m != eid})
+    referenced_by, repeats = [], []
+    for other in (storage.list_entries() if all_entries is None else all_entries):
+        oid = other["id"]
+        if oid == eid:
+            continue
+        if other.get("repeat_of") == eid:
+            repeats.append(oid)
+        _, obody = storage.get_entry(oid)
+        text = (obody or "")
+        obs_path = os.path.join(storage.entry_dir(oid), "observations.md")
+        if os.path.isfile(obs_path):
+            with open(obs_path, "r", encoding="utf-8") as f:
+                text += f.read()
+        if eid in text:
+            referenced_by.append(oid)
+    return mentions, referenced_by, repeats
+
+
+@bp.route("/<eid>/print")
+@login_required
+def print_view(eid):
+    """A clean, self-contained, print-optimized document for one entry — the user
+    saves it as a PDF via the browser's print dialog. Renders the full record
+    (reaction, ops log, results, sign-off, audit trail) with no app chrome."""
+    meta, body = _get_or_404(eid)
+    storage = _storage()
+    sections = parse_sections(body)
+    reaction = meta.get("reaction") or {}
+    components = []
+    for i, c in enumerate(reaction.get("components") or []):
+        c = dict(c)
+        c["idx"] = i
+        raw_svg = _read_rel(storage, eid, c.get("svg"))
+        c["svg_scheme"] = _ns_svg(raw_svg, "psch%d" % i)
+        components.append(c)
+    observations = storage.read_observations(eid)
+    # per-sensor summary: the live plot can't be printed, so distil each logged
+    # sensor to count / min / max / last for the archived record
+    sensor_summary = []
+    for s in storage.read_sensor_series(eid):
+        vals = [v for _, v in (s.get("points") or [])]
+        if not vals:
+            continue
+        pts = s["points"]
+        sensor_summary.append({
+            "label": s.get("label") or s.get("entity"), "unit": s.get("unit", ""),
+            "n": len(vals), "min": min(vals), "max": max(vals), "last": vals[-1],
+            "first_at": pts[0][0], "last_at": pts[-1][0],
+        })
+    own_text = (body or "") + "\n" + "\n".join(o["text"] for o in observations)
+    mentions, referenced_by, repeats = _crossrefs(storage, eid, own_text)
+    return render_template("entry_print.html", meta=meta, sections=sections,
+                           section_names=ENTRY_SECTIONS, reaction=reaction,
+                           components=components, observations=observations,
+                           sensor_summary=sensor_summary,
+                           legacy_obs=sections.get("Observations & Data", ""),
+                           equipment=meta.get("equipment") or {},
+                           ops=meta.get("operations") or {},
+                           audit=storage.read_audit(eid),
+                           mentions=mentions, referenced_by=referenced_by,
+                           repeats=repeats, generated_at=utcnow(),
+                           generated_by=current_user.full_name)
 
 
 @bp.route("/<eid>/edit", methods=["GET", "POST"])
@@ -513,7 +554,7 @@ def save_component_structure(eid, cidx):
     with open(os.path.join(sdir, base + ".mol"), "w", encoding="utf-8") as f:
         f.write(molfile)
     comp["structure"] = "structures/%s.mol" % base
-    svg = request.form.get("svg", "")
+    svg = sanitize_svg(request.form.get("svg", ""))
     if svg.strip():
         with open(os.path.join(sdir, base + ".svg"), "w", encoding="utf-8") as f:
             f.write(svg)
@@ -579,7 +620,7 @@ def save_structure(eid):
         flash("Nothing to save — the sketcher was empty.", "error")
         return redirect(url_for("entries.view", eid=eid))
     smiles = request.form.get("smiles", "").strip()
-    svg = request.form.get("svg", "")
+    svg = sanitize_svg(request.form.get("svg", ""))
     caption = request.form.get("caption", "").strip()
     idx = request.form.get("idx", "")
     structures = meta.setdefault("structures", [])
