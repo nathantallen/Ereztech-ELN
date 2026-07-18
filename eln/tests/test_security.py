@@ -99,6 +99,23 @@ class SecurityTests(unittest.TestCase):
         self.assertNotIn('/equipment/stream/ipcam.hood-one', html)
         self.assertIn('id="ops-camera-toggle"', html)
 
+    def test_top_search_finds_entry_metadata_across_all_books(self):
+        storage = self.app.extensions["storage"]
+        meta, body = storage.get_entry("ELN-2026-0001")
+        meta = dict(meta)
+        meta.pop("id", None)
+        meta["title"] = "Metadata search target"
+        meta["reaction"] = {"components": [{"name": "Test compound", "cas": "867-53-09"}]}
+        storage.create_entry(meta, body)
+        client = self.app.test_client()
+        with client.session_transaction() as sess:
+            sess["_user_id"] = "admin"
+            sess["_fresh"] = True
+        response = client.get("/entries/?author=all&q=867-53-09")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Metadata search target", response.data)
+        self.assertIn(b'id="top-search-input"', response.data)
+
 
 if __name__ == "__main__":
     unittest.main()

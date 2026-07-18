@@ -1,6 +1,7 @@
 import csv
 import datetime
 import io
+import json
 import os
 import uuid
 
@@ -115,8 +116,9 @@ def list_entries():
         entries = [e for e in entries if e.get("status") == status]
     if q:
         def match(e):
-            hay = " ".join([str(e.get(k, "")) for k in ("id", "title", "project", "author")]
-                           + [" ".join(e.get("tags") or [])]).lower()
+            # Search all entry metadata too, so reaction names, CAS numbers,
+            # equipment, attachment captions, and signatures are discoverable.
+            hay = json.dumps(e, ensure_ascii=False, default=str).lower()
             if q in hay:
                 return True
             _, body = storage.get_entry(e["id"])

@@ -34,6 +34,14 @@
     <a href="{{ url_for('admin.list_users') }}" class="{{ 'active' if request.blueprint == 'admin' }}">Users</a>
     {% endif %}
   </nav>
+  <form class="top-search" method="get" action="{{ url_for('entries.list_entries') }}" role="search">
+    <input type="hidden" name="author" value="all">
+    <label class="sr-only" for="top-search-input">Search all notebook entries</label>
+    <input id="top-search-input" type="search" name="q"
+           value="{{ request.args.get('q', '') if request.endpoint == 'entries.list_entries' else '' }}"
+           placeholder="Search notebook…" autocomplete="off">
+    <button type="submit" aria-label="Search notebook" title="Search notebook">⌕</button>
+  </form>
   <div class="userbox">
     <span class="user-name">{{ current_user.full_name }}</span>
     <span class="user-role" style="background: {{ role_colors.get(current_user.role, '#F7941E') }};">{{ role_labels.get(current_user.role, current_user.role) }}</span>
