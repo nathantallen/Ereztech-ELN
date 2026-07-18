@@ -131,10 +131,38 @@
       });
   }
 
+  // ---------- compact navigation for phones and tablets ----------
+  function initNavigation() {
+    var header = document.querySelector(".topbar");
+    var toggle = document.querySelector(".nav-toggle");
+    if (!header || !toggle) return;
+
+    function setOpen(open) {
+      header.classList.toggle("nav-open", open);
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      var label = toggle.querySelector(".sr-only");
+      if (label) label.textContent = open ? "Close navigation" : "Open navigation";
+    }
+
+    toggle.addEventListener("click", function () {
+      setOpen(!header.classList.contains("nav-open"));
+    });
+    header.querySelectorAll("nav a").forEach(function (link) {
+      link.addEventListener("click", function () { setOpen(false); });
+    });
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") setOpen(false);
+    });
+    window.addEventListener("resize", function () {
+      if (window.innerWidth > 1100) setOpen(false);
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     initEntryForm();
     initSketcher();
     initTechnique();
     initEnterSubmit();
+    initNavigation();
   });
 })();
