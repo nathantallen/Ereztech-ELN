@@ -224,17 +224,32 @@
       });
     }
     function stopPreview(img, wrap, msg) {
-      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+      if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
       img.src = "";
       wrap.hidden = true;
       previewBtn.textContent = "Live camera preview";
       if (msg) alert(msg);
     }
     function snapshotPolling(img, entity) {
-      // fall back to refreshing a still frame (works for RTSP / snapshot-only cams)
-      function tick() { img.src = "/equipment/snapshot/" + entity + "?t=" + Date.now(); }
+      var failures = 0;
+      function tick() {
+        pollTimer = null;
+        if (document.hidden || previewWrap.hidden) return;
+        img.onload = function () {
+          failures = 0;
+          pollTimer = setTimeout(tick, 1500);
+        };
+        img.onerror = function () {
+          failures += 1;
+          if (failures >= 5) {
+            stopPreview(img, previewWrap, "Camera is unavailable after repeated attempts.");
+            return;
+          }
+          pollTimer = setTimeout(tick, Math.min(30000, 1500 * Math.pow(2, failures)));
+        };
+        img.src = "/equipment/snapshot/" + encodeURIComponent(entity) + "?t=" + Date.now();
+      }
       tick();
-      pollTimer = setInterval(tick, 1000);
     }
     previewBtn.addEventListener("click", function () {
       var wrap = document.getElementById("eq-preview");
@@ -244,21 +259,7 @@
       var entity = camSel.value;
       wrap.hidden = false;
       previewBtn.textContent = "Hide preview";
-      // try a live MJPEG stream; if it isn't available (RTSP/snapshot-only) or
-      // fails to load, fall back to polling snapshots
-      var streamOk = false;
-      img.onload = function () { streamOk = true; };
-      img.onerror = function () {
-        if (pollTimer) return;                 // already polling
-        fetch("/equipment/snapshot/" + entity + "?t=" + Date.now())
-          .then(function (r) {
-            if (r.ok) { img.onerror = null; snapshotPolling(img, entity); }
-            else { return r.text().then(function (t) {
-              stopPreview(img, wrap, "Camera unreachable: " + (t || r.status)); }); }
-          })
-          .catch(function () { stopPreview(img, wrap, "Camera unreachable."); });
-      };
-      img.src = "/equipment/stream/" + entity;
+      snapshotPolling(img, entity);
     });
   }
 

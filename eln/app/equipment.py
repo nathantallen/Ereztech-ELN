@@ -1,9 +1,7 @@
-"""Lab equipment: Home Assistant connection settings, hood grouping admin UI,
-and authenticated proxies for camera snapshots / MJPEG streams (the HA token
-never reaches the browser)."""
+"""Lab equipment settings and authenticated camera snapshots."""
 import requests
 from flask import (Blueprint, Response, abort, current_app, flash, jsonify,
-                   redirect, render_template, request, stream_with_context, url_for)
+                   redirect, render_template, request, url_for)
 from flask_login import current_user, login_required
 
 from . import ha
@@ -197,23 +195,7 @@ def stream(entity):
     cfg = ha.load_config(_storage())
     if not entity.startswith(("camera.", "ipcam.")) or not ha.camera_usable(cfg, entity):
         abort(404)
-    try:
-        upstream = ha.camera_stream(cfg, _storage(), entity)
-        if upstream is None:
-            # no browser-displayable stream (RTSP / snapshot-only): tell the client
-            # to fall back to polling /snapshot instead
-            return Response("no direct stream", status=409)
-        upstream.raise_for_status()
-    except requests.RequestException as e:
-        return Response(str(e), status=502)
-
-    def gen():
-        try:
-            for chunk in upstream.iter_content(chunk_size=8192):
-                yield chunk
-        finally:
-            upstream.close()
-
-    return Response(stream_with_context(gen()),
-                    content_type=upstream.headers.get("Content-Type",
-                                                      "multipart/x-mixed-replace"))
+    # Never hold a Gunicorn worker thread open as an MJPEG relay. With one
+    # eight-thread worker, a handful of browser tabs could otherwise starve the
+    # complete ELN. Clients deliberately fall back to bounded snapshot polling.
+    return Response("Live relay disabled; use snapshot polling.", status=409)

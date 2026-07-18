@@ -109,6 +109,10 @@ def create_app():
         expected = session.get("_csrf_token")
         if not expected or not supplied or not secrets.compare_digest(expected, supplied):
             abort(400, description="Invalid or missing CSRF token.")
+        # Photo capture performs slow camera I/O before its short atomic update;
+        # the route acquires the lock itself only for that final update.
+        if request.endpoint == "entries.ops_photo":
+            return None
         # The app uses file-backed read-modify-write records. One worker serves
         # multiple threads, so hold the shared re-entrant lock for the complete
         # mutation to prevent one request overwriting another request's changes.
@@ -121,6 +125,22 @@ def create_app():
         guard = getattr(g, "_mutation_guard", None)
         if guard is not None:
             guard.__exit__(None, None, None)
+
+    @app.after_request
+    def _inject_csrf_fields(response):
+        """Put CSRF tokens in HTML at render time so forms work without JS."""
+        if (response.status_code >= 400 or not response.is_sequence
+                or not (response.content_type or "").startswith("text/html")):
+            return response
+        token = session.get("_csrf_token")
+        if not token:
+            return response
+        html = response.get_data(as_text=True)
+        form_re = re.compile(r'(<form\b[^>]*\bmethod=["\']post["\'][^>]*>)', re.I)
+        hidden = '<input type="hidden" name="_csrf_token" value="%s">' % escape(token)
+        html = form_re.sub(lambda match: match.group(1) + hidden, html)
+        response.set_data(html)
+        return response
 
     @login_manager.user_loader
     def load_user(username):

@@ -1014,27 +1014,29 @@ def ops_photo(eid):
         data, _ctype = ha.camera_snapshot(cfg, storage, camera)
     except requests.RequestException as e:
         return jsonify({"ok": False, "error": "Camera unreachable: %s" % e}), 502
-    # reload after the network round-trip so we don't clobber concurrent edits
-    meta, body, ops = _ops_guard(eid)
-    elapsed = _elapsed_since(ops.get("started_at"))
-    stamp = utcnow().replace(":", "").replace("-", "")
-    photo_dir = os.path.join(storage.entry_dir(eid), "photos")
-    os.makedirs(photo_dir, exist_ok=True)
-    name = "photo-%s-%s.jpg" % (stamp, uuid.uuid4().hex[:10])
-    with open(os.path.join(photo_dir, name), "wb") as f:
-        f.write(data)
-    rel = "photos/" + name
-    meta.setdefault("attachments", []).append({
-        "file": rel, "kind": "image",
-        "caption": "Photo from %s at t+%s" % (camera, elapsed),
-        "uploaded_by": current_user.username, "uploaded_at": utcnow(),
-    })
-    storage.save_entry(eid, meta, body)
-    storage.append_observation(eid, current_user.username, "photo",
-                               "Photo captured from `%s`: [%s](%s)" %
-                               (camera, name, url_for("entries.serve_file", eid=eid,
-                                                      relpath=rel)), elapsed)
-    storage.audit(eid, current_user.username, "captured photo", rel)
+    # Only the reload + file updates need serialization. Camera I/O above must
+    # not block unrelated observations, user changes, or notebook saves.
+    with storage.mutation_lock():
+        meta, body, ops = _ops_guard(eid)
+        elapsed = _elapsed_since(ops.get("started_at"))
+        stamp = utcnow().replace(":", "").replace("-", "")
+        photo_dir = os.path.join(storage.entry_dir(eid), "photos")
+        os.makedirs(photo_dir, exist_ok=True)
+        name = "photo-%s-%s.jpg" % (stamp, uuid.uuid4().hex[:10])
+        with open(os.path.join(photo_dir, name), "wb") as f:
+            f.write(data)
+        rel = "photos/" + name
+        meta.setdefault("attachments", []).append({
+            "file": rel, "kind": "image",
+            "caption": "Photo from %s at t+%s" % (camera, elapsed),
+            "uploaded_by": current_user.username, "uploaded_at": utcnow(),
+        })
+        storage.save_entry(eid, meta, body)
+        storage.append_observation(eid, current_user.username, "photo",
+                                   "Photo captured from `%s`: [%s](%s)" %
+                                   (camera, name, url_for("entries.serve_file", eid=eid,
+                                                          relpath=rel)), elapsed)
+        storage.audit(eid, current_user.username, "captured photo", rel)
     return jsonify({"ok": True, "file": rel, "elapsed": elapsed})
 
 

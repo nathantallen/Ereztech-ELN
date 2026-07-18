@@ -202,19 +202,32 @@
     var img = document.getElementById("ops-camera-img");
     if (!wrap || !img) return;
     var pollTimer = null;
+    var failures = 0;
+    var label = wrap.querySelector(".ops-camera-label");
 
-    function pollSnapshots() {
-      if (pollTimer) return;
-      function tick() { img.src = img.dataset.snapshot + "?t=" + Date.now(); }
-      tick();
-      pollTimer = setInterval(tick, 1500);
+    function schedule(delay) {
+      if (document.hidden || wrap.classList.contains("collapsed")) return;
+      if (pollTimer) clearTimeout(pollTimer);
+      pollTimer = setTimeout(tick, delay);
     }
 
-    img.onerror = function () {
-      img.onerror = null;
-      pollSnapshots();
-    };
-    img.src = img.dataset.stream;
+    function tick() {
+      pollTimer = null;
+      if (document.hidden || wrap.classList.contains("collapsed")) return;
+      img.onload = function () {
+        failures = 0;
+        if (label) label.textContent = "Live camera";
+        schedule(1500);
+      };
+      img.onerror = function () {
+        failures += 1;
+        var delay = Math.min(30000, 1500 * Math.pow(2, Math.min(failures, 5)));
+        if (label) label.textContent = "Camera unavailable — retrying";
+        schedule(delay);
+      };
+      img.src = img.dataset.snapshot + "?t=" + Date.now();
+    }
+    tick();
 
     var toggle = document.getElementById("ops-camera-toggle");
     if (toggle) toggle.addEventListener("click", function () {
@@ -222,6 +235,17 @@
       toggle.textContent = collapsed ? "+" : "−";
       toggle.title = collapsed ? "Show camera" : "Hide camera";
       toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      if (collapsed && pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+      if (!collapsed) tick();
+    });
+
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) {
+        if (pollTimer) clearTimeout(pollTimer);
+        pollTimer = null;
+      } else if (!wrap.classList.contains("collapsed")) {
+        tick();
+      }
     });
 
     var handle = wrap.querySelector(".ops-camera-resize");

@@ -21,7 +21,6 @@
   {% if eq.camera and ha_configured %}
   <div class="ops-camera" id="ops-camera" data-camera="{{ eq.camera }}">
     <img id="ops-camera-img" alt="Live view from the assigned lab camera"
-         data-stream="{{ url_for('equipment.stream', entity=eq.camera) }}"
          data-snapshot="{{ url_for('equipment.snapshot', entity=eq.camera) }}">
     <span class="ops-camera-label">Live camera</span>
     <button type="button" class="ops-camera-toggle" id="ops-camera-toggle"

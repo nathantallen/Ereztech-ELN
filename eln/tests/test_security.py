@@ -1,4 +1,5 @@
 import os
+import re
 import tempfile
 import unittest
 
@@ -47,8 +48,25 @@ class SecurityTests(unittest.TestCase):
 
     def test_post_requires_csrf_token(self):
         client = self.app.test_client()
+        login_page = client.get("/login")
+        self.assertIn(b'name="_csrf_token"', login_page.data)
+        token = re.search(rb'name="_csrf_token" value="([^"]+)"', login_page.data).group(1)
+        protected = client.post("/login", data={"username": "x", "password": "x",
+                                                "_csrf_token": token.decode()})
+        self.assertEqual(protected.status_code, 200)
         response = client.post("/login", data={"username": "x", "password": "x"})
         self.assertEqual(response.status_code, 400)
+
+    def test_login_attempt_cache_is_bounded(self):
+        from app import auth
+        with auth._ATTEMPTS_LOCK:
+            auth._ATTEMPTS.clear()
+            auth._LAST_PRUNE = 0.0
+        for i in range(auth._MAX_TRACKED_KEYS + 25):
+            auth._failed(("127.0.0.1", "user-%d" % i))
+        self.assertLessEqual(len(auth._ATTEMPTS), auth._MAX_TRACKED_KEYS)
+        with auth._ATTEMPTS_LOCK:
+            auth._ATTEMPTS.clear()
 
     def test_generated_secret_is_persistent(self):
         first = self.app.config["SECRET_KEY"]
@@ -77,8 +95,8 @@ class SecurityTests(unittest.TestCase):
             html = render_template("_operations.html", meta=meta, ops=ops,
                                    ha_configured=True, recording={"active": False})
         self.assertIn('id="ops-camera"', html)
-        self.assertIn('/equipment/stream/ipcam.hood-one', html)
         self.assertIn('/equipment/snapshot/ipcam.hood-one', html)
+        self.assertNotIn('/equipment/stream/ipcam.hood-one', html)
         self.assertIn('id="ops-camera-toggle"', html)
 
 
