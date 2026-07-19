@@ -4,6 +4,7 @@ import tempfile
 import unittest
 
 from flask import render_template
+from werkzeug.security import check_password_hash
 
 from app import User, create_app
 from app.svg import sanitize_svg
@@ -75,6 +76,11 @@ class SecurityTests(unittest.TestCase):
         second = create_app().config["SECRET_KEY"]
         self.assertEqual(first, second)
         self.assertGreaterEqual(len(first), 64)
+
+    def test_fresh_install_uses_documented_admin_password(self):
+        admin = self.app.extensions["storage"].find_user("admin")
+        self.assertIsNotNone(admin)
+        self.assertTrue(check_password_hash(admin["password_hash"], "ereztech"))
 
     def test_roles_are_persistent_and_permission_driven(self):
         storage = self.app.extensions["storage"]

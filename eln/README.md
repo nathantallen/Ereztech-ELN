@@ -52,14 +52,15 @@ cd eln
 docker compose up --build
 ```
 
-Open http://localhost:8091 and sign in as `admin`. On a fresh data directory,
-the generated one-time administrator password is printed in the container log:
+Open http://localhost:8091. A fresh data directory uses these credentials:
 
-```bash
-docker compose logs eln
+```text
+Username: admin
+Password: ereztech
 ```
 
-Store it in your password manager, then change it under **Users**.
+Change the default password under **Users** immediately after signing in.
+Existing installations retain their current administrator password.
 
 ## Assigning the storage location
 

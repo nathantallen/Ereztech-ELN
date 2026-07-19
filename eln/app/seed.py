@@ -1,7 +1,5 @@
-"""First-run seed: secure admin login plus a few example records so a fresh
+"""First-run seed: default admin login plus a few example records so a fresh
 notebook demonstrates the format. Runs only when users.json does not exist."""
-import secrets
-
 from werkzeug.security import generate_password_hash
 
 from .storage import utcnow
@@ -22,7 +20,7 @@ M  END
 
 
 def seed_initial_data(storage):
-    initial_password = secrets.token_urlsafe(15)
+    initial_password = "ereztech"
     storage.save_users([{
         "username": "admin",
         "full_name": "Administrator",
@@ -30,12 +28,10 @@ def seed_initial_data(storage):
         "role": "admin",
         "active": True,
     }])
-    print("\n*** Ereztech ELN first-run administrator credentials ***")
+    print("\n*** Ereztech ELN default administrator credentials ***")
     print("Username: admin")
     print("Password: %s" % initial_password)
-    # flush=True: under gunicorn stdout is block-buffered, so without it these
-    # lines sit in the buffer and never reach `docker logs` at install time
-    print("Store this password securely; it will not be shown again.\n", flush=True)
+    print("Change this password under Users after signing in.\n", flush=True)
 
     materials = [
         dict(slug="trimethylgallium", name="Trimethylgallium (TMGa)", cas="1445-79-0",
