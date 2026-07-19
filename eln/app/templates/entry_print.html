@@ -118,7 +118,7 @@
         <td>{{ c.equiv }}</td>
         <td>{{ '%.2f' | format(c.mmol) if c.mmol is not none }}</td>
         <td>{{ '%.3f g' | format(c.mass_g) if c.mass_g is not none }}</td>
-        <td>{{ '%.2f mL' | format(c.volume_ml) if c.volume_ml is not none }}</td>
+        <td>{% if c.volume_ml is not none %}{% set unit = c.volume_unit or 'mL' %}{% if unit == 'µL' %}{{ '%.1f µL' | format(c.volume_ml * 1000) }}{% elif unit == 'L' %}{{ '%.3f L' | format(c.volume_ml / 1000) }}{% else %}{{ '%.2f mL' | format(c.volume_ml) }}{% endif %}{% endif %}</td>
       </tr>
       {% endfor %}
       </tbody>

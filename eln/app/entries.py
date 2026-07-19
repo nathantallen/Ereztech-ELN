@@ -786,6 +786,7 @@ def save_reaction(eid):
             "mmol": _f(g("mmol")),
             "mass_g": _f(g("mass_g")),
             "volume_ml": _f(g("volume_ml")),
+            "volume_unit": g("volume_unit") if g("volume_unit") in ("µL", "mL", "L") else "mL",
             # structure files survive round-trips
             "structure": old.get("structure", ""),
             "svg": old.get("svg", ""),

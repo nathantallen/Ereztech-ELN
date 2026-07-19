@@ -1,6 +1,7 @@
 {# Sticky operations bar: timer, live sensor strip, camera + end-work controls. #}
 {% set running = ops.started_at and not ops.ended_at %}
 {% set eq = meta.equipment or {} %}
+{% set reaction_components = components | default([]) %}
 
 {% if running %}
 <div class="ops-bar" id="ops-bar" data-started="{{ ops.started_at }}"
@@ -10,6 +11,28 @@
   <div class="ops-clock">
     <div class="ops-clock-label">Lab time</div>
     <div class="ops-clock-time mono" id="ops-timer">--:--:--</div>
+  </div>
+  <div class="ops-reaction-summary" id="ops-reaction-summary" aria-label="Reaction quantities">
+    <div class="ops-quantity-group">
+      <span class="ops-quantity-label">Reactant weights</span>
+      <span class="ops-quantity-values" id="ops-reactant-weights">
+        {% for c in reaction_components if c.role == 'reactant' and c.mass_g is not none %}
+        <span>{{ c.name or 'Unnamed reactant' }}: {{ '%.3f' | format(c.mass_g) }} g</span>
+        {% else %}<span>—</span>{% endfor %}
+      </span>
+    </div>
+    <div class="ops-quantity-group">
+      <span class="ops-quantity-label">Solvent volumes</span>
+      <span class="ops-quantity-values" id="ops-solvent-volumes">
+        {% for c in reaction_components if c.role == 'solvent' and c.volume_ml is not none %}
+        {% set unit = c.volume_unit or 'mL' %}
+        <span>{{ c.name or 'Unnamed solvent' }}:
+          {% if unit == 'µL' %}{{ '%.1f' | format(c.volume_ml * 1000) }} µL
+          {% elif unit == 'L' %}{{ '%.3f' | format(c.volume_ml / 1000) }} L
+          {% else %}{{ '%.2f' | format(c.volume_ml) }} mL{% endif %}</span>
+        {% else %}<span>—</span>{% endfor %}
+      </span>
+    </div>
   </div>
   {% if eq.sensors and ha_configured %}
   <div class="ops-plot-wrap" id="ops-plot-wrap">

@@ -22,6 +22,50 @@
     return ml.toFixed(2) + " mL";
   }
 
+  function volumeToMl(value, unit) {
+    if (value == null) return null;
+    if (unit === "µL") return value / 1000;
+    if (unit === "L") return value * 1000;
+    return value;
+  }
+
+  function fmtSolventVolume(value, unit) {
+    if (value == null) return "";
+    var decimals = unit === "µL" ? 1 : unit === "L" ? 3 : 2;
+    return value.toFixed(decimals) + " " + unit;
+  }
+
+  function setQuantityList(container, values) {
+    if (!container) return;
+    container.replaceChildren();
+    (values.length ? values : ["—"]).forEach(function (value) {
+      var item = document.createElement("span");
+      item.textContent = value;
+      container.appendChild(item);
+    });
+  }
+
+  function updateOpsQuantities(all) {
+    if (!document.getElementById("ops-reaction-summary")) return;
+    var reactants = [];
+    var solvents = [];
+    all.forEach(function (r) {
+      var role = r.querySelector(".f-role").value;
+      var name = r.querySelector(".f-name").value.trim() ||
+        (role === "solvent" ? "Unnamed solvent" : "Unnamed reactant");
+      if (role === "reactant") {
+        var mass = num(r.querySelector(".f-mass"));
+        if (mass != null) reactants.push(name + ": " + fmtMass(mass));
+      } else if (role === "solvent") {
+        var volume = num(r.querySelector(".f-solvent-volume"));
+        var unit = r.querySelector(".f-volume-unit").value;
+        if (volume != null) solvents.push(name + ": " + fmtSolventVolume(volume, unit));
+      }
+    });
+    setQuantityList(document.getElementById("ops-reactant-weights"), reactants);
+    setQuantityList(document.getElementById("ops-solvent-volumes"), solvents);
+  }
+
   function recalc(form) {
     var table = form.querySelector("#stoich-table");
     var all = rows(table);
@@ -57,21 +101,32 @@
       var conc = num(r.querySelector(".f-conc"));
       var state = r.querySelector(".f-state").value;
       var role = r.querySelector(".f-role").value;
+      var solventVolume = r.querySelector(".f-solvent-volume");
+      var solventVolumeControl = r.querySelector(".solvent-volume-control");
+      var solventVolumeUnit = r.querySelector(".f-volume-unit");
       var mmol = null, mass = null, vol = null;
-      if (limMmol != null && role !== "solvent") {
+      if (role === "solvent") {
+        vol = volumeToMl(num(solventVolume), solventVolumeUnit.value);
+        solventVolumeControl.hidden = false;
+      } else if (limMmol != null) {
+        solventVolumeControl.hidden = true;
         mmol = limMmol * equiv / limEquiv;
         if (mw) mass = mmol * mw / 1000;
         if (state === "solution" && conc) vol = mmol / conc;
         else if (state === "liquid" && density && mass != null) vol = mass / density;
+      } else {
+        solventVolumeControl.hidden = true;
       }
       r.querySelector(".c-mmol").textContent = mmol != null ? mmol.toFixed(2) : "";
       r.querySelector(".c-mass").textContent =
         role === "product" && mass != null ? fmtMass(mass) + " (theor.)" : fmtMass(mass);
-      r.querySelector(".c-volume").textContent = fmtVol(vol);
+      r.querySelector(".c-volume-text").textContent =
+        role === "solvent" ? "" : fmtVol(vol);
       r.querySelector(".f-mmol").value = mmol != null ? mmol.toFixed(3) : "";
       r.querySelector(".f-mass").value = mass != null ? mass.toFixed(4) : "";
       r.querySelector(".f-volume").value = vol != null ? vol.toFixed(3) : "";
     });
+    updateOpsQuantities(all);
   }
 
   function wireStoichRow(form, r) {

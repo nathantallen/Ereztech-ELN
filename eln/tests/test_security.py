@@ -91,13 +91,35 @@ class SecurityTests(unittest.TestCase):
     def test_running_operations_bar_includes_assigned_camera(self):
         meta = {"id": "ELN-2026-0001", "equipment": {"camera": "ipcam.hood-one"}}
         ops = {"started_at": "2026-07-18T12:00:00Z"}
+        components = [
+            {"role": "reactant", "name": "Starting material", "mass_g": 1.25},
+            {"role": "solvent", "name": "THF", "volume_ml": 20.0,
+             "volume_unit": "L"},
+        ]
         with self.app.test_request_context("/entries/ELN-2026-0001"):
             html = render_template("_operations.html", meta=meta, ops=ops,
-                                   ha_configured=True, recording={"active": False})
+                                   components=components, ha_configured=True,
+                                   recording={"active": False})
         self.assertIn('id="ops-camera"', html)
         self.assertIn('/equipment/snapshot/ipcam.hood-one', html)
         self.assertNotIn('/equipment/stream/ipcam.hood-one', html)
         self.assertIn('id="ops-camera-toggle"', html)
+        self.assertIn('id="ops-reactant-weights"', html)
+        self.assertIn("Starting material: 1.250 g", html)
+        self.assertIn('id="ops-solvent-volumes"', html)
+        self.assertIn("0.020 L", html)
+
+    def test_equipment_panel_is_collapsible_and_above_notebook_content(self):
+        client = self.app.test_client()
+        with client.session_transaction() as sess:
+            sess["_user_id"] = "admin"
+            sess["_fresh"] = True
+        response = client.get("/entries/ELN-2026-0001")
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn('<details class="card equipment-panel" id="equipment" open>', html)
+        self.assertIn('<summary class="equipment-panel-summary">', html)
+        self.assertLess(html.index('id="equipment"'), html.index("<h2>Objective</h2>"))
 
     def test_top_search_finds_entry_metadata_across_all_books(self):
         storage = self.app.extensions["storage"]

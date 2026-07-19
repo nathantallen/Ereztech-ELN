@@ -94,7 +94,18 @@
         <td class="center"><input type="radio" name="comp_limiting" value="{{ loop.index0 }}" class="f-limiting" {{ 'checked' if c.limiting }}></td>
         <td class="calc c-mmol mono"></td>
         <td class="calc c-mass mono"></td>
-        <td class="calc c-volume mono"></td>
+        <td class="calc c-volume mono">
+          <span class="c-volume-text"></span>
+          {% set volume_unit = c.volume_unit or 'mL' %}
+          <span class="solvent-volume-control" {{ 'hidden' if c.role != 'solvent' }}>
+            <input type="number" step="any" min="0" class="f-solvent-volume"
+                   value="{% if c.role == 'solvent' and c.volume_ml is not none %}{% if volume_unit == 'µL' %}{{ c.volume_ml * 1000 }}{% elif volume_unit == 'L' %}{{ c.volume_ml / 1000 }}{% else %}{{ c.volume_ml }}{% endif %}{% endif %}"
+                   aria-label="Solvent volume" placeholder="volume">
+            <select name="comp_volume_unit" class="f-volume-unit" aria-label="Solvent volume unit">
+              {% for unit in ['µL', 'mL', 'L'] %}<option value="{{ unit }}" {{ 'selected' if volume_unit == unit }}>{{ unit }}</option>{% endfor %}
+            </select>
+          </span>
+        </td>
         <td><button type="button" class="linklike row-del" title="Remove row">✕</button></td>
       </tr>
       {% endfor %}
@@ -135,7 +146,16 @@
       <td class="center"><input type="radio" name="comp_limiting" value="" class="f-limiting"></td>
       <td class="calc c-mmol mono"></td>
       <td class="calc c-mass mono"></td>
-      <td class="calc c-volume mono"></td>
+      <td class="calc c-volume mono">
+        <span class="c-volume-text"></span>
+        <span class="solvent-volume-control" hidden>
+          <input type="number" step="any" min="0" class="f-solvent-volume"
+                 aria-label="Solvent volume" placeholder="volume">
+          <select name="comp_volume_unit" class="f-volume-unit" aria-label="Solvent volume unit">
+            <option value="µL">µL</option><option value="mL" selected>mL</option><option value="L">L</option>
+          </select>
+        </span>
+      </td>
       <td><button type="button" class="linklike row-del" title="Remove row">✕</button></td>
     </tr>
   </template>
@@ -152,7 +172,7 @@
       <td>{{ c.mw }}</td><td>{{ c.density or '' }}</td><td>{{ c.equiv }}</td>
       <td>{{ '%.2f' | format(c.mmol) if c.mmol is not none }}</td>
       <td>{{ '%.3f g' | format(c.mass_g) if c.mass_g is not none }}</td>
-      <td>{{ '%.2f mL' | format(c.volume_ml) if c.volume_ml is not none }}</td>
+      <td>{% if c.volume_ml is not none %}{% set unit = c.volume_unit or 'mL' %}{% if unit == 'µL' %}{{ '%.1f µL' | format(c.volume_ml * 1000) }}{% elif unit == 'L' %}{{ '%.3f L' | format(c.volume_ml / 1000) }}{% else %}{{ '%.2f mL' | format(c.volume_ml) }}{% endif %}{% endif %}</td>
     </tr>
     {% endfor %}
     </tbody>

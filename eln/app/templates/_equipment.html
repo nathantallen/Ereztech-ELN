@@ -1,8 +1,14 @@
 {# Equipment selection: lab hood -> camera + sensors + recording settings. #}
 {% set locked = meta.status != 'draft' %}
 {% set eq = meta.equipment or {} %}
-<div class="card" id="equipment">
-  <h2>Lab equipment</h2>
+<details class="card equipment-panel" id="equipment" open>
+  <summary class="equipment-panel-summary">
+    <span>Lab equipment</span>
+    <span class="equipment-panel-status">
+      {{ eq.hood or 'No hood selected' }}{% if eq.camera %} · Camera assigned{% endif %}
+    </span>
+  </summary>
+  <div class="equipment-panel-body">
   {% if not ha_configured %}
   <p class="muted">Home Assistant is not connected yet.
     {% if is_admin %}<a href="{{ url_for('equipment.config_page') }}">Configure it under Equipment</a>.{% else %}Ask an administrator to configure it.{% endif %}
@@ -58,4 +64,5 @@
     <tr><th>Recording</th><td>{{ (eq.recording or {}).get('fps', 5) }} fps, {{ (eq.recording or {}).get('resolution', '—') }}</td></tr>
   </table>
   {% endif %}
-</div>
+  </div>
+</details>
