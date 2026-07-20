@@ -6,6 +6,7 @@
   <div>
     <h1><span class="mono">{{ meta.id }}</span> — {{ meta.title }}</h1>
     <div class="sub">
+      {% if meta.lot_number %}<strong>Lot {{ meta.lot_number }}</strong> · {% endif %}
       {{ meta.project }}{{ ' · ' if meta.project }}{{ meta.experiment_date }} · {{ meta.technique or meta.atmosphere }}
       · by {{ meta.author }}
       {% for t in meta.tags or [] %}<span class="tag">{{ t }}</span>{% endfor %}

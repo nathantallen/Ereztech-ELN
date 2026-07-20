@@ -15,6 +15,9 @@
   <label>Project
     <input type="text" name="project" value="{{ meta.project if meta }}" placeholder="e.g. TMGa 6N purity">
   </label>
+  <label>Lot number
+    <input type="text" name="lot_number" value="{{ meta.lot_number if meta else '' }}" placeholder="e.g. TMG-2607-B" autocomplete="off">
+  </label>
   <label>Experiment date
     <input type="date" name="experiment_date" value="{{ meta.experiment_date if meta }}">
   </label>
@@ -31,7 +34,7 @@
     </select>
     <input type="text" name="new_technique" id="new-technique" placeholder="Name the new technique" hidden style="margin-top: 6px;">
   </label>
-  <label>Tags <span class="muted">(comma-separated)</span>
+  <label class="span2">Tags <span class="muted">(comma-separated)</span>
     <input type="text" name="tags" value="{{ (meta.tags or [])|join(', ') if meta }}">
   </label>
 

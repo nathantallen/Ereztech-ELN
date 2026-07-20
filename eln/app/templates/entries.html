@@ -25,7 +25,7 @@
 <div class="card">
   <form method="get" class="filter-row">
     <input type="hidden" name="author" value="{{ author }}">
-    <input type="search" name="q" value="{{ q }}" placeholder="Search title, project, tags, full text…">
+    <input type="search" name="q" value="{{ q }}" placeholder="Search title, lot number, project, tags, full text…">
     <select name="status">
       <option value="">Any status</option>
       {% for s in entry_statuses %}
@@ -37,11 +37,12 @@
 
   {% if entries %}
   <table class="table">
-    <thead><tr><th>ID</th><th>Title</th><th>Project</th><th>Date</th><th>Author</th><th>Tags</th><th>Status</th></tr></thead>
+    <thead><tr><th>ID</th><th>Lot number</th><th>Title</th><th>Project</th><th>Date</th><th>Author</th><th>Tags</th><th>Status</th></tr></thead>
     <tbody>
     {% for e in entries %}
       <tr>
         <td class="mono"><a href="{{ url_for('entries.view', eid=e.id) }}">{{ e.id }}</a></td>
+        <td class="mono">{{ e.lot_number or '—' }}</td>
         <td><a href="{{ url_for('entries.view', eid=e.id) }}">{{ e.title }}</a></td>
         <td>{{ e.project }}</td>
         <td class="mono">{{ e.experiment_date }}</td>

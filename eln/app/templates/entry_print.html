@@ -40,6 +40,7 @@
 
   <h1 class="doc-title">{{ meta.title }}</h1>
   <div class="doc-sub">
+    {% if meta.lot_number %}<strong>Lot {{ meta.lot_number }}</strong> · {% endif %}
     {% if meta.project %}{{ meta.project }} · {% endif %}
     {{ meta.experiment_date or '—' }} · {{ meta.technique or meta.atmosphere or '—' }} · by {{ meta.author }}
     {% for t in meta.tags or [] %}<span class="tag">{{ t }}</span>{% endfor %}
