@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Reconcile inventory — {{ meta.id }} — Ereztech ELN{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Reconcile inventory</h1>
+    <div class="sub"><span class="mono">{{ meta.id }}</span> — {{ meta.title }}</div>
+  </div>
+</div>
+
+<div class="card reconciliation-intro">
+  <h2>Account for every deducted quantity</h2>
+  <p>For each batch, <strong>consumed + recovered + returned must equal the deducted amount</strong>.
+     Returned material is credited back to its original batch. Recovered material is documented but is not automatically returned to the source batch.</p>
+</div>
+
+<form method="post" class="inventory-reconciliation-form">
+  {% for allocation in allocations %}
+  <section class="card reconciliation-row">
+    <div class="reconciliation-head">
+      <div>
+        <h2>{{ allocation.component_name }}</h2>
+        <div class="sub">{{ allocation.material_name }} · lot <span class="mono">{{ allocation.lot }}</span></div>
+      </div>
+      <div class="reconciliation-deducted">
+        <span class="small muted">Deducted</span>
+        <strong>{{ allocation.planned_quantity }} {{ allocation.planned_unit }}</strong>
+        <span class="small muted">Current batch balance {{ allocation.batch_balance }}</span>
+      </div>
+    </div>
+    <div class="reconciliation-fields">
+      <label>Consumed
+        <input type="number" step="any" min="0" name="consumed_{{ allocation.id }}" required placeholder="0">
+      </label>
+      <label>Recovered
+        <input type="number" step="any" min="0" name="recovered_{{ allocation.id }}" required placeholder="0">
+      </label>
+      <label>Returned to original batch
+        <input type="number" step="any" min="0" name="returned_{{ allocation.id }}" required placeholder="0">
+      </label>
+      <label>Reporting unit
+        <select name="unit_{{ allocation.id }}">
+          {% for unit in allocation.units %}<option value="{{ unit }}" {{ 'selected' if unit == allocation.planned_unit }}>{{ unit }}</option>{% endfor %}
+        </select>
+      </label>
+    </div>
+  </section>
+  {% endfor %}
+  <div class="card form-actions reconciliation-actions">
+    <button class="btn btn-orange" type="submit">Reconcile inventory &amp; end lab work</button>
+    <a class="btn btn-ghost" href="{{ url_for('entries.view', eid=meta.id) }}#operations">Continue lab work</a>
+  </div>
+</form>
+{% endblock %}

@@ -59,7 +59,7 @@
       <td>{{ b.supplier }}</td>
       <td class="mono">{{ b.received }}</td>
       <td>{{ b.purity }}</td>
-      <td>{{ b.quantity }}</td>
+      <td><strong>{{ b._inventory.display }}</strong></td>
       <td>{{ b.container }}</td>
       <td>{{ b.location }}</td>
       <td><span class="pill pill-batch-{{ b.status | lower | replace(' ', '-') }}">{{ b.status }}</span></td>
@@ -86,6 +86,33 @@
   </table>
   {% else %}
   <p class="muted">No batches recorded yet.</p>
+  {% endif %}
+</div>
+
+<div class="card" id="inventory-history">
+  <h2>Inventory transaction history</h2>
+  {% if inventory_transactions %}
+  <div class="table-scroll">
+    <table class="table small inventory-ledger">
+      <thead><tr><th>Time</th><th>Lot</th><th>Action</th><th>Change</th><th>Balance</th><th>Experiment</th><th>By</th><th>Detail</th></tr></thead>
+      <tbody>
+      {% for tx in inventory_transactions %}
+      <tr>
+        <td><time data-utc="{{ tx.at }}">{{ tx.at | nicedate }}</time></td>
+        <td class="mono">{{ tx.lot }}</td>
+        <td>{{ tx.action }}</td>
+        <td class="mono {{ 'inventory-positive' if tx.delta_base > 0 else 'inventory-negative' if tx.delta_base < 0 }}">{{ tx.delta_display }}</td>
+        <td class="mono"><strong>{{ tx.balance_display }}</strong></td>
+        <td>{% if tx.entry_id %}<a class="mono" href="{{ url_for('entries.view', eid=tx.entry_id) }}">{{ tx.entry_id }}</a>{% else %}—{% endif %}</td>
+        <td>{{ tx.by }}</td>
+        <td>{{ tx.detail or tx.component_name or '' }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="muted">No inventory transactions have been recorded.</p>
   {% endif %}
 </div>
 {% endblock %}

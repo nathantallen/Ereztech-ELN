@@ -23,8 +23,18 @@
   <label>Purity / grade
     <input type="text" name="purity" value="{{ meta.purity if meta }}" placeholder="99.9999% (6N)">
   </label>
-  <label>Quantity
-    <input type="text" name="quantity" value="{{ meta.quantity if meta }}" placeholder="250 g">
+  <label>Available inventory
+    <span class="input-pair inventory-quantity-input">
+      <input type="number" step="any" min="0" name="quantity_value"
+             value="{{ quantity.value }}" required placeholder="250">
+      <select name="quantity_unit" aria-label="Inventory unit">
+        {% for family, units in inventory_units.items() if not meta or family == quantity.family %}
+        <optgroup label="{{ family }}">
+          {% for unit in units %}<option value="{{ unit }}" {{ 'selected' if quantity.unit == unit }}>{{ unit }}</option>{% endfor %}
+        </optgroup>
+        {% endfor %}
+      </select>
+    </span>
   </label>
   <label>Container
     <input type="text" name="container" value="{{ meta.container if meta }}" placeholder="SS-316 bubbler #14">
@@ -39,6 +49,13 @@
       {% endfor %}
     </select>
   </label>
+  {% if meta %}
+  <label class="span2">Inventory adjustment reason
+    <input type="text" name="adjustment_reason"
+           placeholder="Required only when changing the available quantity">
+    <span class="muted small">Quantity changes create a permanent inventory transaction.</span>
+  </label>
+  {% endif %}
   <label class="span2">Notes
     <textarea name="notes" rows="3">{{ notes }}</textarea>
   </label>

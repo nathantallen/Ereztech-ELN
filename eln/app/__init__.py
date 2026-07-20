@@ -115,6 +115,7 @@ def create_app():
         # finalize — up to 45s) before a short atomic update; each acquires the
         # lock itself only around that final read-modify-write.
         if request.endpoint in ("entries.ops_photo", "entries.ops_end",
+                                "entries.inventory_reconcile",
                                 "entries.ops_record_stop"):
             return None
         # The app uses file-backed read-modify-write records. One worker serves

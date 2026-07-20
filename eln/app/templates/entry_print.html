@@ -126,6 +126,24 @@
   </div>
   {% endif %}
 
+  {% if meta.inventory_allocations %}
+  <div class="doc-section">
+    <h2>Inventory allocation &amp; reconciliation</h2>
+    <table class="summary-table">
+      <thead><tr><th>Component</th><th>Material / lot</th><th>Allocated</th><th>Status</th><th>Consumed</th><th>Recovered</th><th>Returned</th></tr></thead>
+      <tbody>{% for allocation in meta.inventory_allocations %}<tr>
+        <td>{{ allocation.component_name }}</td>
+        <td>{{ allocation.material_name }} · <span class="mono">{{ allocation.lot }}</span></td>
+        <td>{{ allocation.planned_quantity }} {{ allocation.planned_unit }}</td>
+        <td>{{ allocation.status }}</td>
+        <td>{{ allocation.consumed_base if allocation.consumed_base is defined else '—' }}{% if allocation.consumed_base is defined %} {{ allocation.base_unit }}{% endif %}</td>
+        <td>{{ allocation.recovered_base if allocation.recovered_base is defined else '—' }}{% if allocation.recovered_base is defined %} {{ allocation.base_unit }}{% endif %}</td>
+        <td>{{ allocation.returned_base if allocation.returned_base is defined else '—' }}{% if allocation.returned_base is defined %} {{ allocation.base_unit }}{% endif %}</td>
+      </tr>{% endfor %}</tbody>
+    </table>
+  </div>
+  {% endif %}
+
   {# ---------- equipment ---------- #}
   {% if equipment.hood or equipment.camera or equipment.sensors %}
   <div class="doc-section">

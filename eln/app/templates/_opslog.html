@@ -2,6 +2,7 @@
 {% set locked = meta.status != 'draft' %}
 {% set running = ops.started_at and not ops.ended_at %}
 {% set eq = meta.equipment or {} %}
+{% set planned_inventory = (inventory_allocations | default([])) | selectattr('status', 'equalto', 'planned') | list %}
 <div class="card" id="operations">
   <h2>Actions and Observations</h2>
   {% if legacy_obs %}
@@ -15,8 +16,12 @@
     <p class="small muted">Start the lab timer when physical work begins — every observation,
       photo and recording is then timestamped against it{% if eq.sensors and ha_configured %},
       and sensor logging starts automatically{% endif %}.</p>
-    <form method="post" action="{{ url_for('entries.ops_start', eid=meta.id) }}">
-      <button class="btn btn-orange" type="submit">▶ Start lab work</button>
+    {% if planned_inventory %}
+    <p class="inventory-start-notice"><strong>{{ planned_inventory|length }} inventory allocation{{ '' if planned_inventory|length == 1 else 's' }}</strong> will be deducted when work starts.</p>
+    {% endif %}
+    <form method="post" action="{{ url_for('entries.ops_start', eid=meta.id) }}"
+          {% if planned_inventory %}onsubmit="return confirm('Start lab work and deduct the planned inventory allocations?')"{% endif %}>
+      <button class="btn btn-orange" type="submit">▶ Start lab work{% if planned_inventory %} &amp; deduct inventory{% endif %}</button>
     </form>
     {% else %}
     <p class="muted">Lab work has not been performed on this entry.</p>

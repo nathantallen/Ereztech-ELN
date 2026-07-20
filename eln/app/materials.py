@@ -7,13 +7,17 @@ from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 
 from .chem import formula_and_mw, pubchem_lookup
+from .inventory import (UNITS_BY_FAMILY, batch_quantity, format_base,
+                        set_batch_quantity, to_base)
+from .organo import available_templates
 from .storage import BATCH_STATUSES, slugify, utcnow
+from .structure_files import load_preferred, save_bundle
 from .svg import namespace_svg as _ns_svg, sanitize_svg
 
 bp = Blueprint("materials", __name__, url_prefix="/materials")
 
 MATERIAL_FIELDS = ("name", "cas", "formula", "supplier", "hazards", "storage")
-BATCH_FIELDS = ("lot", "supplier", "received", "expiry", "purity", "quantity",
+BATCH_FIELDS = ("lot", "supplier", "received", "expiry", "purity",
                 "container", "location", "status")
 
 
@@ -93,9 +97,12 @@ def view(slug):
     meta, notes = _get_material_or_404(slug)
     storage = _storage()
     batches = storage.list_batches(slug)
+    for batch in batches:
+        batch["_inventory"] = batch_quantity(batch)
     usage = {b.get("lot"): storage.entries_using_batch(slug, b.get("lot")) for b in batches}
     return render_template("material_view.html", meta=meta, notes=notes,
                            batches=batches, usage=usage,
+                           inventory_transactions=storage.inventory_transactions(material=slug),
                            structure_svg=_material_svg(slug, "mat"))
 
 
@@ -104,16 +111,13 @@ def view(slug):
 def draw_structure(slug):
     _require_edit()
     meta, _ = _get_material_or_404(slug)
-    molfile = ""
-    path = os.path.join(_storage().material_dir(slug), "structure.mol")
-    if os.path.isfile(path):
-        with open(path, "r", encoding="utf-8") as f:
-            molfile = f.read()
+    molfile = load_preferred(_storage().material_dir(slug), "structure")
     return render_template("structure_edit.html", idx=None,
                            subtitle=meta.get("name", slug),
                            action_url=url_for("materials.save_structure", slug=slug),
                            cancel_url=url_for("materials.view", slug=slug),
-                           molfile=molfile, caption=meta.get("name", ""))
+                           molfile=molfile, caption=meta.get("name", ""),
+                           structure_templates=available_templates(_storage()))
 
 
 @bp.route("/<slug>/structure/save", methods=["POST"])
@@ -123,12 +127,13 @@ def save_structure(slug):
     meta, notes = _get_material_or_404(slug)
     storage = _storage()
     molfile = request.form.get("molfile", "")
+    molfile_v2000 = request.form.get("molfile_v2000", "")
+    ket = request.form.get("ket", "")
     if not molfile.strip():
         flash("Nothing to save — the sketcher was empty.", "error")
         return redirect(url_for("materials.view", slug=slug))
     d = storage.material_dir(slug)
-    with open(os.path.join(d, "structure.mol"), "w", encoding="utf-8") as f:
-        f.write(molfile)
+    save_bundle(d, "structure", molfile, molfile_v2000, ket)
     svg = sanitize_svg(request.form.get("svg", ""))
     if svg.strip():
         with open(os.path.join(d, "structure.svg"), "w", encoding="utf-8") as f:
@@ -180,10 +185,29 @@ def batch_form(slug, lot_slug=None):
         meta, notes = storage.get_batch(slug, lot_slug)
         if meta is None:
             abort(404)
+    quantity = batch_quantity(meta) if meta else {
+        "value": "", "unit": "g", "family": "mass", "base_value": 0.0,
+        "base_unit": "g", "display": "",
+    }
     if request.method == "POST":
         lot = request.form.get("lot", "").strip()
         if not lot:
             flash("Batch / lot number is required.", "error")
+            return redirect(request.url)
+        try:
+            new_base, new_base_unit, new_family = to_base(
+                request.form.get("quantity_value", ""), request.form.get("quantity_unit", ""))
+        except ValueError as exc:
+            flash(str(exc), "error")
+            return redirect(request.url)
+        if lot_slug and new_family != quantity["family"] and quantity["base_value"] > 1e-12:
+            flash("A stocked batch cannot be changed from %s units to %s units."
+                  % (quantity["family"], new_family), "error")
+            return redirect(request.url)
+        delta = new_base - (quantity["base_value"] if lot_slug else 0.0)
+        reason = request.form.get("adjustment_reason", "").strip()
+        if lot_slug and abs(delta) > 1e-9 and not reason:
+            flash("Explain the inventory adjustment before changing the batch balance.", "error")
             return redirect(request.url)
         new = {k: request.form.get(k, "").strip() for k in BATCH_FIELDS}
         new["material"] = slug
@@ -193,14 +217,34 @@ def batch_form(slug, lot_slug=None):
             return redirect(request.url)
         new["created"] = meta.get("created", utcnow())
         new["created_by"] = meta.get("created_by", current_user.username)
+        set_batch_quantity(new, new_base, new_base_unit,
+                           request.form.get("quantity_unit", ""))
+        new["inventory_updated"] = utcnow()
+        new["inventory_updated_by"] = current_user.username
+        if new_base <= 1e-12 and new.get("status") in ("In Stock", "Open"):
+            new["status"] = "Depleted"
         if lot_slug:
             new["updated"] = utcnow()
             new["attachments"] = meta.get("attachments", [])
         storage.save_batch(slug, new["lot_slug"], new, request.form.get("notes", ""))
+        if not lot_slug or abs(delta) > 1e-9:
+            display_unit = new["quantity_unit"]
+            sign = "+" if delta > 0 else "−" if delta < 0 else ""
+            storage.record_inventory_transaction({
+                "material": slug, "lot_slug": new["lot_slug"], "lot": lot,
+                "by": current_user.username,
+                "action": "opening balance" if not lot_slug else "manual adjustment",
+                "delta_base": round(delta, 12), "base_unit": new_base_unit,
+                "delta_display": sign + format_base(abs(delta), new_base_unit, display_unit),
+                "balance_after_base": round(new_base, 12),
+                "balance_display": format_base(new_base, new_base_unit, display_unit),
+                "detail": reason or "Batch created.",
+            })
         flash("Batch saved.", "success")
         return redirect(url_for("materials.view", slug=slug))
     return render_template("batch_form.html", material=mat_meta, meta=meta, notes=notes,
-                           statuses=BATCH_STATUSES)
+                           statuses=BATCH_STATUSES, quantity=quantity,
+                           inventory_units=UNITS_BY_FAMILY)
 
 
 @bp.route("/<slug>/batches/<lot_slug>/attach", methods=["POST"])

@@ -2,6 +2,7 @@
 {% set running = ops.started_at and not ops.ended_at %}
 {% set eq = meta.equipment or {} %}
 {% set reaction_components = components | default([]) %}
+{% set pending_inventory = (inventory_allocations | default([])) | selectattr('status', 'equalto', 'deducted') | list %}
 
 {% if running %}
 <div class="ops-bar" id="ops-bar" data-started="{{ ops.started_at }}"
@@ -58,10 +59,14 @@
     <button type="button" class="btn {{ 'btn-danger-solid' if recording.active }}" id="ops-record">
       {{ '⏹ Stop recording' if recording.active else '⏺ Record' }}</button>
     {% endif %}
+    {% if pending_inventory %}
+    <a class="btn btn-orange" href="{{ url_for('entries.inventory_reconcile', eid=meta.id) }}">⏹ Reconcile &amp; end</a>
+    {% else %}
     <form method="post" action="{{ url_for('entries.ops_end', eid=meta.id) }}"
           onsubmit="return confirm('End lab work? Sensor logging and any recording will stop.')">
       <button type="submit" class="btn btn-orange">⏹ End lab work</button>
     </form>
+    {% endif %}
   </div>
   <div class="ops-msg small" id="ops-msg"></div>
 </div>

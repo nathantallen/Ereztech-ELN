@@ -10,11 +10,12 @@ Layout:
       users.json
       notebook/<username>/ELN-2026-0001/entry.md
                                         audit.log
-                                        structures/struct-01.mol|.svg
+                                        structures/struct-01.ket|.mol|.v2000.mol|.svg
                                         attachments/<files>
       materials/<slug>/material.md
                        batches/<lot>.md
                        attachments/<lot>/<files>
+      inventory_transactions.jsonl
 
 Entries are grouped into a folder per author (their personal lab book) but keep
 globally-unique ids (ELN-YEAR-SEQ) so cross-references resolve regardless of who
@@ -26,6 +27,7 @@ import json
 import os
 import re
 import threading
+import uuid
 from contextlib import contextmanager
 
 import yaml
@@ -137,6 +139,7 @@ class Storage:
         self.materials_dir = os.path.join(self.root, "materials")
         self.users_file = os.path.join(self.root, "users.json")
         self.roles_file = os.path.join(self.root, "roles.json")
+        self.inventory_file = os.path.join(self.root, "inventory_transactions.jsonl")
         from .chem import PropertyDB
         self.properties = PropertyDB(os.path.join(self.root, "properties.json"))
         # eid -> containing folder; an entry never moves once created, so this
@@ -163,6 +166,7 @@ class Storage:
         if not os.path.exists(self.users_file):
             from .seed import seed_initial_data
             seed_initial_data(self)
+        self._ensure_inventory_opening_balances()
 
     def _migrate_notebook_by_user(self):
         """One-time migration: entries used to live at notebook/ELN-*; they now
@@ -222,6 +226,37 @@ class Storage:
         d = self.get_settings()
         d["timezone"] = tz or ""
         self.save_settings(d)
+
+    # ---------- company-wide Ketcher templates ----------
+
+    def get_structure_templates(self):
+        path = os.path.join(self.root, "structure_templates.json")
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                records = json.load(f)
+            return records if isinstance(records, list) else []
+        except (OSError, ValueError):
+            return []
+
+    def save_structure_template(self, name, structure, username):
+        key = slugify(name)
+        with _LOCK:
+            records = self.get_structure_templates()
+            record = {"key": key, "name": name, "group": "Company templates",
+                      "structure": structure, "builtin": False,
+                      "updated": utcnow(), "updated_by": username}
+            for i, existing in enumerate(records):
+                if existing.get("key") == key:
+                    records[i] = record
+                    break
+            else:
+                records.append(record)
+            path = os.path.join(self.root, "structure_templates.json")
+            tmp = path + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(records, f, indent=2, ensure_ascii=False)
+            os.replace(tmp, path)
+        return record
 
     # ---------- techniques (customizable; seeded from the classic set) ----------
 
@@ -587,6 +622,110 @@ class Storage:
             os.makedirs(d, exist_ok=True)
             dump_md(os.path.join(d, lot_slug + ".md"), meta, notes)
 
+    # ---------- inventory ledger ----------
+
+    def record_inventory_transaction(self, record):
+        """Append one immutable, human-readable JSON transaction."""
+        row = dict(record)
+        row.setdefault("id", uuid.uuid4().hex)
+        row.setdefault("at", utcnow())
+        with _LOCK:
+            with open(self.inventory_file, "a", encoding="utf-8") as f:
+                f.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+        return row
+
+    def inventory_transactions(self, material=None, lot_slug=None, eid=None):
+        rows = []
+        try:
+            with open(self.inventory_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    try:
+                        row = json.loads(line)
+                    except (TypeError, ValueError):
+                        continue
+                    if material is not None and row.get("material") != material:
+                        continue
+                    if lot_slug is not None and row.get("lot_slug") != lot_slug:
+                        continue
+                    if eid is not None and row.get("entry_id") != eid:
+                        continue
+                    rows.append(row)
+        except OSError:
+            pass
+        rows.reverse()
+        return rows
+
+    def apply_inventory_delta(self, slug, lot_slug, delta_base, base_unit,
+                              username, action, preferred_unit=None, **context):
+        """Adjust a batch balance and append the matching ledger record."""
+        from .inventory import batch_quantity, format_base, set_batch_quantity, unit_family
+        with _LOCK:
+            delta_base = float(delta_base)
+            meta, notes = self.get_batch(slug, lot_slug)
+            if meta is None:
+                raise ValueError("The selected inventory batch no longer exists.")
+            current = batch_quantity(meta)
+            if unit_family(current["base_unit"]) != unit_family(base_unit):
+                raise ValueError("The reported unit is not compatible with this batch.")
+            new_balance = current["base_value"] + delta_base
+            if new_balance < -1e-9:
+                raise ValueError("Insufficient inventory in batch %s." % meta.get("lot", lot_slug))
+            new_balance = max(0.0, new_balance)
+            display_unit = preferred_unit or current["unit"]
+            set_batch_quantity(meta, new_balance, current["base_unit"], display_unit)
+            if new_balance <= 1e-12 and meta.get("status") in ("In Stock", "Open"):
+                meta["status"] = "Depleted"
+            elif new_balance > 1e-12 and meta.get("status") == "Depleted":
+                meta["status"] = "Open"
+            meta["inventory_updated"] = utcnow()
+            meta["inventory_updated_by"] = username
+            self.save_batch(slug, lot_slug, meta, notes)
+            signed_delta = ("+" if delta_base > 0 else "−" if delta_base < 0 else "")
+            row = {
+                "material": slug, "lot_slug": lot_slug,
+                "lot": meta.get("lot", lot_slug), "by": username,
+                "action": action, "delta_base": round(delta_base, 12),
+                "base_unit": current["base_unit"],
+                "delta_display": signed_delta + format_base(abs(delta_base),
+                                                              current["base_unit"], display_unit),
+                "balance_after_base": round(new_balance, 12),
+                "balance_display": format_base(new_balance, current["base_unit"], display_unit),
+            }
+            row.update({k: v for k, v in context.items() if v is not None})
+            return meta, self.record_inventory_transaction(row)
+
+    def _ensure_inventory_opening_balances(self):
+        """Normalize legacy quantities and establish an audited opening balance."""
+        from .inventory import batch_quantity, parse_legacy_quantity, set_batch_quantity
+        existing = {(r.get("material"), r.get("lot_slug"))
+                    for r in self.inventory_transactions()}
+        for material in self.list_materials():
+            slug = material.get("slug")
+            if not slug:
+                continue
+            for batch in self.list_batches(slug):
+                lot_slug = batch.get("lot_slug")
+                if not lot_slug or (slug, lot_slug) in existing:
+                    continue
+                has_normalized = batch.get("quantity_base") is not None
+                if not has_normalized and not parse_legacy_quantity(batch.get("quantity")):
+                    continue
+                quantity = batch_quantity(batch)
+                notes = batch.pop("_notes", "")
+                set_batch_quantity(batch, quantity["base_value"], quantity["base_unit"],
+                                   quantity["unit"])
+                self.save_batch(slug, lot_slug, batch, notes)
+                self.record_inventory_transaction({
+                    "material": slug, "lot_slug": lot_slug,
+                    "lot": batch.get("lot", lot_slug), "by": "system",
+                    "action": "opening balance", "delta_base": quantity["base_value"],
+                    "base_unit": quantity["base_unit"],
+                    "delta_display": "+" + quantity["display"],
+                    "balance_after_base": quantity["base_value"],
+                    "balance_display": quantity["display"],
+                    "detail": "Inventory ledger initialized from the recorded batch quantity.",
+                })
+
     def all_batches_by_material(self):
         """{slug: {'name': ..., 'batches': [lot, ...]}} for entry forms."""
         out = {}
@@ -603,7 +742,9 @@ class Storage:
     def entries_using_batch(self, slug, lot):
         hits = []
         for meta in self.list_entries():
-            for used in meta.get("materials") or []:
+            records = list(meta.get("materials") or []) + list(
+                meta.get("inventory_allocations") or [])
+            for used in records:
                 if used.get("material") == slug and used.get("lot") == lot:
                     hits.append(meta["id"])
                     break
@@ -612,7 +753,9 @@ class Storage:
     def entries_using_material(self, slug):
         hits = []
         for meta in self.list_entries():
-            for used in meta.get("materials") or []:
+            records = list(meta.get("materials") or []) + list(
+                meta.get("inventory_allocations") or [])
+            for used in records:
                 if used.get("material") == slug:
                     hits.append(meta["id"])
                     break

@@ -1,4 +1,4 @@
-"""Chemistry helpers: molecular weight / formula from a V2000 molfile, and a
+"""Chemistry helpers: molecular weight / formula from V2000/V3000 molfiles, and a
 local, human-editable physical-properties database (data/properties.json).
 
 Implicit hydrogens follow standard organic valence rules; metals and any
@@ -44,6 +44,8 @@ def parse_molfile(text):
     lines = text.splitlines()
     if len(lines) < 4:
         raise ValueError("molfile too short")
+    if "V3000" in lines[3] or any(line.startswith("M  V30 BEGIN CTAB") for line in lines):
+        return _parse_v3000(lines)
     counts = lines[3]
     try:
         natoms, nbonds = int(counts[0:3]), int(counts[3:6])
@@ -73,6 +75,57 @@ def parse_molfile(text):
                     atoms[idx]["charge"] = chg
         elif line.startswith("M  END"):
             break
+    return atoms, bonds
+
+
+def _parse_v3000(lines):
+    """Parse the atom/bond subset needed for formula and molecular weight.
+
+    Ketcher uses V3000 for structures that V2000 cannot faithfully represent,
+    including coordinate bonds and richer organometallic drawings. Coordinate
+    and hydrogen bonds do not consume the donor atom's normal covalent valence.
+    """
+    atoms, bonds = [], []
+    section = None
+    for raw in lines:
+        if not raw.startswith("M  V30 "):
+            continue
+        line = raw[7:].strip()
+        if line == "BEGIN ATOM":
+            section = "atom"
+            continue
+        if line == "END ATOM":
+            section = None
+            continue
+        if line == "BEGIN BOND":
+            section = "bond"
+            continue
+        if line == "END BOND":
+            section = None
+            continue
+        fields = line.split()
+        if section == "atom" and len(fields) >= 2:
+            symbol = fields[1]
+            charge = 0
+            for field in fields[5:]:
+                if field.startswith("CHG="):
+                    try:
+                        charge = int(field[4:])
+                    except ValueError:
+                        pass
+            atoms.append({"symbol": symbol, "charge": charge})
+        elif section == "bond" and len(fields) >= 4:
+            try:
+                bond_type = int(fields[1])
+                a1, a2 = int(fields[2]) - 1, int(fields[3]) - 1
+            except ValueError:
+                continue
+            # MDL 9 = coordination and 10 = hydrogen bond. Neither contributes
+            # to ordinary valence/implicit-H calculation on the donor ligand.
+            order = 0 if bond_type in (9, 10) else bond_type
+            bonds.append((a1, a2, order))
+    if not atoms:
+        raise ValueError("V3000 atom block missing")
     return atoms, bonds
 
 
@@ -113,9 +166,12 @@ def formula_and_mw(molfile):
             if implicit:
                 counts["H"] = counts.get("H", 0) + implicit
     mw = sum(ATOMIC_WEIGHTS[s] * n for s, n in counts.items())
-    # Hill order: C, H, then alphabetical
+    # Hill order: C, H, then alphabetical when carbon is present; otherwise
+    # every element is alphabetical (so CuH3N, not H3CuN).
     parts = []
-    for sym in ["C", "H"] + sorted(k for k in counts if k not in ("C", "H")):
+    order = (["C", "H"] + sorted(k for k in counts if k not in ("C", "H"))
+             if counts.get("C") else sorted(counts))
+    for sym in order:
         if counts.get(sym):
             parts.append(sym + (str(counts[sym]) if counts[sym] > 1 else ""))
     return "".join(parts), round(mw, 2)

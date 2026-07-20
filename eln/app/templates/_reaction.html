@@ -1,5 +1,5 @@
 {# Reaction definition + stoichiometry. Editable in draft, static once signed. #}
-{% set locked = meta.status != 'draft' %}
+{% set locked = meta.status != 'draft' or (ops.started_at and not ops.ended_at) %}
 <div class="card" id="reaction">
   <h2>Reaction &amp; stoichiometry</h2>
 

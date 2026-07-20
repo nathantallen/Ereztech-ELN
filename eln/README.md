@@ -35,7 +35,11 @@ storage location you assign (NAS share, SharePoint-synced folder, or local disk)
 - **Raw material batch recording** — materials catalog (CAS, formula, hazards,
   air-sensitivity, storage requirements) with per-lot batch records (purity,
   container, location, status) and Certificate-of-Analysis attachments. Entries
-  reference the exact lots consumed.
+  can allocate one component across several lots. Starting Actions and
+  Observations deducts the allocations; ending requires consumed, recovered and
+  returned reconciliation. Compatible mass, volume and amount units are
+  normalized, and every balance change is written to the inventory ledger and
+  the experiment audit trail.
 - **Data file attachments** — attach video (inline playback), sensor logs
   (CSV/TSV with inline preview), spectra, images or any other file to an entry.
 - **Sign & witness workflow** — drafts are editable; signing (with password
@@ -96,13 +100,16 @@ data/
 ├─ users.json                    accounts & roles (hashed passwords)
 ├─ properties.json               physical-properties DB (seeded, self-learning)
 ├─ equipment.json                Home Assistant URL/token + hood assignments
+├─ structure_templates.json      company-wide Ketcher templates
+├─ inventory_transactions.jsonl  append-only inventory ledger
 ├─ notebook/
 │  └─ ELN-2026-0001/
 │     ├─ entry.md                YAML frontmatter (incl. reaction & stoichiometry,
 │     │                          equipment, run times) + Markdown sections
 │     ├─ observations.md         append-only timestamped operational log
 │     ├─ audit.log               append-only event history
-│     ├─ structures/             .mol files (+ .svg renders)
+│     ├─ structures/             authoritative .ket/.mol V3000, V2000 compatibility
+│     │                          files, and .svg renders
 │     ├─ sensors/                one CSV per logged sensor entity
 │     ├─ photos/                 camera snapshots taken during the run
 │     ├─ recordings/             MP4 camera recordings
@@ -159,3 +166,6 @@ docker compose up --build          # rebuild after code changes
 ```
 
 The image bundles Ketcher 3.17.0 (Apache-2.0) under `app/static/ketcher/`.
+The ELN adds a touch/full-screen mode, local unsaved-sketch recovery, built-in
+organometallic starter templates, and administrator-managed company templates.
+Drawings are preserved as KET and V3000 with V2000 compatibility exports.

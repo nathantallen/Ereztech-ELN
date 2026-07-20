@@ -14,8 +14,12 @@ from werkzeug.utils import secure_filename
 
 from . import ha
 from .chem import formula_and_mw
+from .inventory import (UNITS_BY_FAMILY, batch_quantity, format_base,
+                        to_base, unit_family, units_for)
+from .organo import available_templates
 from .storage import (ENTRY_SECTIONS, attachment_kind, compose_sections,
                       parse_sections, utcnow)
+from .structure_files import remove_bundle, save_bundle
 from .svg import namespace_svg as _ns_svg, sanitize_svg
 
 COMPONENT_ROLES = ["reactant", "reagent", "catalyst", "solvent", "product"]
@@ -240,6 +244,10 @@ def view(eid):
                            mentions=mentions, referenced_by=referenced_by,
                            repeats=repeats,
                            compound_library=compound_library,
+                           inventory_allocations=meta.get("inventory_allocations") or [],
+                           inventory_batches=_inventory_batch_options(storage),
+                           inventory_units=UNITS_BY_FAMILY,
+                           inventory_transactions=storage.inventory_transactions(eid=eid),
                            recording=ha.recording_status(eid),
                            recording_fps=RECORDING_FPS,
                            recording_resolutions=RECORDING_RESOLUTIONS)
@@ -500,17 +508,16 @@ def edit_structure(eid, idx=None):
         if not (0 <= idx < len(structures)):
             abort(404)
         caption = structures[idx].get("caption", "")
-        path = os.path.join(_storage().entry_dir(eid), structures[idx]["file"])
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                molfile = f.read()
-        except OSError:
-            pass
+        structure = structures[idx]
+        preferred = structure.get("ket") or structure.get("file")
+        if preferred:
+            molfile = _read_rel(_storage(), eid, preferred)
     return render_template("structure_edit.html", idx=idx,
                            subtitle="%s — %s" % (meta["id"], meta.get("title", "")),
                            action_url=url_for("entries.save_structure", eid=eid),
                            cancel_url=url_for("entries.view", eid=eid),
-                           molfile=molfile, caption=caption)
+                           molfile=molfile, caption=caption,
+                           structure_templates=available_templates(_storage()))
 
 
 @bp.route("/<eid>/reaction/<int:cidx>/draw")
@@ -525,14 +532,32 @@ def draw_component(eid, cidx):
         abort(404)
     comp = components[cidx]
     molfile = ""
-    if comp.get("structure"):
-        molfile = _read_rel(_storage(), eid, comp["structure"])
+    preferred = comp.get("ket") or comp.get("structure")
+    if preferred:
+        molfile = _read_rel(_storage(), eid, preferred)
     return render_template("structure_edit.html", idx=None,
                            subtitle="%s — %s" % (meta["id"], meta.get("title", "")),
                            action_url=url_for("entries.save_component_structure",
                                               eid=eid, cidx=cidx),
                            cancel_url=url_for("entries.view", eid=eid) + "#reaction",
-                           molfile=molfile, caption=comp.get("name", ""))
+                           molfile=molfile, caption=comp.get("name", ""),
+                           structure_templates=available_templates(_storage()))
+
+
+@bp.route("/structure-templates", methods=["POST"])
+@login_required
+def save_structure_template():
+    if not current_user.is_admin:
+        abort(403)
+    payload = request.get_json(silent=True) or {}
+    name = str(payload.get("name", "")).strip()
+    structure = str(payload.get("structure", "")).strip()
+    if not name or len(name) > 80:
+        return jsonify({"error": "Enter a template name of 80 characters or fewer."}), 400
+    if not structure or len(structure.encode("utf-8")) > 1024 * 1024:
+        return jsonify({"error": "The template is empty or too large."}), 400
+    record = _storage().save_structure_template(name, structure, current_user.username)
+    return jsonify({"ok": True, "template": record})
 
 
 @bp.route("/<eid>/reaction/<int:cidx>/save-structure", methods=["POST"])
@@ -548,6 +573,8 @@ def save_component_structure(eid, cidx):
         abort(404)
     comp = components[cidx]
     molfile = request.form.get("molfile", "")
+    molfile_v2000 = request.form.get("molfile_v2000", "")
+    ket = request.form.get("ket", "")
     if not molfile.strip():
         flash("Nothing to save — the sketcher was empty.", "error")
         return redirect(url_for("entries.view", eid=eid) + "#reaction")
@@ -560,9 +587,10 @@ def save_component_structure(eid, cidx):
     sdir = os.path.join(storage.entry_dir(eid), "structures")
     os.makedirs(sdir, exist_ok=True)
     base = "comp-%02d" % key
-    with open(os.path.join(sdir, base + ".mol"), "w", encoding="utf-8") as f:
-        f.write(molfile)
+    saved = save_bundle(sdir, base, molfile, molfile_v2000, ket)
     comp["structure"] = "structures/%s.mol" % base
+    comp["v2000"] = "structures/%s.v2000.mol" % base if saved["v2000"] else ""
+    comp["ket"] = "structures/%s.ket" % base if saved["ket"] else ""
     svg = sanitize_svg(request.form.get("svg", ""))
     if svg.strip():
         with open(os.path.join(sdir, base + ".svg"), "w", encoding="utf-8") as f:
@@ -625,6 +653,8 @@ def save_structure(eid):
     _require_draft(meta)
     storage = _storage()
     molfile = request.form.get("molfile", "")
+    molfile_v2000 = request.form.get("molfile_v2000", "")
+    ket = request.form.get("ket", "")
     if not molfile.strip():
         flash("Nothing to save — the sketcher was empty.", "error")
         return redirect(url_for("entries.view", eid=eid))
@@ -648,14 +678,16 @@ def save_structure(eid):
         base = "struct-%02d" % n
         action = "added structure"
 
-    with open(os.path.join(sdir, base + ".mol"), "w", encoding="utf-8") as f:
-        f.write(molfile)
+    saved = save_bundle(sdir, base, molfile, molfile_v2000, ket)
     svg_rel = ""
     if svg.strip():
         with open(os.path.join(sdir, base + ".svg"), "w", encoding="utf-8") as f:
             f.write(svg)
         svg_rel = "structures/%s.svg" % base
-    record = {"file": "structures/%s.mol" % base, "svg": svg_rel,
+    record = {"file": "structures/%s.mol" % base,
+              "v2000": "structures/%s.v2000.mol" % base if saved["v2000"] else "",
+              "ket": "structures/%s.ket" % base if saved["ket"] else "",
+              "svg": svg_rel,
               "smiles": smiles, "caption": caption}
     if i is None:
         structures.append(record)
@@ -677,11 +709,8 @@ def delete_structure(eid, idx):
     structures = meta.get("structures") or []
     if 0 <= idx < len(structures):
         s = structures.pop(idx)
-        for rel in (s.get("file"), s.get("svg")):
-            if rel:
-                path = os.path.join(storage.entry_dir(eid), rel)
-                if os.path.isfile(path):
-                    os.remove(path)
+        base = os.path.splitext(os.path.basename(s.get("file", "structure.mol")))[0]
+        remove_bundle(os.path.join(storage.entry_dir(eid), "structures"), base)
         storage.save_entry(eid, meta, body)
         storage.audit(eid, current_user.username, "removed structure", s.get("caption", ""))
         flash("Structure removed.", "success")
@@ -703,6 +732,9 @@ def sign(eid):
     if ops.get("started_at") and not ops.get("ended_at"):
         flash("End lab work before signing the entry.", "error")
         return redirect(url_for("entries.view", eid=eid))
+    if _pending_reconciliation(meta):
+        flash("Reconcile all deducted inventory before signing the entry.", "error")
+        return redirect(url_for("entries.view", eid=eid) + "#inventory-allocation")
     if not _check_password(request.form.get("password")):
         flash("Password confirmation failed — entry not signed.", "error")
         return redirect(url_for("entries.view", eid=eid))
@@ -746,12 +778,42 @@ def _f(value):
         return None
 
 
+def _inventory_batch_options(storage):
+    options = []
+    for material in storage.list_materials():
+        slug = material.get("slug")
+        if not slug:
+            continue
+        for batch in storage.list_batches(slug):
+            quantity = batch_quantity(batch)
+            options.append({
+                "key": "%s|%s" % (slug, batch.get("lot_slug", "")),
+                "material": slug, "material_name": material.get("name", slug),
+                "lot_slug": batch.get("lot_slug", ""),
+                "lot": batch.get("lot", batch.get("lot_slug", "")),
+                "status": batch.get("status", ""), "quantity": quantity,
+                "units": units_for(quantity["family"]),
+                "selectable": quantity["base_value"] > 1e-12
+                              and batch.get("status") not in ("Depleted", "Quarantined"),
+            })
+    options.sort(key=lambda item: (item["material_name"].lower(), item["lot"].lower()))
+    return options
+
+
+def _pending_reconciliation(meta):
+    return [a for a in (meta.get("inventory_allocations") or [])
+            if a.get("status") == "deducted"]
+
+
 @bp.route("/<eid>/reaction", methods=["POST"])
 @login_required
 def save_reaction(eid):
     _require_edit()
     meta, body = _get_or_404(eid)
     _require_draft(meta)
+    active_ops = meta.get("operations") or {}
+    if active_ops.get("started_at") and not active_ops.get("ended_at"):
+        abort(409, description="Reaction setup is locked while lab work is running.")
     storage = _storage()
     form = request.form
     reaction = meta.get("reaction") or {}
@@ -789,6 +851,8 @@ def save_reaction(eid):
             "volume_unit": g("volume_unit") if g("volume_unit") in ("µL", "mL", "L") else "mL",
             # structure files survive round-trips
             "structure": old.get("structure", ""),
+            "v2000": old.get("v2000", ""),
+            "ket": old.get("ket", ""),
             "svg": old.get("svg", ""),
             "smiles": old.get("smiles", ""),
         }
@@ -807,6 +871,11 @@ def save_reaction(eid):
         "components": components,
         "next_key": next_key,
     }
+    component_keys = {c["key"] for c in components}
+    meta["inventory_allocations"] = [
+        a for a in (meta.get("inventory_allocations") or [])
+        if a.get("status") != "planned" or a.get("component_key") in component_keys
+    ]
     storage.save_entry(eid, meta, body)
     storage.audit(eid, current_user.username, "updated reaction setup",
                   "%d component(s)" % len(components))
@@ -815,6 +884,96 @@ def save_reaction(eid):
         return redirect(url_for("entries.draw_component", eid=eid, cidx=int(draw)))
     flash("Reaction setup saved.", "success")
     return redirect(url_for("entries.view", eid=eid) + "#reaction")
+
+
+@bp.route("/<eid>/inventory/allocations", methods=["POST"])
+@login_required
+def save_inventory_allocations(eid):
+    _require_edit()
+    meta, body = _get_or_404(eid)
+    _require_draft(meta)
+    ops = meta.get("operations") or {}
+    if (ops.get("started_at") and not ops.get("ended_at")) or _pending_reconciliation(meta):
+        flash("Inventory allocations are locked until the active work is reconciled.", "error")
+        return redirect(url_for("entries.view", eid=eid) + "#inventory-allocation")
+
+    storage = _storage()
+    components = {str(c.get("key")): c for c in
+                  (meta.get("reaction") or {}).get("components") or []
+                  if c.get("role") != "product"}
+    batch_options = {item["key"]: item for item in _inventory_batch_options(storage)}
+    old_planned = {a.get("id"): a for a in (meta.get("inventory_allocations") or [])
+                   if a.get("status") == "planned"}
+    ids = request.form.getlist("allocation_id")
+    component_keys = request.form.getlist("allocation_component")
+    batch_keys = request.form.getlist("allocation_batch")
+    quantities = request.form.getlist("allocation_quantity")
+    units = request.form.getlist("allocation_unit")
+    planned, errors, used_ids = [], [], set()
+    totals = {}
+    count = max(len(component_keys), len(batch_keys), len(quantities), len(units))
+    for i in range(count):
+        component_key = component_keys[i].strip() if i < len(component_keys) else ""
+        batch_key = batch_keys[i].strip() if i < len(batch_keys) else ""
+        value = quantities[i].strip() if i < len(quantities) else ""
+        unit = units[i].strip() if i < len(units) else ""
+        if not any((component_key, batch_key, value, unit)):
+            continue
+        component = components.get(component_key)
+        option = batch_options.get(batch_key)
+        if not component:
+            errors.append("Choose a valid non-product reaction component.")
+            continue
+        if not option or not option["selectable"]:
+            errors.append("Choose an available, non-quarantined inventory batch.")
+            continue
+        try:
+            planned_base, base_unit, family = to_base(value, unit)
+        except ValueError as exc:
+            errors.append(str(exc))
+            continue
+        if planned_base <= 0:
+            errors.append("Allocated quantities must be greater than zero.")
+            continue
+        if family != option["quantity"]["family"]:
+            errors.append("%s is not compatible with batch %s."
+                          % (unit, option["lot"]))
+            continue
+        totals[batch_key] = totals.get(batch_key, 0.0) + planned_base
+        old_id = ids[i].strip() if i < len(ids) else ""
+        allocation_id = (old_id if old_id in old_planned and old_id not in used_ids
+                         else uuid.uuid4().hex[:16])
+        used_ids.add(allocation_id)
+        planned.append({
+            "id": allocation_id, "status": "planned",
+            "component_key": component.get("key"),
+            "component_name": component.get("name") or "Unnamed component",
+            "component_role": component.get("role"),
+            "material": option["material"], "material_name": option["material_name"],
+            "lot_slug": option["lot_slug"], "lot": option["lot"],
+            "planned_quantity": float(value), "planned_unit": unit,
+            "planned_base": round(planned_base, 12), "base_unit": base_unit,
+            "created_at": old_planned.get(allocation_id, {}).get("created_at", utcnow()),
+            "created_by": old_planned.get(allocation_id, {}).get(
+                "created_by", current_user.username),
+        })
+    for batch_key, total in totals.items():
+        option = batch_options[batch_key]
+        if total > option["quantity"]["base_value"] + 1e-9:
+            errors.append("Allocations for %s exceed the available %s."
+                          % (option["lot"], option["quantity"]["display"]))
+    if errors:
+        flash(errors[0], "error")
+        return redirect(url_for("entries.view", eid=eid) + "#inventory-allocation")
+
+    history = [a for a in (meta.get("inventory_allocations") or [])
+               if a.get("status") != "planned"]
+    meta["inventory_allocations"] = history + planned
+    storage.save_entry(eid, meta, body)
+    storage.audit(eid, current_user.username, "updated inventory allocations",
+                  "%d planned allocation(s)" % len(planned))
+    flash("Inventory allocations saved.", "success")
+    return redirect(url_for("entries.view", eid=eid) + "#inventory-allocation")
 
 
 @bp.route("/<eid>/components/add-known", methods=["POST"])
@@ -858,7 +1017,8 @@ def add_known_component(eid):
         dst_dir = os.path.join(storage.entry_dir(eid), "structures")
         os.makedirs(dst_dir, exist_ok=True)
         base = "comp-%02d" % new_key
-        for attr, ext in (("structure", ".mol"), ("svg", ".svg")):
+        for attr, ext in (("structure", ".mol"), ("v2000", ".v2000.mol"),
+                          ("ket", ".ket"), ("svg", ".svg")):
             rel = comp.get(attr)
             if rel and os.path.isfile(os.path.join(src_dir, rel)):
                 shutil.copyfile(os.path.join(src_dir, rel),
@@ -929,6 +1089,49 @@ def _ops_guard(eid, need_started=True):
     return meta, body, ops
 
 
+def _deduct_planned_inventory(storage, meta, eid, session):
+    planned = [a for a in (meta.get("inventory_allocations") or [])
+               if a.get("status") == "planned"]
+    totals = {}
+    snapshots = {}
+    for allocation in planned:
+        key = (allocation.get("material"), allocation.get("lot_slug"))
+        batch, _ = storage.get_batch(*key)
+        if batch is None:
+            raise ValueError("Inventory batch %s no longer exists." % allocation.get("lot", ""))
+        quantity = batch_quantity(batch)
+        if batch.get("status") == "Quarantined":
+            raise ValueError("Batch %s is quarantined." % allocation.get("lot", ""))
+        if unit_family(quantity["base_unit"]) != unit_family(allocation.get("base_unit")):
+            raise ValueError("Batch %s now uses an incompatible inventory unit."
+                             % allocation.get("lot", ""))
+        snapshots[key] = quantity
+        totals[key] = totals.get(key, 0.0) + float(allocation.get("planned_base") or 0)
+    for key, total in totals.items():
+        if total > snapshots[key]["base_value"] + 1e-9:
+            raise ValueError("Insufficient inventory in batch %s."
+                             % next(a.get("lot", "") for a in planned
+                                    if (a.get("material"), a.get("lot_slug")) == key))
+
+    audit_rows = []
+    for allocation in planned:
+        amount = float(allocation.get("planned_base") or 0)
+        _, transaction = storage.apply_inventory_delta(
+            allocation["material"], allocation["lot_slug"], -amount,
+            allocation["base_unit"], current_user.username, "experiment deduction",
+            preferred_unit=allocation.get("planned_unit"), entry_id=eid,
+            allocation_id=allocation["id"], component_key=allocation.get("component_key"),
+            component_name=allocation.get("component_name"), session=session,
+            detail="Deducted when Actions and Observations started.")
+        allocation.update({
+            "status": "deducted", "deducted_at": transaction["at"],
+            "deducted_by": current_user.username, "deducted_session": session,
+            "deduction_transaction": transaction["id"],
+        })
+        audit_rows.append((allocation, transaction))
+    return audit_rows
+
+
 @bp.route("/<eid>/ops/start", methods=["POST"])
 @login_required
 def ops_start(eid):
@@ -942,9 +1145,19 @@ def ops_start(eid):
         history.append(dict(ops))
         meta["operations_history"] = history
     session = len(history) + 1
+    try:
+        inventory_audits = _deduct_planned_inventory(storage, meta, eid, session)
+    except ValueError as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("entries.view", eid=eid) + "#inventory-allocation")
     meta["operations"] = {"started_at": utcnow(), "started_by": current_user.username,
                           "session": session}
     storage.save_entry(eid, meta, body)
+    for allocation, transaction in inventory_audits:
+        storage.audit(eid, current_user.username, "inventory deducted",
+                      "%s · %s · %s · transaction %s" % (
+                          allocation.get("component_name"), allocation.get("lot"),
+                          transaction.get("delta_display"), transaction.get("id")))
     storage.append_observation(eid, current_user.username, "system",
                                ("**Lab work restarted — session %d.**" % session
                                 if restarting else "**Lab work started.**"), "00:00:00")
@@ -963,7 +1176,11 @@ def ops_start(eid):
 @bp.route("/<eid>/ops/end", methods=["POST"])
 @login_required
 def ops_end(eid):
-    _ops_guard(eid)
+    meta, _, _ = _ops_guard(eid)
+    if _pending_reconciliation(meta):
+        flash("Reconcile consumed, recovered, and returned inventory before ending work.",
+              "warning")
+        return redirect(url_for("entries.inventory_reconcile", eid=eid))
     storage = _storage()
     rec_file = ha.stop_recording(eid)   # blocks while ffmpeg finalizes
     ha.stop_sensor_logging(eid)
@@ -971,16 +1188,120 @@ def ops_end(eid):
     # take ~45s); serialize only the read-modify-write, like ops_photo
     with storage.mutation_lock():
         meta, body, ops = _ops_guard(eid)
-        if rec_file:
-            _register_recording(storage, meta, eid, rec_file)
-        elapsed = _elapsed_since(ops.get("started_at"))
-        meta["operations"]["ended_at"] = utcnow()
-        meta["operations"]["ended_by"] = current_user.username
-        storage.save_entry(eid, meta, body)
-        storage.append_observation(eid, current_user.username, "system",
-                                   "**Lab work ended.**", elapsed)
-        storage.audit(eid, current_user.username, "ended lab work", "duration " + elapsed)
+        elapsed = _finish_operations(storage, meta, body, ops, eid, rec_file)
     flash("Lab work ended after %s." % elapsed, "success")
+    return redirect(url_for("entries.view", eid=eid) + "#operations")
+
+
+def _finish_operations(storage, meta, body, ops, eid, rec_file=None):
+    if rec_file:
+        _register_recording(storage, meta, eid, rec_file)
+    elapsed = _elapsed_since(ops.get("started_at"))
+    meta["operations"]["ended_at"] = utcnow()
+    meta["operations"]["ended_by"] = current_user.username
+    storage.save_entry(eid, meta, body)
+    storage.append_observation(eid, current_user.username, "system",
+                               "**Lab work ended.**", elapsed)
+    storage.audit(eid, current_user.username, "ended lab work", "duration " + elapsed)
+    return elapsed
+
+
+def _parse_reconciliation(form, allocations):
+    results = []
+    for allocation in allocations:
+        aid = allocation["id"]
+        unit = form.get("unit_" + aid, allocation.get("planned_unit", "g"))
+        if unit_family(unit) != unit_family(allocation.get("base_unit")):
+            raise ValueError("Choose a unit compatible with %s." % allocation.get("lot", ""))
+        values = {}
+        for field in ("consumed", "recovered", "returned"):
+            raw = form.get("%s_%s" % (field, aid), "")
+            try:
+                values[field], _, _ = to_base(raw, unit)
+            except ValueError:
+                raise ValueError("Report consumed, recovered, and returned quantities for %s."
+                                 % allocation.get("component_name", "the allocation"))
+        deducted = float(allocation.get("planned_base") or 0)
+        total = values["consumed"] + values["recovered"] + values["returned"]
+        if abs(total - deducted) > max(1e-8, deducted * 1e-6):
+            raise ValueError("The reconciliation for %s must total %s."
+                             % (allocation.get("component_name", "the allocation"),
+                                format_base(deducted, allocation["base_unit"],
+                                            allocation.get("planned_unit"))))
+        results.append((allocation, unit, values))
+    return results
+
+
+@bp.route("/<eid>/ops/reconcile", methods=["GET", "POST"])
+@login_required
+def inventory_reconcile(eid):
+    meta, body, ops = _ops_guard(eid)
+    pending = _pending_reconciliation(meta)
+    if not pending:
+        flash("There is no inventory awaiting reconciliation.", "warning")
+        return redirect(url_for("entries.view", eid=eid) + "#operations")
+    storage = _storage()
+    if request.method == "GET":
+        rows = []
+        for allocation in pending:
+            row = dict(allocation)
+            batch, _ = storage.get_batch(allocation["material"], allocation["lot_slug"])
+            row["batch_balance"] = batch_quantity(batch or {})["display"]
+            row["units"] = units_for(allocation.get("base_unit"))
+            rows.append(row)
+        return render_template("inventory_reconcile.html", meta=meta, allocations=rows)
+    try:
+        _parse_reconciliation(request.form, pending)
+    except ValueError as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("entries.inventory_reconcile", eid=eid))
+
+    rec_file = ha.stop_recording(eid)
+    ha.stop_sensor_logging(eid)
+    with storage.mutation_lock():
+        meta, body, ops = _ops_guard(eid)
+        pending = _pending_reconciliation(meta)
+        try:
+            reconciliations = _parse_reconciliation(request.form, pending)
+        except ValueError as exc:
+            flash(str(exc), "error")
+            return redirect(url_for("entries.inventory_reconcile", eid=eid))
+        for allocation, unit, values in reconciliations:
+            returned = values["returned"]
+            _, transaction = storage.apply_inventory_delta(
+                allocation["material"], allocation["lot_slug"], returned,
+                allocation["base_unit"], current_user.username,
+                "experiment reconciliation", preferred_unit=unit, entry_id=eid,
+                allocation_id=allocation["id"], component_key=allocation.get("component_key"),
+                component_name=allocation.get("component_name"),
+                session=ops.get("session"), consumed_base=round(values["consumed"], 12),
+                recovered_base=round(values["recovered"], 12),
+                returned_base=round(returned, 12),
+                consumed_display=format_base(values["consumed"], allocation["base_unit"], unit),
+                recovered_display=format_base(values["recovered"], allocation["base_unit"], unit),
+                returned_display=format_base(returned, allocation["base_unit"], unit),
+                detail="Consumed %s; recovered %s; returned %s." % (
+                    format_base(values["consumed"], allocation["base_unit"], unit),
+                    format_base(values["recovered"], allocation["base_unit"], unit),
+                    format_base(returned, allocation["base_unit"], unit)))
+            allocation.update({
+                "status": "reconciled", "reconciled_at": transaction["at"],
+                "reconciled_by": current_user.username,
+                "reconciliation_unit": unit,
+                "consumed_base": round(values["consumed"], 12),
+                "recovered_base": round(values["recovered"], 12),
+                "returned_base": round(returned, 12),
+                "reconciliation_transaction": transaction["id"],
+            })
+            storage.audit(eid, current_user.username, "inventory reconciled",
+                          "%s · %s · consumed %s · recovered %s · returned %s · transaction %s"
+                          % (allocation.get("component_name"), allocation.get("lot"),
+                             transaction["consumed_display"], transaction["recovered_display"],
+                             transaction["returned_display"], transaction["id"]))
+        meta["operations"]["inventory_reconciled_at"] = utcnow()
+        meta["operations"]["inventory_reconciled_by"] = current_user.username
+        elapsed = _finish_operations(storage, meta, body, ops, eid, rec_file)
+    flash("Inventory reconciled and lab work ended after %s." % elapsed, "success")
     return redirect(url_for("entries.view", eid=eid) + "#operations")
 
 

@@ -524,6 +524,30 @@ td.today .day-num {
 .material-row { display: grid; grid-template-columns: 2fr 1.4fr 1.2fr auto; gap: 8px; margin-bottom: 8px; align-items: center; }
 @media (max-width: 800px) { .material-row { grid-template-columns: 1fr; } }
 
+.input-pair { display: flex; align-items: stretch; gap: 6px; }
+.input-pair > input { min-width: 0; flex: 1; }
+.input-pair > select { flex: 0 0 auto; width: auto; min-width: 76px; }
+.card-title-row, .reconciliation-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+.card-title-row h2, .reconciliation-head h2 { margin-bottom: 3px; }
+.inventory-allocation-rows { display: grid; gap: 8px; }
+.inventory-allocation-row { display: grid; grid-template-columns: 1.15fr 1.8fr .9fr auto; gap: 8px; align-items: end; padding: 10px; border: 1px solid var(--border); border-radius: 9px; background: #faf9fd; }
+.inventory-allocation-row label { margin: 0; min-width: 0; }
+.inventory-allocation-remove { min-height: 40px; align-self: end; }
+.inventory-allocation-history { margin-top: 16px; }
+.inventory-entry-ledger { margin-top: 12px; }
+.inventory-start-notice { padding: 9px 11px; border: 1px solid #f3c78d; border-radius: 8px; background: #fff5e8; }
+.inventory-status-planned { background: var(--lavender); color: var(--indigo); }
+.inventory-status-deducted { background: #ffe0b8; color: #704000; }
+.inventory-status-reconciled { background: #d7f3e5; color: #075d3b; }
+.inventory-positive { color: #087448; }
+.inventory-negative { color: #a32c20; }
+.reconciliation-intro { border-left: 5px solid var(--orange); }
+.inventory-reconciliation-form { display: grid; gap: 12px; }
+.reconciliation-row { margin: 0; }
+.reconciliation-deducted { display: grid; text-align: right; }
+.reconciliation-fields { display: grid; grid-template-columns: repeat(4, minmax(130px, 1fr)); gap: 10px; margin-top: 14px; }
+.reconciliation-actions { position: sticky; bottom: 8px; z-index: 4; margin: 0; box-shadow: 0 8px 30px rgba(15, 0, 55, .18); }
+
 .grid-main-side { display: grid; grid-template-columns: 1fr 320px; gap: 18px; align-items: start; }
 @media (max-width: 1000px) { .grid-main-side { grid-template-columns: 1fr; } }
 .head-actions { display: flex; align-items: center; gap: 10px; }
@@ -564,9 +588,34 @@ td.today .day-num {
 .audit-row:last-child { border-bottom: none; }
 
 .sketcher-card { padding: 12px; }
+.sketcher-top-controls { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+.organo-library { flex: 1; min-width: 0; border: 1px solid var(--border); border-radius: 9px; padding: 8px 10px; }
+.organo-library > summary { cursor: pointer; color: var(--indigo); font-size: 13px; font-weight: 600; }
+.template-groups { display: grid; gap: 8px; margin-top: 9px; max-height: 190px; overflow-y: auto; }
+.template-group { display: grid; grid-template-columns: 105px 1fr; gap: 8px; align-items: start; }
+.template-group-label { color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: .7px; padding-top: 7px; text-transform: uppercase; }
+.template-buttons { display: flex; flex-wrap: wrap; gap: 5px; }
+.organo-tip { margin: 9px 0 0; }
+.company-template-save { display: flex; gap: 7px; align-items: center; margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--border); }
+.company-template-save input { flex: 1; min-width: 180px; }
+.sketcher-mode-buttons { display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; }
+.sketcher-mode-buttons .btn[aria-pressed="true"] { background: var(--orange); color: var(--indigo); }
+.sketcher-recovery { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; padding: 9px 11px; border-radius: 8px; background: #fff5e8; border: 1px solid #f3c78d; color: var(--indigo); font-size: 12px; }
+.sketcher-recovery[hidden] { display: none; }
 #ketcher-frame { width: 100%; height: 620px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
 .sketcher-actions { display: flex; gap: 10px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
 .sketcher-actions input[type="text"] { width: auto; flex: 1; min-width: 220px; }
+.sketcher-shell.touch-mode #ketcher-frame { min-height: 680px; }
+.sketcher-shell.editor-fullscreen {
+  position: fixed; inset: 0; z-index: 1000; margin: 0; border: 0; border-radius: 0;
+  display: flex; flex-direction: column; overflow: hidden; padding: max(8px, env(safe-area-inset-top))
+    max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom))
+    max(8px, env(safe-area-inset-left));
+}
+.sketcher-shell.editor-fullscreen .sketcher-top-controls { flex: 0 0 auto; }
+.sketcher-shell.editor-fullscreen #ketcher-frame { flex: 1 1 auto; height: auto; min-height: 0; border-radius: 6px; }
+.sketcher-shell.editor-fullscreen .sketcher-actions { flex: 0 0 auto; margin-top: 8px; }
+body.sketcher-fullscreen-active { overflow: hidden; }
 
 .tree { background: #f3f1f8; border-radius: 10px; padding: 14px 16px; font-size: 12px; line-height: 1.7; overflow-x: auto; }
 
@@ -958,6 +1007,12 @@ td.today .day-num {
   .filter-row > .btn, .attach-form > .btn { flex: 1 1 100%; }
   .input-with-browse { flex-wrap: wrap; }
   .input-with-browse .btn { width: 100%; }
+  .inventory-allocation-row { grid-template-columns: 1fr; }
+  .inventory-allocation-remove { width: 100%; }
+  .card-title-row, .reconciliation-head { flex-direction: column; }
+  .reconciliation-deducted { text-align: left; }
+  .reconciliation-fields { grid-template-columns: 1fr; }
+  .reconciliation-actions { bottom: 0; }
 
   .stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
   .stat-tile { padding: 13px 14px; }
@@ -973,6 +1028,13 @@ td.today .day-num {
   .md-body table { display: block; overflow-x: auto; }
 
   .structure-grid { grid-template-columns: 1fr; }
+  .sketcher-top-controls { flex-direction: column-reverse; }
+  .sketcher-mode-buttons { width: 100%; justify-content: stretch; }
+  .sketcher-mode-buttons .btn { flex: 1; }
+  .organo-library { width: 100%; }
+  .template-group { grid-template-columns: 1fr; gap: 3px; }
+  .company-template-save { flex-wrap: wrap; }
+  .company-template-save input, .company-template-save .btn { width: 100%; }
   .material-detail { display: block; }
   .material-struct { min-width: 0; margin-bottom: 12px; }
   .material-detail .table { min-width: 0; }
