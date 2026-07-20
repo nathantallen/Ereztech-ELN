@@ -55,6 +55,12 @@ def _require_edit():
         abort(403)
 
 
+def _has_notebook_identity(storage):
+    user = storage.find_user(current_user.username) or {}
+    return bool(str(user.get("chemist_number", "")).strip()
+                and str(user.get("notebook_number", "")).strip())
+
+
 def _get_or_404(eid):
     try:
         meta, body = _storage().get_entry(eid)
@@ -145,11 +151,15 @@ def list_entries():
 def new_entry():
     _require_edit()
     storage = _storage()
+    if not _has_notebook_identity(storage):
+        flash("Set your chemist number and notebook number before creating an experiment.", "error")
+        return redirect(url_for("auth.profile"))
     if request.method == "POST":
         meta = {
             "title": request.form.get("title", "").strip() or "Untitled experiment",
             "author": current_user.username,
             "project": request.form.get("project", "").strip(),
+            "lot_number": request.form.get("lot_number", "").strip(),
             "experiment_date": request.form.get("experiment_date", ""),
             "technique": _technique_from_form(request.form, storage),
             "tags": [t.strip() for t in request.form.get("tags", "").split(",") if t.strip()],
@@ -346,6 +356,7 @@ def edit(eid):
     if request.method == "POST":
         meta["title"] = request.form.get("title", "").strip() or meta["title"]
         meta["project"] = request.form.get("project", "").strip()
+        meta["lot_number"] = request.form.get("lot_number", "").strip()
         meta["experiment_date"] = request.form.get("experiment_date", "")
         meta["technique"] = _technique_from_form(request.form, storage)
         meta.pop("atmosphere", None)
@@ -390,11 +401,16 @@ def repeat(eid):
     import shutil
     meta, body = _get_or_404(eid)
     storage = _storage()
+    if not _has_notebook_identity(storage):
+        flash("Set your chemist number and notebook number before repeating an experiment.", "error")
+        return redirect(url_for("auth.profile"))
     sections = parse_sections(body)
     new_meta = {
         "title": meta.get("title", "Untitled"),
         "author": current_user.username,
         "project": meta.get("project", ""),
+        # A repeated reaction is a new run and therefore needs its own lot.
+        "lot_number": "",
         "experiment_date": datetime.date.today().isoformat(),
         "technique": meta.get("technique") or meta.get("atmosphere", ""),
         "tags": list(meta.get("tags") or []),

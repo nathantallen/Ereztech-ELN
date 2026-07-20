@@ -149,6 +149,8 @@ def user_form(username=None):
             users.append({
                 "username": uname,
                 "full_name": full_name or uname,
+                "chemist_number": "",
+                "notebook_number": "",
                 "password_hash": generate_password_hash(password),
                 "role": role,
                 "active": True,

@@ -1,12 +1,14 @@
 import threading
 import time
+import re
 from urllib.parse import urlparse
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
-from flask_login import login_required, login_user, logout_user
+from flask_login import current_user, login_required, login_user, logout_user
 from werkzeug.security import check_password_hash
 
 bp = Blueprint("auth", __name__)
+NOTEBOOK_NUMBER_RE = re.compile(r"[A-Za-z0-9._-]{1,40}")
 _ATTEMPTS = {}
 _ATTEMPTS_LOCK = threading.Lock()
 _WINDOW_SECONDS = 15 * 60
@@ -99,3 +101,28 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for("auth.login"))
+
+
+@bp.route("/profile", methods=["GET", "POST"])
+@login_required
+def profile():
+    """Let each chemist own the identifiers used for new notebook pages."""
+    storage = _storage()
+    user = storage.find_user(current_user.username)
+    if request.method == "POST":
+        chemist_number = request.form.get("chemist_number", "").strip()
+        notebook_number = request.form.get("notebook_number", "").strip()
+        if (not NOTEBOOK_NUMBER_RE.fullmatch(chemist_number)
+                or not NOTEBOOK_NUMBER_RE.fullmatch(notebook_number)):
+            flash("Chemist and notebook numbers are required and may use letters, numbers, dot, dash and underscore.", "error")
+            return render_template("profile.html", user=user), 400
+        users = storage.get_users()
+        for record in users:
+            if record.get("username") == current_user.username:
+                record["chemist_number"] = chemist_number
+                record["notebook_number"] = notebook_number
+                break
+        storage.save_users(users)
+        flash("Notebook identity saved. New experiments will use the next page number.", "success")
+        return redirect(url_for("auth.profile"))
+    return render_template("profile.html", user=user)

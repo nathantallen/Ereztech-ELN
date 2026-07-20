@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}My notebook identity — Ereztech ELN{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>My notebook identity</h1>
+    <div class="sub">These identifiers are recorded on every new experiment. Page numbers advance automatically.</div>
+  </div>
+</div>
+<form method="post" class="card form-grid" style="max-width: 620px;">
+  <label>Chemist number
+    <input type="text" name="chemist_number" maxlength="40" required
+           value="{{ user.chemist_number or '' }}" placeholder="1042" autocomplete="off">
+  </label>
+  <label>Notebook number
+    <input type="text" name="notebook_number" maxlength="40" required
+           value="{{ user.notebook_number or '' }}" placeholder="7" autocomplete="off">
+  </label>
+  <p class="span2 muted small">Changing the notebook number starts at page 1 for a new notebook. Returning to a previously used notebook continues after its highest page. Existing experiments keep their original numbers.</p>
+  <div class="span2 form-actions">
+    <button class="btn btn-orange" type="submit">Save notebook identity</button>
+    <a class="btn btn-ghost" href="{{ url_for('entries.list_entries') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}
