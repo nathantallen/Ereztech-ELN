@@ -7,14 +7,6 @@ BUILTIN_ORGANOMETALLIC_TEMPLATES = [
      "structure": "C[Al](C)C"},
     {"key": "dez", "name": "Diethylzinc", "group": "Precursors",
      "structure": "CC[Zn]CC"},
-    {"key": "cp", "name": "Cyclopentadienyl", "group": "Ligands",
-     "structure": "[cH-]1cccc1"},
-    {"key": "acac", "name": "Acetylacetonate", "group": "Ligands",
-     "structure": "CC(=O)C=C(C)[O-]"},
-    {"key": "amidinate", "name": "Amidinate", "group": "Ligands",
-     "structure": "C[N-]C(=N)C"},
-    {"key": "carbonyl", "name": "Carbonyl ligand", "group": "Ligands",
-     "structure": "[C-]#[O+]"},
 ]
 
 for _symbol in ("Ga", "Al", "Zn", "In", "Mg", "Li", "Fe", "Co", "Ni",

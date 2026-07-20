@@ -326,6 +326,10 @@ M  END
         self.assertIn(b'name="molfile_v2000"', response.data)
         self.assertIn(b'name="ket"', response.data)
         self.assertIn(b"Trimethylgallium", response.data)
+        self.assertNotIn(b"Cyclopentadienyl", response.data)
+        self.assertNotIn(b"Acetylacetonate", response.data)
+        self.assertNotIn(b"Amidinate", response.data)
+        self.assertNotIn(b"Carbonyl ligand", response.data)
 
     def test_admin_can_save_company_structure_template(self):
         client = self.app.test_client()
