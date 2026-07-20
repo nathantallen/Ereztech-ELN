@@ -37,11 +37,11 @@
 
   {% if entries %}
   <table class="table">
-    <thead><tr><th>ID</th><th>Lot number</th><th>Title</th><th>Project</th><th>Date</th><th>Author</th><th>Tags</th><th>Status</th></tr></thead>
+    <thead><tr><th>Notebook page</th><th>Lot number</th><th>Title</th><th>Project</th><th>Date</th><th>Author</th><th>Tags</th><th>Status</th></tr></thead>
     <tbody>
     {% for e in entries %}
       <tr>
-        <td class="mono"><a href="{{ url_for('entries.view', eid=e.id) }}">{{ e.id }}</a></td>
+        <td class="mono"><a href="{{ url_for('entries.view', eid=e.id) }}">{% if e.chemist_number and e.notebook_number and e.page_number %}{{ e.chemist_number }} / {{ e.notebook_number }} / {{ e.page_number }}{% else %}{{ e.id }}{% endif %}</a></td>
         <td class="mono">{{ e.lot_number or '—' }}</td>
         <td><a href="{{ url_for('entries.view', eid=e.id) }}">{{ e.title }}</a></td>
         <td>{{ e.project }}</td>

@@ -55,6 +55,12 @@ def _require_edit():
         abort(403)
 
 
+def _has_notebook_identity(storage):
+    user = storage.find_user(current_user.username) or {}
+    return bool(str(user.get("chemist_number", "")).strip()
+                and str(user.get("notebook_number", "")).strip())
+
+
 def _get_or_404(eid):
     try:
         meta, body = _storage().get_entry(eid)
@@ -145,6 +151,9 @@ def list_entries():
 def new_entry():
     _require_edit()
     storage = _storage()
+    if not _has_notebook_identity(storage):
+        flash("Set your chemist number and notebook number before creating an experiment.", "error")
+        return redirect(url_for("auth.profile"))
     if request.method == "POST":
         meta = {
             "title": request.form.get("title", "").strip() or "Untitled experiment",
@@ -392,6 +401,9 @@ def repeat(eid):
     import shutil
     meta, body = _get_or_404(eid)
     storage = _storage()
+    if not _has_notebook_identity(storage):
+        flash("Set your chemist number and notebook number before repeating an experiment.", "error")
+        return redirect(url_for("auth.profile"))
     sections = parse_sections(body)
     new_meta = {
         "title": meta.get("title", "Untitled"),

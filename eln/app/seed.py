@@ -24,6 +24,8 @@ def seed_initial_data(storage):
     storage.save_users([{
         "username": "admin",
         "full_name": "Administrator",
+        "chemist_number": "ADMIN",
+        "notebook_number": "1",
         "password_hash": generate_password_hash(initial_password),
         "role": "admin",
         "active": True,

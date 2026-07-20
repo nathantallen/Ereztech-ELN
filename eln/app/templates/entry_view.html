@@ -6,6 +6,7 @@
   <div>
     <h1><span class="mono">{{ meta.id }}</span> — {{ meta.title }}</h1>
     <div class="sub">
+      {% if meta.chemist_number and meta.notebook_number and meta.page_number %}<strong>Chemist {{ meta.chemist_number }} · Notebook {{ meta.notebook_number }} · Page {{ meta.page_number }}</strong> · {% endif %}
       {% if meta.lot_number %}<strong>Lot {{ meta.lot_number }}</strong> · {% endif %}
       {{ meta.project }}{{ ' · ' if meta.project }}{{ meta.experiment_date }} · {{ meta.technique or meta.atmosphere }}
       · by {{ meta.author }}

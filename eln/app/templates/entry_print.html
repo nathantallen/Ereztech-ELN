@@ -33,6 +33,7 @@
     </div>
     <div class="doc-meta">
       <div class="doc-id">{{ meta.id }}</div>
+      {% if meta.chemist_number and meta.notebook_number and meta.page_number %}<div>Chemist <strong>{{ meta.chemist_number }}</strong> · Notebook <strong>{{ meta.notebook_number }}</strong> · Page <strong>{{ meta.page_number }}</strong></div>{% endif %}
       <div>Status: <strong>{{ meta.status }}</strong></div>
       <div>Generated {{ generated_at | nicedate }}</div>
     </div>
