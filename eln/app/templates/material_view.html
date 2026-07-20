@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}{{ meta.name }} — Ereztech ELN{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ meta.name }} {% if meta.air_sensitive %}<span class="pill pill-air">air-sensitive</span>{% endif %}</h1>
+    <div class="sub mono">{{ meta.cas }}{{ ' · ' if meta.cas }}{{ meta.formula }}</div>
+  </div>
+  {% if can_edit %}
+  <div class="head-actions">
+    <a class="btn" href="{{ url_for('materials.edit', slug=meta.slug) }}">Edit</a>
+    <a class="btn btn-orange" href="{{ url_for('materials.batch_form', slug=meta.slug) }}">+ New batch</a>
+  </div>
+  {% endif %}
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h2>Details</h2>
+    <div class="material-detail">
+      <div class="material-struct">
+        {% if structure_svg %}{{ structure_svg | safe }}
+        {% else %}<span class="muted small">No structure drawn.</span>{% endif %}
+        {% if can_edit %}
+        <div><a class="btn btn-xs" href="{{ url_for('materials.draw_structure', slug=meta.slug) }}">✏️ {{ 'Edit' if structure_svg else 'Draw' }} structure</a></div>
+        {% endif %}
+      </div>
+      <table class="table kv">
+        <tr><th>Supplier</th><td>{{ meta.supplier }}</td></tr>
+        {% if meta.mw %}<tr><th>MW</th><td>{{ meta.mw }} g/mol{% if meta.smiles %} · <span class="mono small">{{ meta.smiles }}</span>{% endif %}</td></tr>{% endif %}
+        <tr><th>Hazards</th><td>{{ meta.hazards }}</td></tr>
+        <tr><th>Storage</th><td>{{ meta.storage }}</td></tr>
+      </table>
+    </div>
+    {% if notes %}<div class="md-body">{{ notes | markdown }}</div>{% endif %}
+  </div>
+  <div class="card">
+    <h2>Used in entries</h2>
+    {% set ns = namespace(any=false) %}
+    <ul class="plain-list">
+    {% for lot, eids in usage.items() %}{% for eid in eids %}
+      {% set ns.any = true %}
+      <li><a href="{{ url_for('entries.view', eid=eid) }}" class="mono">{{ eid }}</a> <span class="muted small">(lot {{ lot }})</span></li>
+    {% endfor %}{% endfor %}
+    </ul>
+    {% if not ns.any %}<p class="muted">Not referenced by any notebook entry yet.</p>{% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <h2>Batches / lots</h2>
+  {% if batches %}
+  <table class="table">
+    <thead><tr><th>Lot</th><th>Supplier</th><th>Received</th><th>Purity</th><th>Qty</th><th>Container</th><th>Location</th><th>Status</th><th>Documents</th><th></th></tr></thead>
+    <tbody>
+    {% for b in batches %}
+    <tr>
+      <td class="mono"><strong>{{ b.lot }}</strong></td>
+      <td>{{ b.supplier }}</td>
+      <td class="mono">{{ b.received }}</td>
+      <td>{{ b.purity }}</td>
+      <td><strong>{{ b._inventory.display }}</strong></td>
+      <td>{{ b.container }}</td>
+      <td>{{ b.location }}</td>
+      <td><span class="pill pill-batch-{{ b.status | lower | replace(' ', '-') }}">{{ b.status }}</span></td>
+      <td>
+        {% for att in b.attachments or [] %}
+        <a href="{{ url_for('materials.serve_file', slug=meta.slug, relpath=att.file) }}">{{ att.label }}</a><br>
+        {% endfor %}
+        {% if can_edit %}
+        <details class="inline-details">
+          <summary class="small">attach…</summary>
+          <form method="post" action="{{ url_for('materials.batch_attach', slug=meta.slug, lot_slug=b.lot_slug) }}" enctype="multipart/form-data" class="attach-form small">
+            <input type="file" name="file" required>
+            <input type="text" name="label" placeholder="Certificate of Analysis">
+            <button class="btn" type="submit">Upload</button>
+          </form>
+        </details>
+        {% endif %}
+      </td>
+      <td>{% if can_edit %}<a href="{{ url_for('materials.batch_form', slug=meta.slug, lot_slug=b.lot_slug) }}">edit</a>{% endif %}</td>
+    </tr>
+    {% if b._notes %}<tr class="batch-notes"><td colspan="10" class="muted small">{{ b._notes }}</td></tr>{% endif %}
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No batches recorded yet.</p>
+  {% endif %}
+</div>
+
+<div class="card" id="inventory-history">
+  <h2>Inventory transaction history</h2>
+  {% if inventory_transactions %}
+  <div class="table-scroll">
+    <table class="table small inventory-ledger">
+      <thead><tr><th>Time</th><th>Lot</th><th>Action</th><th>Change</th><th>Balance</th><th>Experiment</th><th>By</th><th>Detail</th></tr></thead>
+      <tbody>
+      {% for tx in inventory_transactions %}
+      <tr>
+        <td><time data-utc="{{ tx.at }}">{{ tx.at | nicedate }}</time></td>
+        <td class="mono">{{ tx.lot }}</td>
+        <td>{{ tx.action }}</td>
+        <td class="mono {{ 'inventory-positive' if tx.delta_base > 0 else 'inventory-negative' if tx.delta_base < 0 }}">{{ tx.delta_display }}</td>
+        <td class="mono"><strong>{{ tx.balance_display }}</strong></td>
+        <td>{% if tx.entry_id %}<a class="mono" href="{{ url_for('entries.view', eid=tx.entry_id) }}">{{ tx.entry_id }}</a>{% else %}—{% endif %}</td>
+        <td>{{ tx.by }}</td>
+        <td>{{ tx.detail or tx.component_name or '' }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="muted">No inventory transactions have been recorded.</p>
+  {% endif %}
+</div>
+{% endblock %}

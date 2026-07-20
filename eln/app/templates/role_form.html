@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit role' if role else 'New role' }} — Ereztech ELN{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ 'Edit ' + role.label if role else 'New role' }}</h1>
+</div>
+<form method="post" class="card form-grid" style="max-width: 620px;">
+  <label>Role key
+    <input type="text" name="key" value="{{ role.key if role else '' }}"
+           placeholder="e.g. lab-manager" pattern="[a-z0-9_-]+" required
+           {{ 'readonly' if role }}>
+    <span class="muted small">Permanent identifier used in audit-safe user records.</span>
+  </label>
+  <label>Display name
+    <input type="text" name="label" value="{{ role.label if role else '' }}"
+           placeholder="e.g. Lab Manager" required>
+  </label>
+  <label>Badge color
+    <input type="color" name="color" value="{{ role.color if role else '#8a8797' }}">
+  </label>
+  <div class="span2">
+    <label class="checkbox-line">
+      <input type="checkbox" name="can_edit" {{ 'checked' if role and role.can_edit }}>
+      Can create and edit notebook entries and raw materials
+    </label>
+    <label class="checkbox-line">
+      <input type="checkbox" name="can_admin" {{ 'checked' if role and role.can_admin }}>
+      Can administer users, roles, equipment, and storage
+    </label>
+  </div>
+  <div class="span2 form-actions">
+    <button class="btn btn-orange" type="submit">Save role</button>
+    <a class="btn btn-ghost" href="{{ url_for('admin.list_users') }}">Cancel</a>
+  </div>
+</form>
+{% if role %}
+<form method="post" action="{{ url_for('admin.delete_role', key=role.key) }}"
+      class="card" style="max-width: 620px;">
+  <strong>Delete role</strong>
+  <p class="muted small">A role can only be deleted when no users are assigned to it.</p>
+  <button class="btn btn-danger" type="submit">Delete role</button>
+</form>
+{% endif %}
+{% endblock %}

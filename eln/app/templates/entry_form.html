@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit ' + meta.id if meta else 'New experiment' }} — Ereztech ELN{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ 'Edit ' + meta.id if meta else 'New experiment' }}</h1>
+    <div class="sub">Entries are editable while in draft; signing locks the record.</div>
+  </div>
+</div>
+
+<form method="post" class="card form-grid" id="entry-form">
+  <label class="span2">Title
+    <input type="text" name="title" value="{{ meta.title if meta }}" required placeholder="e.g. TMGa adduct purification — distillation trial 13">
+  </label>
+  <label>Project
+    <input type="text" name="project" value="{{ meta.project if meta }}" placeholder="e.g. TMGa 6N purity">
+  </label>
+  <label>Lot number
+    <input type="text" name="lot_number" value="{{ meta.lot_number if meta else '' }}" placeholder="e.g. TMG-2607-B" autocomplete="off">
+  </label>
+  <label>Experiment date
+    <input type="date" name="experiment_date" value="{{ meta.experiment_date if meta }}">
+  </label>
+  {% set current_technique = (meta.technique or meta.atmosphere) if meta else '' %}
+  <label>Technique
+    <select name="technique" id="technique-select">
+      {% for t in techniques %}
+      <option value="{{ t }}" {{ 'selected' if current_technique == t }}>{{ t }}</option>
+      {% endfor %}
+      {% if current_technique and current_technique not in techniques %}
+      <option value="{{ current_technique }}" selected>{{ current_technique }}</option>
+      {% endif %}
+      <option value="__new__">+ New technique…</option>
+    </select>
+    <input type="text" name="new_technique" id="new-technique" placeholder="Name the new technique" hidden style="margin-top: 6px;">
+  </label>
+  <label class="span2">Tags <span class="muted">(comma-separated)</span>
+    <input type="text" name="tags" value="{{ (meta.tags or [])|join(', ') if meta }}">
+  </label>
+
+  {% for name in section_names %}
+  <label class="span2">{{ name }}
+    <textarea name="section_{{ loop.index0 }}" rows="{{ 8 if name == 'Procedure' else 5 }}">{{ sections.get(name, '') }}</textarea>
+  </label>
+  {% endfor %}
+
+  <div class="span2 form-actions">
+    <button class="btn btn-orange" type="submit">{{ 'Save changes' if meta else 'Create entry' }}</button>
+    <a class="btn btn-ghost" href="{{ url_for('entries.view', eid=meta.id) if meta else url_for('entries.list_entries') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

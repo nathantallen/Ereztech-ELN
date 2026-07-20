@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}{{ meta.id }} — EreZtech ELN{% endblock %}
+{% block content %}
+{% set locked = meta.status != 'draft' %}
+<div class="page-head">
+  <div>
+    <h1><span class="mono">{{ meta.id }}</span> — {{ meta.title }}</h1>
+    <div class="sub">
+      {{ meta.project }}{{ ' · ' if meta.project }}{{ meta.experiment_date }} · {{ meta.technique or meta.atmosphere }}
+      · by {{ meta.author }}
+      {% for t in meta.tags or [] %}<span class="tag">{{ t }}</span>{% endfor %}
+    </div>
+  </div>
+  <div class="head-actions">
+    <span class="pill pill-lg" style="background: {{ status_colors.get(meta.status, '#8a8797') }};">{{ meta.status }}</span>
+    <a class="btn btn-ghost" href="{{ url_for('entries.print_view', eid=meta.id) }}" target="_blank" rel="noopener" title="Open a print-ready page and save it as a PDF">⤓ PDF</a>
+    {% if can_edit and not locked %}
+    <a class="btn" href="{{ url_for('entries.edit', eid=meta.id) }}">Edit</a>
+    {% endif %}
+    {% if can_edit %}
+    <form method="post" action="{{ url_for('entries.repeat', eid=meta.id) }}">
+      <button class="btn btn-ghost" type="submit" title="Create a new draft with this reaction, procedure and equipment">↻ Repeat reaction</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+{% if locked %}
+<div class="lockbar">
+  🔒 Signed by <strong>{{ meta.signed.name }}</strong> on {{ meta.signed.at | nicedate }}
+  {% if meta.witnessed %} · Witnessed by <strong>{{ meta.witnessed.name }}</strong> on {{ meta.witnessed.at | nicedate }}{% endif %}
+  — this record can no longer be edited.
+</div>
+{% endif %}
+
+{% include '_operations.html' %}
+
+<div class="grid-main-side">
+<div>
+  <div class="card">
+    <h2>Objective</h2>
+    <div class="md-body">{{ sections.get('Objective', '') | markdown }}</div>
+  </div>
+
+  {% include '_reaction.html' %}
+  {% include '_equipment.html' %}
+
+  <div class="card">
+    <h2>Procedure</h2>
+    <div class="md-body">{{ sections.get('Procedure', '') | markdown }}</div>
+  </div>
+
+  {% include '_opslog.html' %}
+
+  <div class="card" id="results">
+    <h2>Results &amp; Conclusions</h2>
+    {% if sections.get('Results & Conclusions') %}
+    <div class="md-body">{{ sections.get('Results & Conclusions', '') | markdown }}</div>
+    {% elif locked %}
+    <p class="muted">No results recorded.</p>
+    {% endif %}
+    {% if can_edit and not locked %}
+    <details class="results-edit" {{ 'open' if not sections.get('Results & Conclusions') }}>
+      <summary>{{ 'Edit results' if sections.get('Results & Conclusions') else 'Write results' }}</summary>
+      <form method="post" action="{{ url_for('entries.save_results', eid=meta.id) }}">
+        <textarea name="results" rows="5">{{ sections.get('Results & Conclusions', '') }}</textarea>
+        <div class="form-actions"><button class="btn btn-orange" type="submit">Save results</button></div>
+      </form>
+    </details>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Attached data files</h2>
+    {% if meta.attachments %}
+    {% for att in meta.attachments %}
+    <div class="attachment">
+      <div class="attachment-head">
+        <span class="att-kind att-{{ att.kind }}">{{ att.kind }}</span>
+        <a href="{{ url_for('entries.serve_file', eid=meta.id, relpath=att.file) }}">{{ att.file.split('/')[-1] }}</a>
+        <span class="muted small">{{ att.caption }} — {{ att.uploaded_by }}, {{ att.uploaded_at | nicedate }}</span>
+        {% if can_edit and not locked %}
+        <form method="post" action="{{ url_for('entries.delete_attachment', eid=meta.id, idx=loop.index0) }}" onsubmit="return confirm('Remove this attachment?')">
+          <button class="linklike" type="submit">remove</button>
+        </form>
+        {% endif %}
+      </div>
+      {% if att.kind == 'video' %}
+      <video controls preload="metadata" class="att-video" src="{{ url_for('entries.serve_file', eid=meta.id, relpath=att.file) }}"></video>
+      {% elif att.kind == 'image' %}
+      <img class="att-image" src="{{ url_for('entries.serve_file', eid=meta.id, relpath=att.file) }}" alt="{{ att.caption }}">
+      {% elif previews.get(att.file) %}
+      <details class="csv-preview">
+        <summary>Preview sensor data (first {{ previews[att.file]|length }} rows)</summary>
+        <div class="table-scroll"><table class="table small">
+          {% for row in previews[att.file] %}
+          <tr>{% for cell in row %}<td class="mono">{{ cell }}</td>{% endfor %}</tr>
+          {% endfor %}
+        </table></div>
+      </details>
+      {% endif %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <p class="muted">No files attached yet.</p>
+    {% endif %}
+
+    {% if can_edit and not locked %}
+    <form method="post" action="{{ url_for('entries.attach', eid=meta.id) }}" enctype="multipart/form-data" class="attach-form">
+      <input type="file" name="files" multiple>
+      <input type="text" name="caption" placeholder="Caption (optional)">
+      <button class="btn" type="submit">Attach files</button>
+    </form>
+    <p class="muted small">Video (mp4, mov…), sensor logs (csv, tsv, json…), spectra, images or any other file.</p>
+    {% endif %}
+  </div>
+</div>
+
+<aside>
+  <div class="card">
+    <h2>References</h2>
+    {% if meta.repeat_of %}
+    <p class="small">↻ Repeat of <a class="entry-ref mono" href="{{ url_for('entries.view', eid=meta.repeat_of) }}">{{ meta.repeat_of }}</a></p>
+    {% endif %}
+    {% if repeats %}
+    <p class="small">Repeated by:
+      {% for r in repeats %}<a class="entry-ref mono" href="{{ url_for('entries.view', eid=r) }}">{{ r }}</a>{{ ', ' if not loop.last }}{% endfor %}</p>
+    {% endif %}
+    {% if mentions %}
+    <p class="small">References:
+      {% for r in mentions %}<a class="entry-ref mono" href="{{ url_for('entries.view', eid=r) }}">{{ r }}</a>{{ ', ' if not loop.last }}{% endfor %}</p>
+    {% endif %}
+    {% if referenced_by %}
+    <p class="small">Referenced by:
+      {% for r in referenced_by %}<a class="entry-ref mono" href="{{ url_for('entries.view', eid=r) }}">{{ r }}</a>{{ ', ' if not loop.last }}{% endfor %}</p>
+    {% endif %}
+    {% if not meta.repeat_of and not repeats and not mentions and not referenced_by %}
+    <p class="muted small">No cross-references. Mention an entry id (e.g. ELN-2026-0001)
+      in any text and it becomes a link.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Sign-off</h2>
+    {% if meta.status == 'draft' and can_edit %}
+    <p class="small muted">Signing locks the entry. Confirm with your password.</p>
+    <form method="post" action="{{ url_for('entries.sign', eid=meta.id) }}" class="signoff-form">
+      <input type="password" name="password" placeholder="Your password" required autocomplete="current-password">
+      <button class="btn btn-orange" type="submit">Sign entry</button>
+    </form>
+    {% elif meta.status == 'signed' %}
+    <p class="small">Signed by <strong>{{ meta.signed.name }}</strong><br>{{ meta.signed.at | nicedate }}</p>
+    {% if can_edit and meta.signed.by != current_user.username %}
+    <form method="post" action="{{ url_for('entries.witness', eid=meta.id) }}" class="signoff-form">
+      <input type="password" name="password" placeholder="Your password" required autocomplete="current-password">
+      <button class="btn btn-orange" type="submit">Witness entry</button>
+    </form>
+    {% elif can_edit %}
+    <p class="small muted">Awaiting witness by another scientist.</p>
+    {% endif %}
+    {% if is_admin %}
+    <form method="post" action="{{ url_for('entries.reopen', eid=meta.id) }}" onsubmit="return confirm('Reopen this signed entry as a draft? The action is audit-logged.')">
+      <button class="btn btn-ghost" type="submit">Reopen as draft (admin)</button>
+    </form>
+    {% endif %}
+    {% elif meta.status == 'witnessed' %}
+    <p class="small">Signed by <strong>{{ meta.signed.name }}</strong><br>{{ meta.signed.at | nicedate }}</p>
+    <p class="small">Witnessed by <strong>{{ meta.witnessed.name }}</strong><br>{{ meta.witnessed.at | nicedate }}</p>
+    <p class="small muted">Permanent record.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Audit trail</h2>
+    <div class="audit-log">
+      {% for row in audit | reverse %}
+      <div class="audit-row">
+        <div class="small muted">{{ row.at | nicedate }}</div>
+        <div class="small"><strong>{{ row.by }}</strong> {{ row.action }}{% if row.detail %} — {{ row.detail }}{% endif %}</div>
+      </div>
+      {% else %}
+      <p class="muted small">No events.</p>
+      {% endfor %}
+    </div>
+  </div>
+</aside>
+</div>
+<script src="{{ url_for('static', filename='js/stoich.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/ops.js') }}" defer></script>
+{% endblock %}

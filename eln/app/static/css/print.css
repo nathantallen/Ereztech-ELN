@@ -1,0 +1,150 @@
+/* Print / PDF layout for a single lab-notebook entry.
+   Loaded AFTER style.css, so it re-uses the component styles (.scheme, .stoich,
+   .md-body, .obs, .tag, .pill, .audit-log …) and only overrides what a printable
+   document needs: no app chrome, a centred "sheet" on screen, and @page rules so
+   the browser's "Save as PDF" produces a clean, paginated record. */
+
+:root { --sheet: 8.5in; }
+
+body.print-doc {
+  display: block;
+  background: #e9e7f0;
+  color: var(--text);
+  margin: 0;
+  padding: 0;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* --- on-screen toolbar (hidden when printing) --- */
+.print-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 20px;
+  background: var(--indigo);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(15, 0, 55, 0.25);
+}
+.print-toolbar .spacer { flex: 1; }
+.print-toolbar .hint { font-size: 12px; color: var(--lavender); }
+.print-toolbar a { color: #cfc7e6; font-size: 13px; }
+.print-toolbar .btn-print {
+  background: var(--orange);
+  color: var(--indigo);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+.print-toolbar .btn-print:hover { filter: brightness(1.05); }
+
+/* --- the document "sheet" --- */
+.sheet {
+  background: #fff;
+  max-width: var(--sheet);
+  margin: 22px auto;
+  padding: 30px 40px 42px;
+  box-shadow: 0 2px 18px rgba(15, 0, 55, 0.14);
+  border-radius: 4px;
+}
+
+/* header / letterhead */
+.doc-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 3px solid var(--orange);
+  padding-bottom: 12px;
+  margin-bottom: 18px;
+}
+.doc-brand { display: flex; flex-direction: column; align-items: flex-start; }
+.doc-logo-plate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--indigo);
+  border-radius: 4px;
+  padding: 4px 10px;
+}
+.doc-logo-plate img { display: block; width: 87px; height: 40px; object-fit: contain; }
+.doc-brand-sub {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.doc-meta { text-align: right; font-size: 11px; color: var(--muted); line-height: 1.6; }
+.doc-meta .doc-id { font-size: 15px; font-weight: 700; color: var(--indigo); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+.doc-title { font-size: 20px; color: var(--indigo); margin: 0 0 4px; }
+.doc-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 16px; }
+.doc-sub .tag { vertical-align: middle; }
+
+/* sign-off / status block */
+.signoff-block {
+  border: 1px solid var(--border);
+  border-left: 5px solid var(--ok);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  background: #fbfaff;
+}
+.signoff-block.is-draft { border-left-color: var(--hold); }
+.signoff-block.is-signed { border-left-color: var(--orange); }
+.signoff-block h2 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--indigo); }
+.signoff-grid { display: flex; flex-wrap: wrap; gap: 26px; }
+.signoff-grid .who { font-weight: 600; color: var(--indigo); }
+.signoff-grid .when { color: var(--muted); font-size: 12px; }
+.draft-note { color: var(--hold); font-weight: 600; }
+
+/* document sections */
+.doc-section { margin-bottom: 20px; }
+.doc-section > h2 {
+  font-size: 14px;
+  color: var(--indigo);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 5px;
+  margin: 0 0 10px;
+}
+.doc-section .muted { color: var(--muted); }
+
+.kv-table { border-collapse: collapse; font-size: 13px; }
+.kv-table th { text-align: left; color: var(--indigo); font-weight: 600; padding: 3px 14px 3px 0; vertical-align: top; white-space: nowrap; }
+.kv-table td { padding: 3px 0; }
+
+.summary-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.summary-table th, .summary-table td { border: 1px solid var(--border); padding: 5px 8px; text-align: left; }
+.summary-table th { background: #f3f1f8; color: var(--indigo); }
+
+/* Actions and Observations plus the audit trail must print in full, not as scroll-boxes */
+.doc-section .obs-list,
+.doc-section .audit-log { max-height: none; overflow: visible; border: none; padding: 0; }
+.doc-section .audit-log { font-size: 12px; }
+
+.gen-footer { margin-top: 26px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 10.5px; color: var(--muted); }
+
+@media print {
+  @page { size: letter; margin: 14mm 14mm 16mm; }
+  body.print-doc { background: #fff; }
+  .print-toolbar { display: none !important; }
+  .sheet { max-width: none; margin: 0; padding: 0; box-shadow: none; border-radius: 0; }
+
+  /* keep logically-grouped blocks from splitting across pages */
+  .doc-section, .signoff-block, .scheme, .obs, .audit-row, .summary-table tr, .stoich tr { break-inside: avoid; }
+  .doc-section > h2 { break-after: avoid; }
+  a { color: var(--text); text-decoration: none; }
+}
+
+.doc-section .obs-photo-thumb { width: 120px; height: 82px; object-fit: cover; }

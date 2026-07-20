@@ -1,0 +1,45 @@
+{# Sticky operations bar: timer, live sensor strip, camera + end-work controls. #}
+{% set running = ops.started_at and not ops.ended_at %}
+{% set eq = meta.equipment or {} %}
+
+{% if running %}
+<div class="ops-bar" id="ops-bar" data-started="{{ ops.started_at }}"
+     data-eid="{{ meta.id }}" data-has-camera="{{ '1' if eq.camera and ha_configured else '' }}"
+     data-has-sensors="{{ '1' if eq.sensors and ha_configured else '' }}"
+     data-recording="{{ '1' if recording.active else '' }}">
+  <div class="ops-clock">
+    <div class="ops-clock-label">Lab time</div>
+    <div class="ops-clock-time mono" id="ops-timer">--:--:--</div>
+  </div>
+  {% if eq.sensors and ha_configured %}
+  <div class="ops-plot-wrap" id="ops-plot-wrap">
+    <canvas id="ops-plot" width="640" height="110"></canvas>
+    <div class="ops-plot-legend" id="ops-plot-legend"></div>
+    <button type="button" class="ops-fs-btn" id="ops-fullscreen" title="Full screen">⛶</button>
+  </div>
+  {% endif %}
+  {% if eq.camera and ha_configured %}
+  <div class="ops-camera" id="ops-camera" data-camera="{{ eq.camera }}">
+    <img id="ops-camera-img" alt="Live view from the assigned lab camera"
+         data-snapshot="{{ url_for('equipment.snapshot', entity=eq.camera) }}">
+    <span class="ops-camera-label">Live camera</span>
+    <button type="button" class="ops-camera-toggle" id="ops-camera-toggle"
+            aria-expanded="true" title="Hide camera">−</button>
+    <button type="button" class="camera-resize-handle ops-camera-resize"
+            aria-label="Resize live camera">↘</button>
+  </div>
+  {% endif %}
+  <div class="ops-actions">
+    {% if eq.camera and ha_configured %}
+    <button type="button" class="btn" id="ops-photo">📷 Photo</button>
+    <button type="button" class="btn {{ 'btn-danger-solid' if recording.active }}" id="ops-record">
+      {{ '⏹ Stop recording' if recording.active else '⏺ Record' }}</button>
+    {% endif %}
+    <form method="post" action="{{ url_for('entries.ops_end', eid=meta.id) }}"
+          onsubmit="return confirm('End lab work? Sensor logging and any recording will stop.')">
+      <button type="submit" class="btn btn-orange">⏹ End lab work</button>
+    </form>
+  </div>
+  <div class="ops-msg small" id="ops-msg"></div>
+</div>
+{% endif %}

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Batch — {{ material.name }} — Ereztech ELN{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ 'Edit batch ' + meta.lot if meta else 'New batch' }}</h1>
+    <div class="sub">{{ material.name }}</div>
+  </div>
+</div>
+<form method="post" class="card form-grid">
+  <label>Batch / lot number
+    <input type="text" name="lot" value="{{ meta.lot if meta }}" required {{ 'readonly' if meta }} placeholder="TMG-2607-A">
+  </label>
+  <label>Supplier
+    <input type="text" name="supplier" value="{{ meta.supplier if meta else material.supplier }}">
+  </label>
+  <label>Received
+    <input type="date" name="received" value="{{ meta.received if meta }}">
+  </label>
+  <label>Expiry / retest
+    <input type="date" name="expiry" value="{{ meta.expiry if meta }}">
+  </label>
+  <label>Purity / grade
+    <input type="text" name="purity" value="{{ meta.purity if meta }}" placeholder="99.9999% (6N)">
+  </label>
+  <label>Available inventory
+    <span class="input-pair inventory-quantity-input">
+      <input type="number" step="any" min="0" name="quantity_value"
+             value="{{ quantity.value }}" required placeholder="250">
+      <select name="quantity_unit" aria-label="Inventory unit">
+        {% for family, units in inventory_units.items() if not meta or family == quantity.family %}
+        <optgroup label="{{ family }}">
+          {% for unit in units %}<option value="{{ unit }}" {{ 'selected' if quantity.unit == unit }}>{{ unit }}</option>{% endfor %}
+        </optgroup>
+        {% endfor %}
+      </select>
+    </span>
+  </label>
+  <label>Container
+    <input type="text" name="container" value="{{ meta.container if meta }}" placeholder="SS-316 bubbler #14">
+  </label>
+  <label>Storage location
+    <input type="text" name="location" value="{{ meta.location if meta }}" placeholder="Gas cabinet 2, slot A">
+  </label>
+  <label>Status
+    <select name="status">
+      {% for s in statuses %}
+      <option value="{{ s }}" {{ 'selected' if meta and meta.status == s }}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  {% if meta %}
+  <label class="span2">Inventory adjustment reason
+    <input type="text" name="adjustment_reason"
+           placeholder="Required only when changing the available quantity">
+    <span class="muted small">Quantity changes create a permanent inventory transaction.</span>
+  </label>
+  {% endif %}
+  <label class="span2">Notes
+    <textarea name="notes" rows="3">{{ notes }}</textarea>
+  </label>
+  <div class="span2 form-actions">
+    <button class="btn btn-orange" type="submit">Save batch</button>
+    <a class="btn btn-ghost" href="{{ url_for('materials.view', slug=material.slug) }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% if observations %}
+{% for o in observations %}
+<div class="obs obs-{{ o.kind }}">
+  <div class="obs-head">
+    <span class="obs-elapsed mono" title="Elapsed since start of lab work">t+{{ o.elapsed }}</span>
+    <span class="muted small">{{ o.at | nicedate }}</span>
+    <span class="small"><strong>{{ o.by }}</strong></span>
+    {% if o.kind != 'note' %}<span class="obs-kind">{{ o.kind }}</span>{% endif %}
+  </div>
+  {% if o.kind == 'photo' and o.photo_url %}
+  <div class="obs-body obs-photo-body">
+    <a href="{{ o.photo_url }}" target="_blank" rel="noopener" class="obs-photo-link"
+       title="Open full-size photo">
+      <img src="{{ o.photo_url }}" alt="{{ o.photo_name or 'Captured laboratory photo' }}"
+           class="obs-photo-thumb" loading="lazy">
+    </a>
+    <span class="small muted">{{ o.photo_name or 'Captured photo' }} · select thumbnail for full size</span>
+  </div>
+  {% else %}
+  <div class="obs-body md-body">{{ o.text | markdown }}</div>
+  {% endif %}
+</div>
+{% endfor %}
+{% else %}
+<p class="muted">No observations recorded yet.</p>
+{% endif %}

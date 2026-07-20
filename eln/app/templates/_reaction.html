@@ -1,0 +1,184 @@
+{# Reaction definition + stoichiometry. Editable in draft, static once signed. #}
+{% set locked = meta.status != 'draft' or (ops.started_at and not ops.ended_at) %}
+<div class="card" id="reaction">
+  <h2>Reaction &amp; stoichiometry</h2>
+
+  {% if can_edit and not locked and compound_library %}
+  <form method="post" action="{{ url_for('entries.add_known_component', eid=meta.id) }}" class="filter-row library-row">
+    <select name="source" required>
+      <option value="">Add a previously used material or product…</option>
+      {% for c in compound_library %}
+      <option value="{{ c.value }}">{{ c.label }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn" type="submit">Add to reaction</button>
+  </form>
+  {% endif %}
+
+  {% if components %}
+  <div class="scheme">
+    {% set left = components | selectattr('role', 'in', ['reactant', 'reagent']) | list %}
+    {% set over = components | selectattr('role', 'in', ['catalyst', 'solvent']) | list %}
+    {% set right = components | selectattr('role', 'eq', 'product') | list %}
+    {% for c in left %}
+      <div class="scheme-item">
+        <div class="scheme-img">{% if c.svg_scheme %}{{ c.svg_scheme | safe }}{% else %}<span class="scheme-placeholder">{{ c.name or '?' }}</span>{% endif %}</div>
+        <div class="scheme-label">{{ c.name }}{% if c.equiv %} <span class="muted">({{ c.equiv }} equiv)</span>{% endif %}</div>
+      </div>
+      {% if not loop.last %}<div class="scheme-plus">+</div>{% endif %}
+    {% endfor %}
+    {% if left and (right or over) %}
+    <div class="scheme-arrow-block">
+      {% for c in over %}<div class="scheme-over small">{{ c.name }}</div>{% endfor %}
+      <div class="scheme-arrow">⟶</div>
+    </div>
+    {% endif %}
+    {% for c in right %}
+      <div class="scheme-item">
+        <div class="scheme-img">{% if c.svg_scheme %}{{ c.svg_scheme | safe }}{% else %}<span class="scheme-placeholder">{{ c.name or '?' }}</span>{% endif %}</div>
+        <div class="scheme-label">{{ c.name }}</div>
+      </div>
+      {% if not loop.last %}<div class="scheme-plus">+</div>{% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if can_edit and not locked %}
+  <form method="post" action="{{ url_for('entries.save_reaction', eid=meta.id) }}" id="reaction-form">
+    <div class="scale-row">
+      <strong>Scale:</strong>
+      <input type="number" step="any" min="0" name="scale_amount" id="scale-amount"
+             value="{{ reaction.scale_amount if reaction.scale_amount is not none }}" placeholder="5.0">
+      <select name="scale_unit" id="scale-unit">
+        {% for u in ['mg', 'g', 'kg', 'mmol', 'mol'] %}
+        <option value="{{ u }}" {{ 'selected' if reaction.scale_unit == u }}>{{ u }}</option>
+        {% endfor %}
+      </select>
+      <span class="muted small">of the limiting component — amounts below update automatically</span>
+    </div>
+    <div class="table-scroll">
+    <table class="table stoich" id="stoich-table">
+      <thead><tr>
+        <th>Role</th><th>Name</th><th>CAS</th><th>Structure</th><th>MW<br><span class="th-sub">g/mol</span></th>
+        <th>Density<br><span class="th-sub">g/mL</span></th><th>State</th><th>Conc<br><span class="th-sub">mol/L</span></th>
+        <th>Equiv</th><th>Limit</th><th>mmol</th><th>Amount</th><th>Volume</th><th></th>
+      </tr></thead>
+      <tbody>
+      {% for c in components %}
+      <tr class="stoich-row">
+        <td>
+          <input type="hidden" name="comp_key" value="{{ c.key or '' }}">
+          <input type="hidden" name="comp_formula" value="{{ c.formula or '' }}">
+          <input type="hidden" name="comp_mw_auto" class="f-mw-auto" value="{{ '1' if c.mw_auto else '0' }}">
+          <input type="hidden" name="comp_mmol" class="f-mmol">
+          <input type="hidden" name="comp_mass_g" class="f-mass">
+          <input type="hidden" name="comp_volume_ml" class="f-volume">
+          <select name="comp_role" class="f-role">
+            {% for r in component_roles %}<option value="{{ r }}" {{ 'selected' if c.role == r }}>{{ r }}</option>{% endfor %}
+          </select>
+        </td>
+        <td><input type="text" name="comp_name" class="f-name" value="{{ c.name }}" placeholder="name"></td>
+        <td><input type="text" name="comp_cas" class="f-cas" value="{{ c.cas }}" placeholder="CAS" size="10"></td>
+        <td class="struct-cell">
+          {% if c.svg_row %}<div class="stoich-struct">{{ c.svg_row | safe }}</div>{% endif %}
+          <button type="submit" name="draw" value="{{ loop.index0 }}" class="btn btn-xs" formnovalidate>{{ '✏️ edit' if c.structure else '✏️ draw' }}</button>
+        </td>
+        <td><input type="number" step="any" min="0" name="comp_mw" class="f-mw {{ 'mw-auto' if c.mw_auto }}" value="{{ c.mw if c.mw is not none }}" title="{{ c.formula or '' }}">
+            {% if c.formula %}<div class="th-sub mono">{{ c.formula }}</div>{% endif %}</td>
+        <td><input type="number" step="any" min="0" name="comp_density" class="f-density" value="{{ c.density if c.density is not none }}"></td>
+        <td><select name="comp_state" class="f-state">
+            {% for s in component_states %}<option value="{{ s }}" {{ 'selected' if c.state == s }}>{{ s }}</option>{% endfor %}
+        </select></td>
+        <td><input type="number" step="any" min="0" name="comp_conc" class="f-conc" value="{{ c.conc if c.conc is not none }}"></td>
+        <td><input type="number" step="any" min="0" name="comp_equiv" class="f-equiv" value="{{ c.equiv if c.equiv is not none else 1 }}"></td>
+        <td class="center"><input type="radio" name="comp_limiting" value="{{ loop.index0 }}" class="f-limiting" {{ 'checked' if c.limiting }}></td>
+        <td class="calc c-mmol mono"></td>
+        <td class="calc c-mass mono"></td>
+        <td class="calc c-volume mono">
+          <span class="c-volume-text"></span>
+          {% set volume_unit = c.volume_unit or 'mL' %}
+          <span class="solvent-volume-control" {{ 'hidden' if c.role != 'solvent' }}>
+            <input type="number" step="any" min="0" class="f-solvent-volume"
+                   value="{% if c.role == 'solvent' and c.volume_ml is not none %}{% if volume_unit == 'µL' %}{{ c.volume_ml * 1000 }}{% elif volume_unit == 'L' %}{{ c.volume_ml / 1000 }}{% else %}{{ c.volume_ml }}{% endif %}{% endif %}"
+                   aria-label="Solvent volume" placeholder="volume">
+            <select name="comp_volume_unit" class="f-volume-unit" aria-label="Solvent volume unit">
+              {% for unit in ['µL', 'mL', 'L'] %}<option value="{{ unit }}" {{ 'selected' if volume_unit == unit }}>{{ unit }}</option>{% endfor %}
+            </select>
+          </span>
+        </td>
+        <td><button type="button" class="linklike row-del" title="Remove row">✕</button></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <div class="form-actions">
+      <button type="button" class="btn btn-ghost" id="add-component">+ Add component</button>
+      <button type="submit" class="btn btn-orange">Save reaction setup</button>
+      <span class="muted small">MW is calculated from the drawn structure; density &amp; b.p. are looked
+        up from the local properties database and learned from what you enter.</span>
+    </div>
+  </form>
+
+  <template id="stoich-row-template">
+    <tr class="stoich-row">
+      <td>
+        <input type="hidden" name="comp_key" value="">
+        <input type="hidden" name="comp_formula" value="">
+        <input type="hidden" name="comp_mw_auto" class="f-mw-auto" value="1">
+        <input type="hidden" name="comp_mmol" class="f-mmol">
+        <input type="hidden" name="comp_mass_g" class="f-mass">
+        <input type="hidden" name="comp_volume_ml" class="f-volume">
+        <select name="comp_role" class="f-role">
+          {% for r in component_roles %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+        </select>
+      </td>
+      <td><input type="text" name="comp_name" class="f-name" placeholder="name"></td>
+      <td><input type="text" name="comp_cas" class="f-cas" placeholder="CAS" size="10"></td>
+      <td class="struct-cell"><button type="submit" name="draw" value="" class="btn btn-xs draw-btn" formnovalidate>✏️ draw</button></td>
+      <td><input type="number" step="any" min="0" name="comp_mw" class="f-mw"></td>
+      <td><input type="number" step="any" min="0" name="comp_density" class="f-density"></td>
+      <td><select name="comp_state" class="f-state">
+          {% for s in component_states %}<option value="{{ s }}" {{ 'selected' if s == 'liquid' }}>{{ s }}</option>{% endfor %}
+      </select></td>
+      <td><input type="number" step="any" min="0" name="comp_conc" class="f-conc"></td>
+      <td><input type="number" step="any" min="0" name="comp_equiv" class="f-equiv" value="1"></td>
+      <td class="center"><input type="radio" name="comp_limiting" value="" class="f-limiting"></td>
+      <td class="calc c-mmol mono"></td>
+      <td class="calc c-mass mono"></td>
+      <td class="calc c-volume mono">
+        <span class="c-volume-text"></span>
+        <span class="solvent-volume-control" hidden>
+          <input type="number" step="any" min="0" class="f-solvent-volume"
+                 aria-label="Solvent volume" placeholder="volume">
+          <select name="comp_volume_unit" class="f-volume-unit" aria-label="Solvent volume unit">
+            <option value="µL">µL</option><option value="mL" selected>mL</option><option value="L">L</option>
+          </select>
+        </span>
+      </td>
+      <td><button type="button" class="linklike row-del" title="Remove row">✕</button></td>
+    </tr>
+  </template>
+
+  {% elif components %}
+  <div class="table-scroll">
+  <table class="table small stoich stoich-readonly">
+    <thead><tr><th>Role</th><th>Name</th><th>CAS</th><th>Formula</th><th>MW</th><th>d</th><th>Equiv</th><th>mmol</th><th>Amount</th><th>Volume</th></tr></thead>
+    <tbody>
+    {% for c in components %}
+    <tr>
+      <td>{{ c.role }}{% if c.limiting %} <span class="pill pill-air">limiting</span>{% endif %}</td>
+      <td>{{ c.name }}</td><td class="mono">{{ c.cas }}</td><td class="mono">{{ c.formula }}</td>
+      <td>{{ c.mw }}</td><td>{{ c.density or '' }}</td><td>{{ c.equiv }}</td>
+      <td>{{ '%.2f' | format(c.mmol) if c.mmol is not none }}</td>
+      <td>{{ '%.3f g' | format(c.mass_g) if c.mass_g is not none }}</td>
+      <td>{% if c.volume_ml is not none %}{% set unit = c.volume_unit or 'mL' %}{% if unit == 'µL' %}{{ '%.1f µL' | format(c.volume_ml * 1000) }}{% elif unit == 'L' %}{{ '%.3f L' | format(c.volume_ml / 1000) }}{% else %}{{ '%.2f mL' | format(c.volume_ml) }}{% endif %}{% endif %}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="muted">No reaction defined.</p>
+  {% endif %}
+</div>

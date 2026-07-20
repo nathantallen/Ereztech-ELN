@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Users — Ereztech ELN{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Users</h1>
+  <div class="head-actions">
+    <a class="btn btn-ghost" href="{{ url_for('admin.role_form') }}">+ New role</a>
+    <a class="btn btn-orange" href="{{ url_for('admin.user_form') }}">+ New user</a>
+  </div>
+</div>
+<div class="card">
+  <table class="table">
+    <thead><tr><th>Username</th><th>Full name</th><th>Role</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {% for u in users %}
+    <tr>
+      <td class="mono">{{ u.username }}</td>
+      <td>{{ u.full_name }}</td>
+      <td><span class="pill" style="background: {{ role_colors.get(u.role, '#8a8797') }};">{{ role_labels.get(u.role, u.role) }}</span></td>
+      <td>{{ 'active' if u.active else 'disabled' }}</td>
+      <td><a href="{{ url_for('admin.user_form', username=u.username) }}">edit</a></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted small">Users are never deleted — disable them instead so signatures and audit history stay valid.</p>
+</div>
+
+<div class="card">
+  <div class="section-head"><h2>Roles</h2></div>
+  <div class="role-grid">
+    {% for role in roles %}
+    <div class="role-card">
+      <span class="pill" style="background: {{ role.color }};">{{ role.label }}</span>
+      <code>{{ role.key }}</code>
+      <span class="muted small">
+        {{ 'Administration and notebook editing' if role.can_admin else ('Notebook editing' if role.can_edit else 'Read only') }}
+      </span>
+      <a href="{{ url_for('admin.role_form', key=role.key) }}">edit</a>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit user' if user else 'New user' }} — Ereztech ELN{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ 'Edit ' + user.username if user else 'New user' }}</h1>
+</div>
+<form method="post" class="card form-grid" style="max-width: 560px;">
+  {% if not user %}
+  <label class="span2">Username
+    <input type="text" name="username" required autocomplete="off">
+  </label>
+  {% endif %}
+  <label class="span2">Full name
+    <input type="text" name="full_name" value="{{ user.full_name if user }}">
+  </label>
+  <label>Role
+    <select name="role">
+      {% for r in roles %}
+      <option value="{{ r.key }}" {{ 'selected' if user and user.role == r.key }}>{{ r.label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="check-label">
+    <input type="checkbox" name="active" {{ 'checked' if not user or user.active }}> Active
+  </label>
+  <label class="span2">{{ 'Reset password (leave blank to keep)' if user else 'Password' }}
+    <input type="password" name="password" autocomplete="new-password" {{ '' if user else 'required' }}>
+  </label>
+  <div class="span2 form-actions">
+    <button class="btn btn-orange" type="submit">Save user</button>
+    <a class="btn btn-ghost" href="{{ url_for('admin.list_users') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

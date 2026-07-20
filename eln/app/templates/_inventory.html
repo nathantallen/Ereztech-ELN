@@ -1,0 +1,133 @@
+{% set running = ops.started_at and not ops.ended_at %}
+{% set pending = inventory_allocations | selectattr('status', 'equalto', 'deducted') | list %}
+{% set planned = inventory_allocations | selectattr('status', 'equalto', 'planned') | list %}
+{% set completed = inventory_allocations | rejectattr('status', 'equalto', 'planned') | list %}
+{% set eligible = components | rejectattr('role', 'equalto', 'product') | list %}
+<div class="card inventory-card" id="inventory-allocation">
+  <div class="card-title-row">
+    <div>
+      <h2>Inventory allocation</h2>
+      <p class="small muted">Allocate one or more batches to each reaction component. Planned quantities are deducted when Actions and Observations starts.</p>
+    </div>
+    {% if pending %}<span class="pill pill-air">Reconciliation required</span>{% endif %}
+  </div>
+
+  {% if can_edit and meta.status == 'draft' and not running and not pending and eligible %}
+  <form method="post" action="{{ url_for('entries.save_inventory_allocations', eid=meta.id) }}"
+        id="inventory-allocation-form">
+    <div class="inventory-allocation-rows" id="inventory-allocation-rows">
+      {% for allocation in planned %}
+      <div class="inventory-allocation-row">
+        <input type="hidden" name="allocation_id" value="{{ allocation.id }}">
+        <label>Component
+          <select name="allocation_component" required>
+            <option value="">Choose component…</option>
+            {% for c in eligible %}<option value="{{ c.key }}" {{ 'selected' if c.key == allocation.component_key }}>{{ c.name or 'Unnamed component' }} · {{ c.role }}</option>{% endfor %}
+          </select>
+        </label>
+        <label>Inventory batch
+          <select name="allocation_batch" class="inventory-batch-select" required>
+            <option value="">Choose batch…</option>
+            {% for batch in inventory_batches %}
+            <option value="{{ batch.key }}" data-units="{{ batch.units | join(',') }}" data-default-unit="{{ batch.quantity.unit }}"
+                    {{ 'selected' if batch.material == allocation.material and batch.lot_slug == allocation.lot_slug }}
+                    {{ 'disabled' if not batch.selectable and not (batch.material == allocation.material and batch.lot_slug == allocation.lot_slug) }}>
+              {{ batch.material_name }} · {{ batch.lot }} · {{ batch.quantity.display }} · {{ batch.status }}
+            </option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Planned quantity
+          <span class="input-pair">
+            <input type="number" step="any" min="0" name="allocation_quantity"
+                   value="{{ allocation.planned_quantity }}" required>
+            <select name="allocation_unit" class="inventory-unit-select" data-current="{{ allocation.planned_unit }}" required>
+              <option value="{{ allocation.planned_unit }}">{{ allocation.planned_unit }}</option>
+            </select>
+          </span>
+        </label>
+        <button type="button" class="linklike inventory-allocation-remove" aria-label="Remove allocation">✕</button>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="form-actions">
+      <button type="button" class="btn btn-ghost" id="add-inventory-allocation">+ Add batch allocation</button>
+      <button type="submit" class="btn btn-orange">Save allocations</button>
+      {% if not planned %}<span class="small muted">No inventory will be deducted until an allocation is saved.</span>{% endif %}
+    </div>
+  </form>
+  <template id="inventory-allocation-template">
+    <div class="inventory-allocation-row">
+      <input type="hidden" name="allocation_id" value="">
+      <label>Component
+        <select name="allocation_component" required>
+          <option value="">Choose component…</option>
+          {% for c in eligible %}<option value="{{ c.key }}">{{ c.name or 'Unnamed component' }} · {{ c.role }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Inventory batch
+        <select name="allocation_batch" class="inventory-batch-select" required>
+          <option value="">Choose batch…</option>
+          {% for batch in inventory_batches if batch.selectable %}
+          <option value="{{ batch.key }}" data-units="{{ batch.units | join(',') }}" data-default-unit="{{ batch.quantity.unit }}">{{ batch.material_name }} · {{ batch.lot }} · {{ batch.quantity.display }} · {{ batch.status }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Planned quantity
+        <span class="input-pair">
+          <input type="number" step="any" min="0" name="allocation_quantity" required>
+          <select name="allocation_unit" class="inventory-unit-select" required><option value="">unit</option></select>
+        </span>
+      </label>
+      <button type="button" class="linklike inventory-allocation-remove" aria-label="Remove allocation">✕</button>
+    </div>
+  </template>
+  {% elif not eligible %}
+  <p class="muted">Add non-product components to the reaction before allocating inventory.</p>
+  {% elif running %}
+  <p class="small muted">Allocations are locked while Actions and Observations is running.</p>
+  {% elif pending %}
+  <p><a class="btn btn-orange" href="{{ url_for('entries.inventory_reconcile', eid=meta.id) }}">Reconcile inventory to end work</a></p>
+  {% endif %}
+
+  {% if inventory_allocations %}
+  <div class="table-scroll inventory-allocation-history">
+    <table class="table small">
+      <thead><tr><th>Component</th><th>Material / lot</th><th>Allocated</th><th>Status</th><th>Session</th><th>Reconciliation</th></tr></thead>
+      <tbody>
+      {% for allocation in inventory_allocations %}
+      <tr>
+        <td>{{ allocation.component_name }}</td>
+        <td>{{ allocation.material_name }} · <span class="mono">{{ allocation.lot }}</span></td>
+        <td class="mono">{{ allocation.planned_quantity }} {{ allocation.planned_unit }}</td>
+        <td><span class="pill inventory-status-{{ allocation.status }}">{{ allocation.status }}</span></td>
+        <td>{{ allocation.deducted_session or '—' }}</td>
+        <td>
+          {% if allocation.status == 'reconciled' %}
+          consumed {{ allocation.consumed_base }} {{ allocation.base_unit }} ·
+          recovered {{ allocation.recovered_base }} {{ allocation.base_unit }} ·
+          returned {{ allocation.returned_base }} {{ allocation.base_unit }}
+          {% elif allocation.status == 'deducted' %}Required before ending work{% else %}Deducts when work starts{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if inventory_transactions %}
+  <details class="inventory-entry-ledger">
+    <summary class="small">{{ inventory_transactions | length }} inventory transaction{{ '' if inventory_transactions|length == 1 else 's' }} for this experiment</summary>
+    <div class="table-scroll">
+      <table class="table small">
+        <thead><tr><th>Time</th><th>Lot</th><th>Action</th><th>Change</th><th>Balance</th><th>By</th></tr></thead>
+        <tbody>{% for tx in inventory_transactions %}<tr>
+          <td>{{ tx.at | nicedate }}</td><td class="mono">{{ tx.lot }}</td><td>{{ tx.action }}</td>
+          <td class="mono">{{ tx.delta_display }}</td><td class="mono">{{ tx.balance_display }}</td><td>{{ tx.by }}</td>
+        </tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </details>
+  {% endif %}
+</div>

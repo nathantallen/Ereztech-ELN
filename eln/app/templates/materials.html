@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Raw materials — Ereztech ELN{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Raw materials</h1>
+    <div class="sub">Materials catalog with batch / lot records and certificates</div>
+  </div>
+  {% if can_edit %}
+  <a class="btn btn-orange" href="{{ url_for('materials.new_material') }}">+ New material</a>
+  {% endif %}
+</div>
+
+<div class="card">
+  <form method="get" class="filter-row">
+    <input type="search" name="q" value="{{ q }}" placeholder="Search name, CAS, formula, supplier…">
+    <button class="btn" type="submit">Search</button>
+  </form>
+  {% if materials %}
+  <table class="table">
+    <thead><tr><th>Structure</th><th>Material</th><th>CAS</th><th>Formula</th><th>Supplier</th><th>Batches</th><th></th></tr></thead>
+    <tbody>
+    {% for m in materials %}
+      <tr>
+        <td class="material-thumb">{% if m._svg %}{{ m._svg | safe }}{% endif %}</td>
+        <td><a href="{{ url_for('materials.view', slug=m.slug) }}">{{ m.name }}</a></td>
+        <td class="mono">{{ m.cas }}</td>
+        <td class="mono">{{ m.formula }}</td>
+        <td>{{ m.supplier }}</td>
+        <td>{{ m._batch_count }}</td>
+        <td>{% if m.air_sensitive %}<span class="pill pill-air">air-sensitive</span>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No materials found.</p>
+  {% endif %}
+</div>
+{% endblock %}
