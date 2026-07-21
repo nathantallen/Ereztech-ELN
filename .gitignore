@@ -16,3 +16,6 @@ __pycache__/
 .DS_Store
 .claude/settings.local.json
 deploy/*.bundle
+
+# Local database bind-mount (never commit DB files)
+/pgdata/
