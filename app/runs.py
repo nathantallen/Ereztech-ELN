@@ -46,7 +46,7 @@ def link_choices(exclude_id=None):
 @login_required
 def list_runs():
     runs = ProductionRun.query.order_by(ProductionRun.start_date.desc()).all()
-    return render_template("runs_list.html", runs=runs)
+    return render_template("runs_list.html", runs=runs, can_edit=can_edit_production())
 
 
 @bp.route("/new", methods=["GET", "POST"])

@@ -17,7 +17,7 @@
     <thead>
       <tr>
         <th>Project</th><th>Customer</th><th>Researcher</th><th>Due</th>
-        <th>Deliverables</th><th>Status</th><th>Sign-off</th>
+        <th>Deliverables</th><th>Status</th><th>Sign-off</th>{% if can_edit %}<th></th>{% endif %}
       </tr>
     </thead>
     <tbody>
@@ -33,9 +33,19 @@
           <span class="badge badge-{{ project.aspect_status('Final Procedure')|lower }}" title="Final Procedure">Proc</span>
           <span class="badge badge-{{ project.aspect_status('Final QC Methods')|lower }}" title="Final QC Methods">QC</span>
         </td>
+        {% if can_edit %}
+        <td style="width: 1%;">
+          {% if project.can_delete %}
+          <form class="inline" method="post" action="{{ url_for('rd.delete_project', project_id=project.id) }}"
+                onsubmit="return confirm('Delete project “{{ project.name }}” and all deliverables/approvals?');">
+            <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+          </form>
+          {% endif %}
+        </td>
+        {% endif %}
       </tr>
       {% else %}
-      <tr><td colspan="7" class="muted">No R&amp;D projects yet.</td></tr>
+      <tr><td colspan="{{ 8 if can_edit else 7 }}" class="muted">No R&amp;D projects yet.</td></tr>
       {% endfor %}
     </tbody>
   </table>

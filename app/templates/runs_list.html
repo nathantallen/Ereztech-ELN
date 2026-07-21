@@ -14,7 +14,7 @@
     <thead>
       <tr>
         <th>Product</th><th>Batch #</th><th>Reactor</th><th>Dates</th>
-        <th>Duration</th><th>Status</th><th>Approvals</th>
+        <th>Duration</th><th>Status</th><th>Approvals</th>{% if can_edit %}<th></th>{% endif %}
       </tr>
     </thead>
     <tbody>
@@ -36,9 +36,17 @@
             {% for s in run.stages %}<i class="{{ 'on' if s.approval_status == 'Approved' }}"></i>{% endfor %}
           </span>
         </td>
+        {% if can_edit %}
+        <td style="width: 1%;">
+          <form class="inline" method="post" action="{{ url_for('runs.delete_run', run_id=run.id) }}"
+                onsubmit="return confirm('Delete run “{{ run.product }}” and all of its stage records?');">
+            <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+          </form>
+        </td>
+        {% endif %}
       </tr>
       {% else %}
-      <tr><td colspan="7" class="muted">No production runs yet. Schedule one to get started.</td></tr>
+      <tr><td colspan="{{ 8 if can_edit else 7 }}" class="muted">No production runs yet. Schedule one to get started.</td></tr>
       {% endfor %}
     </tbody>
   </table>

@@ -35,6 +35,8 @@ def researchers():
 @login_required
 def list_projects():
     projects = RDProject.query.order_by(RDProject.status, RDProject.due_date).all()
+    for p in projects:
+        p.can_delete = can_edit_rd(p)
     return render_template("projects.html", projects=projects, can_edit=can_edit_rd())
 
 
