@@ -77,6 +77,14 @@ def _require_draft(meta):
         abort(redirect(url_for("entries.view", eid=meta["id"])))
 
 
+def _require_reaction_unlocked(meta):
+    """Reaction setup (components, structures, stoichiometry) is frozen once
+    lab work has started so the run's basis can't shift underneath it."""
+    ops = meta.get("operations") or {}
+    if ops.get("started_at") and not ops.get("ended_at"):
+        abort(409, description="Reaction setup is locked while lab work is running.")
+
+
 def _check_password(password):
     rec = _storage().find_user(current_user.username)
     return rec and check_password_hash(rec["password_hash"], password or "")
@@ -543,6 +551,7 @@ def draw_component(eid, cidx):
     _require_edit()
     meta, _ = _get_or_404(eid)
     _require_draft(meta)
+    _require_reaction_unlocked(meta)
     components = (meta.get("reaction") or {}).get("components") or []
     if not (0 <= cidx < len(components)):
         abort(404)
@@ -582,6 +591,7 @@ def save_component_structure(eid, cidx):
     _require_edit()
     meta, body = _get_or_404(eid)
     _require_draft(meta)
+    _require_reaction_unlocked(meta)
     storage = _storage()
     reaction = meta.setdefault("reaction", {})
     components = reaction.setdefault("components", [])
@@ -827,9 +837,7 @@ def save_reaction(eid):
     _require_edit()
     meta, body = _get_or_404(eid)
     _require_draft(meta)
-    active_ops = meta.get("operations") or {}
-    if active_ops.get("started_at") and not active_ops.get("ended_at"):
-        abort(409, description="Reaction setup is locked while lab work is running.")
+    _require_reaction_unlocked(meta)
     storage = _storage()
     form = request.form
     reaction = meta.get("reaction") or {}
@@ -1001,6 +1009,7 @@ def add_known_component(eid):
     import shutil
     meta, body = _get_or_404(eid)
     _require_draft(meta)
+    _require_reaction_unlocked(meta)
     storage = _storage()
     src_id, _, src_key = request.form.get("source", "").partition("|")
     try:
