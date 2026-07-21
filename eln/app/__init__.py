@@ -30,6 +30,8 @@ class User(UserMixin):
         self.id = record["username"]
         self.username = record["username"]
         self.full_name = record.get("full_name", record["username"])
+        self.chemist_number = record.get("chemist_number", "")
+        self.notebook_number = record.get("notebook_number", "")
         self.role = record.get("role", "viewer")
         self.role_record = record.get("_role") or {}
         self.active = record.get("active", True)

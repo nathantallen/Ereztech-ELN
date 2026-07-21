@@ -398,6 +398,23 @@ class Storage:
                     pass
         return "%s%04d" % (prefix, seq + 1)
 
+    def next_page_number(self, author, chemist_number, notebook_number):
+        """Return the next immutable page in one chemist's selected notebook."""
+        highest = 0
+        for _, path in self._iter_entry_paths():
+            try:
+                meta, _ = load_md(path)
+            except Exception:
+                continue
+            if (meta.get("author") == author
+                    and str(meta.get("chemist_number", "")) == chemist_number
+                    and str(meta.get("notebook_number", "")) == notebook_number):
+                try:
+                    highest = max(highest, int(meta.get("page_number", 0)))
+                except (TypeError, ValueError):
+                    pass
+        return highest + 1
+
     def list_entries(self):
         entries = []
         live_paths = set()
@@ -441,6 +458,15 @@ class Storage:
     def create_entry(self, meta, body):
         with _LOCK:
             eid = self.next_entry_id()
+            user = self.find_user(meta.get("author")) or {}
+            chemist_number = str(user.get("chemist_number", "")).strip()
+            notebook_number = str(user.get("notebook_number", "")).strip()
+            if not chemist_number or not notebook_number:
+                raise ValueError("chemist and notebook numbers must be set before creating an entry")
+            meta["chemist_number"] = chemist_number
+            meta["notebook_number"] = notebook_number
+            meta["page_number"] = self.next_page_number(
+                meta.get("author"), chemist_number, notebook_number)
             meta["id"] = eid
             self.save_entry(eid, meta, body)
             return eid
