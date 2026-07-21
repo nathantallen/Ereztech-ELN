@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Notebook identity — Ereztech ELN{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Notebook identity</h1>
+</div>
+<form method="post" class="card form-grid" style="max-width: 560px;">
+  <p class="span2 muted" style="margin: 0 0 4px;">
+    Your chemist and notebook numbers identify the pages you create. They must be
+    set before you can start a new experiment, and each new entry is stamped with
+    the next page number for this chemist + notebook combination.
+  </p>
+  <label>Chemist number
+    <input type="text" name="chemist_number" value="{{ user.chemist_number or '' }}"
+           pattern="[A-Za-z0-9._-]{1,40}" maxlength="40" required autocomplete="off">
+  </label>
+  <label>Notebook number
+    <input type="text" name="notebook_number" value="{{ user.notebook_number or '' }}"
+           pattern="[A-Za-z0-9._-]{1,40}" maxlength="40" required autocomplete="off">
+  </label>
+  <div class="span2 form-actions">
+    <button class="btn btn-orange" type="submit">Save identity</button>
+    <a class="btn btn-ghost" href="{{ url_for('entries.list_entries') }}">Back to notebook</a>
+  </div>
+</form>
+{% endblock %}
