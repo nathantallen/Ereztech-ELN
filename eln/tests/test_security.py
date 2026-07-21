@@ -244,6 +244,105 @@ M  END
         response = client.post("/login", data={"username": "x", "password": "x"})
         self.assertEqual(response.status_code, 400)
 
+    def test_notebook_lot_number_create_search_edit_and_repeat(self):
+        storage = self.app.extensions["storage"]
+        client = self.app.test_client()
+        with client.session_transaction() as sess:
+            sess["_user_id"] = "admin"
+            sess["_fresh"] = True
+            sess["_csrf_token"] = "lot-number-test-token"
+        csrf = {"_csrf_token": "lot-number-test-token"}
+
+        response = client.post("/entries/new", data={
+            **csrf,
+            "title": "Lot-number test experiment",
+            "project": "TMGa scale-up",
+            "lot_number": "TMG-2607-B",
+            "experiment_date": "2026-07-20",
+            "technique": "N2 glovebox",
+            "tags": "lot-test",
+            "section_0": "Verify the notebook lot number.",
+            "section_1": "Run the reaction.",
+        })
+        self.assertEqual(response.status_code, 302)
+        eid = response.headers["Location"].rstrip("/").split("/")[-1]
+        meta, _ = storage.get_entry(eid)
+        self.assertEqual(meta["lot_number"], "TMG-2607-B")
+
+        search = client.get("/entries/?q=TMG-2607-B&author=all")
+        self.assertEqual(search.status_code, 200)
+        self.assertIn(b"TMG-2607-B", search.data)
+
+        response = client.post("/entries/%s/edit" % eid, data={
+            **csrf,
+            "title": meta["title"],
+            "project": meta["project"],
+            "lot_number": "TMG-2607-C",
+            "experiment_date": meta["experiment_date"],
+            "technique": meta["technique"],
+            "tags": "lot-test",
+            "section_0": "Verify the notebook lot number.",
+            "section_1": "Run the reaction.",
+        })
+        self.assertEqual(response.status_code, 302)
+        meta, _ = storage.get_entry(eid)
+        self.assertEqual(meta["lot_number"], "TMG-2607-C")
+
+        response = client.post("/entries/%s/repeat" % eid, data=csrf)
+        self.assertEqual(response.status_code, 302)
+        repeated = response.headers["Location"].rstrip("/").split("/")[-1]
+        repeated_meta, _ = storage.get_entry(repeated)
+        self.assertEqual(repeated_meta["repeat_of"], eid)
+        self.assertEqual(repeated_meta["lot_number"], "")
+
+    def test_user_notebook_identity_and_sequential_pages(self):
+        storage = self.app.extensions["storage"]
+        client = self.app.test_client()
+        with client.session_transaction() as sess:
+            sess["_user_id"] = "admin"
+            sess["_fresh"] = True
+            sess["_csrf_token"] = "page-number-test-token"
+        csrf = {"_csrf_token": "page-number-test-token"}
+
+        response = client.post("/profile", data={
+            **csrf, "chemist_number": "C-1042", "notebook_number": "NB-7",
+        })
+        self.assertEqual(response.status_code, 302)
+
+        def create(title):
+            response = client.post("/entries/new", data={
+                **csrf, "title": title, "experiment_date": "2026-07-20",
+                "section_0": "Page allocation test.", "section_1": "Test.",
+            })
+            self.assertEqual(response.status_code, 302)
+            eid = response.headers["Location"].rstrip("/").split("/")[-1]
+            return storage.get_entry(eid)[0]
+
+        first = create("First numbered experiment")
+        second = create("Second numbered experiment")
+        self.assertEqual((first["chemist_number"], first["notebook_number"],
+                          first["page_number"]), ("C-1042", "NB-7", 1))
+        self.assertEqual(second["page_number"], 2)
+
+        client.post("/profile", data={
+            **csrf, "chemist_number": "C-1042", "notebook_number": "NB-8",
+        })
+        other_book = create("New notebook experiment")
+        self.assertEqual((other_book["notebook_number"], other_book["page_number"]),
+                         ("NB-8", 1))
+
+        client.post("/profile", data={
+            **csrf, "chemist_number": "C-1042", "notebook_number": "NB-7",
+        })
+        resumed = create("Resumed notebook experiment")
+        self.assertEqual(resumed["page_number"], 3)
+        self.assertEqual(storage.get_entry(first["id"])[0]["notebook_number"], "NB-7")
+
+        page = client.get("/entries/%s" % resumed["id"])
+        self.assertIn(b"Chemist C-1042", page.data)
+        self.assertIn(b"Notebook NB-7", page.data)
+        self.assertIn(b"Page 3", page.data)
+
     def test_login_attempt_cache_is_bounded(self):
         from app import auth
         with auth._ATTEMPTS_LOCK:
