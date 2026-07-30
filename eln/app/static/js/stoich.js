@@ -185,8 +185,9 @@
 
   // ---------- equipment picker ----------
   function initEquipment() {
-    var form = document.getElementById("equipment-form");
-    if (!form || !window.EQUIPMENT_CFG) return;
+    // Works both on the entry-page equipment form and the New Experiment create
+    // form; keyed on the hood select, which both share.
+    if (!document.getElementById("eq-hood") || !window.EQUIPMENT_CFG) return;
     var hoodSel = document.getElementById("eq-hood");
     var camSel = document.getElementById("eq-camera");
     var sensorBox = document.getElementById("eq-sensors");
@@ -306,7 +307,7 @@
       }
       tick();
     }
-    previewBtn.addEventListener("click", function () {
+    if (previewBtn) previewBtn.addEventListener("click", function () {
       var wrap = document.getElementById("eq-preview");
       var img = document.getElementById("eq-preview-img");
       if (!wrap.hidden) { stopPreview(img, wrap); return; }

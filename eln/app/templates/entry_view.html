@@ -46,6 +46,27 @@
     <div class="md-body">{{ sections.get('Objective', '') | markdown }}</div>
   </div>
 
+  {% if meta.structures %}
+  <div class="card" id="structures">
+    <h2>Chemical structures</h2>
+    <div class="structure-gallery">
+      {% for s in meta.structures %}
+      <figure class="structure-item">
+        {% if s.svg %}
+        <img class="structure-thumb" src="{{ url_for('entries.serve_file', eid=meta.id, relpath=s.svg) }}"
+             alt="{{ s.caption or s.formula or 'structure' }}">
+        {% endif %}
+        <figcaption>
+          {% if s.formula %}<strong>{{ s.formula }}</strong>{% endif %}
+          {% if s.mw %}<span class="muted"> · {{ '%.2f'|format(s.mw) }} g/mol</span>{% endif %}
+          {% if s.caption %}<div class="small muted">{{ s.caption }}</div>{% endif %}
+        </figcaption>
+      </figure>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
   {% include '_reaction.html' %}
 
   {% include '_inventory.html' %}

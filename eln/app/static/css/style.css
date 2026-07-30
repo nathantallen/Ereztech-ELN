@@ -608,6 +608,19 @@ td.today .day-num {
 .sketcher-actions { display: flex; gap: 10px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
 .sketcher-actions input[type="text"] { width: auto; flex: 1; min-width: 220px; }
 .sketcher-shell.touch-mode #ketcher-frame { min-height: 680px; }
+
+/* New Experiment create form: inline equipment + structure sections */
+.create-section { border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px 16px; margin-top: 8px; min-width: 0; }
+.create-section > legend { font-weight: 600; font-size: 13px; color: var(--indigo); padding: 0 6px; }
+.create-subgrid { margin-top: 2px; }
+.create-ketcher-frame { width: 100%; height: 560px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+.create-struct-controls { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+.create-struct-controls input[type="text"] { width: auto; flex: 1; min-width: 220px; }
+.struct-calc-result { font-size: 13px; color: var(--indigo); }
+.structure-gallery { display: flex; flex-wrap: wrap; gap: 16px; }
+.structure-item { margin: 0; text-align: center; }
+.structure-thumb { max-width: 200px; max-height: 150px; border: 1px solid var(--border); border-radius: 8px; background: #fff; padding: 6px; }
+.structure-item figcaption { margin-top: 6px; font-size: 13px; }
 .sketcher-shell.editor-fullscreen {
   position: fixed; inset: 0; z-index: 1000; margin: 0; border: 0; border-radius: 0;
   display: flex; flex-direction: column; overflow: hidden; padding: max(8px, env(safe-area-inset-top))
