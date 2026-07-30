@@ -90,6 +90,8 @@ a:hover { text-decoration: underline; }
 
 /* ---------- Layout ---------- */
 .container { max-width: 1240px; margin: 0 auto; padding: 24px; width: 100%; flex: 1; }
+/* Editing forms opt into full window width so text fields track the window size. */
+.container.container-wide { max-width: none; }
 .footer {
   display: flex;
   align-items: center;

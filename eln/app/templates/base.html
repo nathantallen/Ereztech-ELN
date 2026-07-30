@@ -52,7 +52,7 @@
   </div>
 </header>
 {% endif %}
-<main class="container">
+<main class="container {% block container_class %}{% endblock %}">
   {% if storage_fallback %}
   <div class="flash flash-error">
     ⚠ The assigned storage location <span class="mono">{{ storage_fallback }}</span> is
