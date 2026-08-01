@@ -8,6 +8,12 @@ import os
 
 def _atomic_write(path, text):
     if not text or not text.strip():
+        # remove any stale sibling from a previous drawing so a re-draw can't
+        # leave the bundle mixing an old structure with the new one
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            pass
         return False
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:

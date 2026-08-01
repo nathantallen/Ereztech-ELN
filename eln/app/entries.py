@@ -77,6 +77,14 @@ def _require_draft(meta):
         abort(redirect(url_for("entries.view", eid=meta["id"])))
 
 
+def _require_reaction_unlocked(meta):
+    """Reaction setup (components, structures, stoichiometry) is frozen once
+    lab work has started so the run's basis can't shift underneath it."""
+    ops = meta.get("operations") or {}
+    if ops.get("started_at") and not ops.get("ended_at"):
+        abort(409, description="Reaction setup is locked while lab work is running.")
+
+
 def _check_password(password):
     rec = _storage().find_user(current_user.username)
     return rec and check_password_hash(rec["password_hash"], password or "")
@@ -154,6 +162,7 @@ def new_entry():
     if not _has_notebook_identity(storage):
         flash("Set your chemist number and notebook number before creating an experiment.", "error")
         return redirect(url_for("auth.profile"))
+    equipment_cfg = ha.load_config(storage)
     if request.method == "POST":
         meta = {
             "title": request.form.get("title", "").strip() or "Untitled experiment",
@@ -167,15 +176,27 @@ def new_entry():
             "created": utcnow(),
             "structures": [],
             "attachments": [],
+            "equipment": _equipment_from_form(request.form, storage),
         }
         body = compose_sections(_sections_from_form(request.form))
         eid = storage.create_entry(meta, body)
+        # Optional chemical structure drawn on the create form.
+        if request.form.get("struct_molfile", "").strip():
+            record = _new_structure_record(storage, eid, request.form)
+            if record:
+                meta["structures"].append(record)
+                storage.save_entry(eid, meta, body)
         storage.audit(eid, current_user.username, "created", meta["title"])
         flash("Entry %s created." % eid, "success")
         return redirect(url_for("entries.view", eid=eid))
     return render_template("entry_form.html", meta=None, sections={},
                            techniques=storage.get_techniques(),
-                           section_names=SETUP_SECTIONS)
+                           section_names=SETUP_SECTIONS,
+                           equipment_cfg=equipment_cfg,
+                           ha_configured=ha.configured(equipment_cfg)
+                                         or bool(equipment_cfg.get("ip_cameras")),
+                           recording_fps=RECORDING_FPS,
+                           recording_resolutions=RECORDING_RESOLUTIONS)
 
 
 @bp.route("/<eid>")
@@ -543,6 +564,7 @@ def draw_component(eid, cidx):
     _require_edit()
     meta, _ = _get_or_404(eid)
     _require_draft(meta)
+    _require_reaction_unlocked(meta)
     components = (meta.get("reaction") or {}).get("components") or []
     if not (0 <= cidx < len(components)):
         abort(404)
@@ -582,6 +604,7 @@ def save_component_structure(eid, cidx):
     _require_edit()
     meta, body = _get_or_404(eid)
     _require_draft(meta)
+    _require_reaction_unlocked(meta)
     storage = _storage()
     reaction = meta.setdefault("reaction", {})
     components = reaction.setdefault("components", [])
@@ -659,6 +682,51 @@ def save_component_structure(eid, cidx):
     flash("Structure saved%s." % (" — MW %.2f g/mol (%s)" % (mw, formula) if mw else ""),
           "success")
     return redirect(url_for("entries.view", eid=eid) + "#reaction")
+
+
+@bp.route("/structure-calc", methods=["POST"])
+@login_required
+def structure_calc():
+    """Compute formula + MW from a drawn molfile, for live display on the
+    create form before the entry exists. Returns JSON."""
+    _require_edit()
+    data = request.get_json(silent=True) or {}
+    molfile = (data.get("molfile") or "").strip()
+    if not molfile:
+        return jsonify({"error": "The drawing is empty."}), 400
+    formula, mw = formula_and_mw(molfile)
+    if not formula:
+        return jsonify({"error": "Could not parse the structure."}), 422
+    return jsonify({"formula": formula, "mw": mw})
+
+
+def _new_structure_record(storage, eid, form):
+    """Persist a structure drawn on the create form and return its record,
+    including computed formula/MW. Mirrors save_structure's file layout.
+    Returns None if the drawing has no parseable atoms (empty canvas)."""
+    molfile = form.get("struct_molfile", "")
+    formula, mw = formula_and_mw(molfile)
+    if not formula:
+        return None
+    v2000 = form.get("struct_molfile_v2000", "")
+    ket = form.get("struct_ket", "")
+    smiles = form.get("struct_smiles", "").strip()
+    svg = sanitize_svg(form.get("struct_svg", ""))
+    caption = form.get("struct_caption", "").strip()
+    sdir = os.path.join(storage.entry_dir(eid), "structures")
+    os.makedirs(sdir, exist_ok=True)
+    base = "struct-01"
+    saved = save_bundle(sdir, base, molfile, v2000, ket)
+    svg_rel = ""
+    if svg.strip():
+        with open(os.path.join(sdir, base + ".svg"), "w", encoding="utf-8") as f:
+            f.write(svg)
+        svg_rel = "structures/%s.svg" % base
+    return {"file": "structures/%s.mol" % base,
+            "v2000": "structures/%s.v2000.mol" % base if saved["v2000"] else "",
+            "ket": "structures/%s.ket" % base if saved["ket"] else "",
+            "svg": svg_rel, "smiles": smiles, "caption": caption,
+            "formula": formula, "mw": mw}
 
 
 @bp.route("/<eid>/structures/save", methods=["POST"])
@@ -827,9 +895,7 @@ def save_reaction(eid):
     _require_edit()
     meta, body = _get_or_404(eid)
     _require_draft(meta)
-    active_ops = meta.get("operations") or {}
-    if active_ops.get("started_at") and not active_ops.get("ended_at"):
-        abort(409, description="Reaction setup is locked while lab work is running.")
+    _require_reaction_unlocked(meta)
     storage = _storage()
     form = request.form
     reaction = meta.get("reaction") or {}
@@ -1001,6 +1067,7 @@ def add_known_component(eid):
     import shutil
     meta, body = _get_or_404(eid)
     _require_draft(meta)
+    _require_reaction_unlocked(meta)
     storage = _storage()
     src_id, _, src_key = request.form.get("source", "").partition("|")
     try:
@@ -1061,6 +1128,27 @@ def properties_lookup(eid):
 
 # ---------- equipment selection ----------
 
+def _equipment_from_form(form, storage):
+    """Build the equipment dict from posted hood/camera/sensors/recording fields.
+    Shared by the create form (new_entry) and the entry-page equipment form."""
+    cfg = ha.load_config(storage)
+    hood_name = form.get("hood", "")
+    hood = ha.find_hood(cfg, hood_name)
+    sensors = []
+    if hood:
+        chosen = set(form.getlist("sensors"))
+        sensors = [s for s in hood.get("sensors", []) if s["entity"] in chosen]
+    fps = form.get("rec_fps", "5")
+    res = form.get("rec_resolution", "1280x720")
+    return {
+        "hood": hood_name if hood else "",
+        "camera": form.get("camera", ""),
+        "sensors": sensors,
+        "recording": {"fps": int(fps) if fps.isdigit() else 5,
+                      "resolution": res if res in RECORDING_RESOLUTIONS else "1280x720"},
+    }
+
+
 @bp.route("/<eid>/equipment", methods=["POST"])
 @login_required
 def save_equipment(eid):
@@ -1068,22 +1156,9 @@ def save_equipment(eid):
     meta, body = _get_or_404(eid)
     _require_draft(meta)
     storage = _storage()
-    cfg = ha.load_config(storage)
-    hood_name = request.form.get("hood", "")
-    hood = ha.find_hood(cfg, hood_name)
-    sensors = []
-    if hood:
-        chosen = set(request.form.getlist("sensors"))
-        sensors = [s for s in hood.get("sensors", []) if s["entity"] in chosen]
-    fps = request.form.get("rec_fps", "5")
-    res = request.form.get("rec_resolution", "1280x720")
-    meta["equipment"] = {
-        "hood": hood_name if hood else "",
-        "camera": request.form.get("camera", ""),
-        "sensors": sensors,
-        "recording": {"fps": int(fps) if fps.isdigit() else 5,
-                      "resolution": res if res in RECORDING_RESOLUTIONS else "1280x720"},
-    }
+    meta["equipment"] = _equipment_from_form(request.form, storage)
+    hood_name = meta["equipment"]["hood"]
+    sensors = meta["equipment"]["sensors"]
     storage.save_entry(eid, meta, body)
     storage.audit(eid, current_user.username, "updated equipment",
                   "%s / %s / %d sensor(s)" % (hood_name, meta["equipment"]["camera"] or "no camera",

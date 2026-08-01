@@ -374,6 +374,82 @@
     });
   }
 
+  // ---------- create form: embedded structure sketcher + MW/formula calc ----------
+  function initCreateSketcher() {
+    var frame = document.getElementById("create-ketcher-frame");
+    var form = document.getElementById("entry-form");
+    if (!frame || !form) return;
+    var calcBtn = document.getElementById("struct-calc-btn");
+    var result = document.getElementById("struct-calc-result");
+    var ketcher = null;
+
+    (function poll() {
+      try { ketcher = frame.contentWindow && frame.contentWindow.ketcher; }
+      catch (e) { ketcher = null; }
+      if (!ketcher) setTimeout(poll, 300);
+    })();
+
+    function exportFormats() {
+      var formats = {v3000: "", v2000: "", ket: "", smiles: ""};
+      return ketcher.getMolfile("v3000").then(function (v) {
+        formats.v3000 = v || "";
+        return ketcher.getMolfile("v2000").catch(function () { return ""; });
+      }).then(function (v) {
+        formats.v2000 = v || "";
+        return (typeof ketcher.getKet === "function"
+          ? ketcher.getKet().catch(function () { return ""; }) : "");
+      }).then(function (v) {
+        formats.ket = v || "";
+        return ketcher.getSmiles().catch(function () { return ""; });
+      }).then(function (v) {
+        formats.smiles = v || "";
+        return formats;
+      });
+    }
+
+    if (calcBtn) calcBtn.addEventListener("click", function () {
+      if (!ketcher) { result.textContent = "Sketcher still loading…"; return; }
+      result.textContent = "Calculating…";
+      exportFormats().then(function (formats) {
+        if (!formats.smiles.trim()) { result.textContent = "Draw a structure first."; return; }
+        var csrf = document.querySelector('meta[name="csrf-token"]').content;
+        return fetch("/entries/structure-calc", {
+          method: "POST", credentials: "same-origin",
+          headers: {"Content-Type": "application/json", "X-CSRF-Token": csrf},
+          body: JSON.stringify({molfile: formats.v3000})
+        }).then(function (r) {
+          return r.json().then(function (b) {
+            if (!r.ok) throw new Error(b.error || "Could not calculate.");
+            result.innerHTML = "<strong>" + b.formula + "</strong> · " +
+              (b.mw != null ? Number(b.mw).toFixed(2) + " g/mol" : "MW n/a");
+          });
+        });
+      }).catch(function (e) { result.textContent = e.message || "Calculation failed."; });
+    });
+
+    form.addEventListener("submit", function (ev) {
+      if (form.dataset.structReady === "1") return;   // second pass: really submit
+      if (!ketcher) return;                            // sketcher not up: submit as-is
+      ev.preventDefault();
+      exportFormats().then(function (formats) {
+        if (formats.smiles.trim()) {                   // a structure was drawn
+          document.getElementById("struct-molfile").value = formats.v3000;
+          document.getElementById("struct-molfile-v2000").value = formats.v2000;
+          document.getElementById("struct-ket").value = formats.ket;
+          document.getElementById("struct-smiles").value = formats.smiles;
+          return ketcher.generateImage(formats.v3000, { outputFormat: "svg" })
+            .then(function (blob) { return blob.text(); })
+            .catch(function () { return ""; })
+            .then(function (svg) { document.getElementById("struct-svg").value = svg || ""; });
+        }
+      }).catch(function () { /* fall through and submit anyway */ })
+        .then(function () {
+          form.dataset.structReady = "1";
+          form.submit();
+        });
+    });
+  }
+
   // ---------- technique select: "+ New technique…" reveals a text input ----------
   function initTechnique() {
     var sel = document.getElementById("technique-select");
@@ -434,6 +510,7 @@
     initEntryForm();
     initInventoryAllocations();
     initSketcher();
+    initCreateSketcher();
     initTechnique();
     initEnterSubmit();
     initNavigation();

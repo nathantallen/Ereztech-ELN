@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ 'Edit material' if meta else 'New material' }} — Ereztech ELN{% endblock %}
+{% block container_class %}container-wide{% endblock %}
 {% block content %}
 <div class="page-head">
   <h1>{{ 'Edit ' + meta.name if meta else 'New material' }}</h1>

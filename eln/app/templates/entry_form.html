@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ 'Edit ' + meta.id if meta else 'New experiment' }} — Ereztech ELN{% endblock %}
+{% block container_class %}container-wide{% endblock %}
 {% block content %}
 <div class="page-head">
   <div>
@@ -44,9 +45,49 @@
   </label>
   {% endfor %}
 
+  {% if not meta %}
+  {# ---- Lab equipment, specified at creation ---- #}
+  <fieldset class="span2 create-section">
+    <legend>Lab equipment</legend>
+    {% if ha_configured %}
+    <div class="form-grid create-subgrid">
+      {% include '_equipment_fields.html' %}
+    </div>
+    {% else %}
+    <p class="muted small" style="margin:0;">Home Assistant isn't connected yet, so hoods, cameras and sensors aren't available here.
+      {% if is_admin %}<a href="{{ url_for('equipment.config_page') }}">Configure it under Equipment</a>.{% endif %}
+      You can add equipment later from the experiment page once it's connected.</p>
+    {% endif %}
+  </fieldset>
+
+  {# ---- Primary chemical structure + calculation (optional) ---- #}
+  <fieldset class="span2 create-section">
+    <legend>Primary chemical structure <span class="muted">(optional)</span></legend>
+    <p class="muted small" style="margin-top:0;">Draw the main compound — its molecular formula and weight are calculated and saved with the experiment.</p>
+    <iframe id="create-ketcher-frame" class="create-ketcher-frame"
+            src="{{ url_for('static', filename='ketcher/index.html') }}"
+            title="Ketcher chemical structure editor" allow="fullscreen"></iframe>
+    <div class="create-struct-controls">
+      <input type="text" name="struct_caption" placeholder="Structure caption (optional)">
+      <button class="btn btn-ghost" type="button" id="struct-calc-btn">Calculate formula &amp; MW</button>
+      <span class="struct-calc-result" id="struct-calc-result" aria-live="polite"></span>
+    </div>
+    <input type="hidden" name="struct_molfile" id="struct-molfile">
+    <input type="hidden" name="struct_molfile_v2000" id="struct-molfile-v2000">
+    <input type="hidden" name="struct_ket" id="struct-ket">
+    <input type="hidden" name="struct_smiles" id="struct-smiles">
+    <input type="hidden" name="struct_svg" id="struct-svg">
+  </fieldset>
+  {% endif %}
+
   <div class="span2 form-actions">
     <button class="btn btn-orange" type="submit">{{ 'Save changes' if meta else 'Create entry' }}</button>
     <a class="btn btn-ghost" href="{{ url_for('entries.view', eid=meta.id) if meta else url_for('entries.list_entries') }}">Cancel</a>
   </div>
 </form>
+
+{% if not meta %}
+<script>window.EQUIPMENT_CFG = {{ {'hoods': equipment_cfg.hoods} | tojson }};</script>
+<script src="{{ url_for('static', filename='js/stoich.js') }}" defer></script>
+{% endif %}
 {% endblock %}

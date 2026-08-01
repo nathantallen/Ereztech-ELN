@@ -10,10 +10,12 @@
 <form method="post" class="card form-grid" style="max-width: 620px;">
   <label>Chemist number
     <input type="text" name="chemist_number" maxlength="40" required
+           pattern="[A-Za-z0-9._-]{1,40}"
            value="{{ user.chemist_number or '' }}" placeholder="1042" autocomplete="off">
   </label>
   <label>Notebook number
     <input type="text" name="notebook_number" maxlength="40" required
+           pattern="[A-Za-z0-9._-]{1,40}"
            value="{{ user.notebook_number or '' }}" placeholder="7" autocomplete="off">
   </label>
   <p class="span2 muted small">Changing the notebook number starts at page 1 for a new notebook. Returning to a previously used notebook continues after its highest page. Existing experiments keep their original numbers.</p>
