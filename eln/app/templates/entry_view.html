@@ -51,7 +51,7 @@
       <input type="text" name="lot_number" value="{{ meta.lot_number or '' }}" autocomplete="off">
     </label>
     <label class="span2">Objective
-      <textarea name="objective" rows="5">{{ sections.get('Objective', '') }}</textarea>
+      <textarea name="objective" class="objective-input" rows="1">{{ sections.get('Objective', '') }}</textarea>
     </label>
     <div class="span2 form-actions"><button class="btn btn-orange" type="submit">Save page details</button></div>
   </form>

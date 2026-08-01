@@ -438,6 +438,7 @@ M  END
         self.assertIn('name="experiment_date"', html)
         self.assertIn('name="lot_number"', html)
         self.assertIn('name="objective"', html)
+        self.assertIn('class="objective-input" rows="1"', html)
         self.assertIn('name="procedure"', html)
         ordered = [
             'name="title"', 'name="project"', 'name="experiment_date"',
