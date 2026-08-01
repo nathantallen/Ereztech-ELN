@@ -7,7 +7,10 @@ services:
       POSTGRES_USER: erezops
       POSTGRES_PASSWORD: erezops
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # Database files live in ./pgdata next to this file so they're easy to
+      # find and back up. Point this at any absolute path to store them
+      # elsewhere, e.g.  - /Users/you/Documents/erezops-db:/var/lib/postgresql/data
+      - ./pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U erezops -d erezops"]
       interval: 5s
@@ -23,8 +26,16 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://erezops:erezops@db:5432/erezops
       SECRET_KEY: change-this-in-production
+      # Gunicorn worker processes. Rule of thumb: (2 x CPU cores) + 1.
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
     ports:
       - "8080:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/login')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     volumes:
       # Folders mounted here become browsable in the app's "Browse…" dialog.
       # Register each under Admin → Doc Roots with a link prefix that maps the
@@ -32,6 +43,3 @@ services:
       # Machine-specific mounts (your Documents, OneDrive, network drives) belong
       # in docker-compose.override.yml (gitignored) — see the .example file.
       - ./shares:/shares
-
-volumes:
-  pgdata:

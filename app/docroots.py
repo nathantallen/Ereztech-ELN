@@ -89,6 +89,56 @@ def browse():
     )
 
 
+@bp.route("/fsbrowse")
+@login_required
+@admin_required
+def fsbrowse():
+    """Browse the container's own filesystem to pick a folder to register as a
+    root. Returns absolute container paths (not mapped links) — this is the only
+    picker that can yield a valid `container_path`, since a root can live
+    anywhere mounted into the container, not just under an existing root."""
+    raw = request.args.get("path", "").strip() or "/"
+    try:
+        target = Path(raw).resolve()
+    except (OSError, ValueError):
+        target = Path("/")
+    if not target.is_dir():
+        return jsonify(
+            {
+                "path": str(target),
+                "parent": str(target.parent) if target != target.parent else None,
+                "error": f"'{target}' is not a folder inside the container.",
+                "dirs": [],
+            }
+        )
+    dirs = []
+    try:
+        for p in sorted(target.iterdir(), key=lambda p: p.name.lower()):
+            if p.name.startswith("."):
+                continue
+            try:
+                if p.is_dir():
+                    dirs.append({"name": p.name, "path": str(p)})
+            except OSError:
+                continue  # unreadable entry — skip it
+    except PermissionError:
+        return jsonify(
+            {
+                "path": str(target),
+                "parent": str(target.parent) if target != target.parent else None,
+                "error": f"Permission denied reading '{target}'.",
+                "dirs": [],
+            }
+        )
+    return jsonify(
+        {
+            "path": str(target),
+            "parent": str(target.parent) if target != target.parent else None,
+            "dirs": dirs,
+        }
+    )
+
+
 @bp.route("/")
 @login_required
 @admin_required

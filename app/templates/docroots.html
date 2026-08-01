@@ -12,7 +12,8 @@
   <p class="muted" style="margin-top: 0;">
     A document root is a folder <strong>mounted into the app container</strong> (see the
     <code>volumes:</code> section of <code>docker-compose.yml</code>). Mount your network
-    share or SharePoint sync folder there, then register it here. The optional
+    share or SharePoint sync folder there, then register it here — use <strong>Browse…</strong>
+    to pick the container path from a folder dialog instead of typing it. The optional
     <strong>link prefix</strong> rewrites picked paths into the address teammates should
     open — e.g. container path <code>/shares/rd</code> with prefix
     <code>https://ereztech.sharepoint.com/sites/RD/Shared%20Documents</code> or
@@ -29,7 +30,10 @@
           <form method="post" action="{{ url_for('docroots.update_root', root_id=root.id) }}"
                 style="display: grid; grid-template-columns: 1fr 1.4fr 1.6fr auto auto; gap: 8px; align-items: center; padding: 10px;">
             <input type="text" name="name" value="{{ root.name }}" required>
-            <input type="text" name="container_path" value="{{ root.container_path }}" required>
+            <div style="display: flex; gap: 6px;">
+              <input type="text" id="cp-{{ root.id }}" name="container_path" value="{{ root.container_path }}" required style="flex: 1; min-width: 0;">
+              <button type="button" class="btn btn-outline btn-sm path-btn" data-target="#cp-{{ root.id }}">Browse…</button>
+            </div>
             <input type="text" name="link_prefix" value="{{ root.link_prefix }}" placeholder="(optional)">
             {% if root.exists %}<span class="badge badge-active">Mounted</span>
             {% else %}<span class="badge badge-rejected" title="Folder not found inside the container">Missing</span>{% endif %}
@@ -60,7 +64,10 @@
       </div>
       <div>
         <label for="container_path">Container Path</label>
-        <input type="text" id="container_path" name="container_path" placeholder="/shares/rd" required>
+        <div style="display: flex; gap: 6px;">
+          <input type="text" id="container_path" name="container_path" placeholder="/shares/rd" required style="flex: 1; min-width: 0;">
+          <button type="button" class="btn btn-outline btn-sm path-btn" data-target="#container_path">Browse…</button>
+        </div>
       </div>
     </div>
     <label for="link_prefix">Link Prefix (optional)</label>

@@ -22,3 +22,6 @@ deploy/*.bundle
 
 # Built/exported image bundles (240MB+; exceeds GitHub's 100MB limit — rebuild instead)
 dist/
+
+# Local database bind-mount (never commit DB files)
+/pgdata/
