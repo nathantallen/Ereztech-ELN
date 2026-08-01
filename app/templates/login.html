@@ -8,7 +8,7 @@
       <div class="tagline">OPERATIONS · BRIDGING CHEMICAL GAPS</div>
     </div>
     <div class="login-body">
-      <form method="post">
+      <form method="post" id="login-form">
         <label for="username">Username</label>
         <input type="text" id="username" name="username" autofocus required>
         <label for="password">Password</label>
@@ -18,4 +18,14 @@
     </div>
   </div>
 </div>
+<script>
+  (function () {
+    var form = document.getElementById("login-form");
+    form.addEventListener("keydown", function (ev) {
+      if (ev.key !== "Enter" || ev.isComposing || !ev.target.matches("input")) return;
+      ev.preventDefault();
+      if (form.reportValidity()) form.requestSubmit();
+    });
+  })();
+</script>
 {% endblock %}
