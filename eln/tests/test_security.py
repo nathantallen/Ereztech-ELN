@@ -295,6 +295,29 @@ M  END
         self.assertEqual(repeated_meta["repeat_of"], eid)
         self.assertEqual(repeated_meta["lot_number"], "")
 
+    def test_reaction_component_purity_is_saved_and_rendered(self):
+        storage = self.app.extensions["storage"]
+        client = self.app.test_client()
+        with client.session_transaction() as sess:
+            sess["_user_id"] = "admin"
+            sess["_fresh"] = True
+            sess["_csrf_token"] = "purity-test-token"
+        response = client.post("/entries/ELN-2026-0001/reaction", data={
+            "_csrf_token": "purity-test-token",
+            "scale_amount": "10", "scale_unit": "g",
+            "comp_key": "1", "comp_role": "reactant", "comp_name": "Test reagent",
+            "comp_cas": "", "comp_formula": "C2H6", "comp_mw": "30.07",
+            "comp_mw_auto": "0", "comp_density": "0.8", "comp_purity": "80",
+            "comp_state": "liquid", "comp_conc": "", "comp_equiv": "1",
+            "comp_limiting": "0", "comp_mmol": "266.046", "comp_mass_g": "10",
+            "comp_volume_ml": "12.5", "comp_volume_unit": "mL",
+        })
+        self.assertEqual(response.status_code, 302)
+        meta, _ = storage.get_entry("ELN-2026-0001")
+        self.assertEqual(meta["reaction"]["components"][0]["purity"], 80.0)
+        page = client.get("/entries/ELN-2026-0001")
+        self.assertIn(b'class="f-purity" value="80.0"', page.data)
+
     def test_user_notebook_identity_and_sequential_pages(self):
         storage = self.app.extensions["storage"]
         client = self.app.test_client()
@@ -400,7 +423,7 @@ M  END
         self.assertIn('id="ops-solvent-volumes"', html)
         self.assertIn("0.020 L", html)
 
-    def test_equipment_panel_is_collapsible_and_above_notebook_content(self):
+    def test_notebook_page_fields_are_editable_and_sections_are_ordered(self):
         client = self.app.test_client()
         with client.session_transaction() as sess:
             sess["_user_id"] = "admin"
@@ -410,7 +433,36 @@ M  END
         html = response.get_data(as_text=True)
         self.assertIn('<details class="card equipment-panel" id="equipment" open>', html)
         self.assertIn('<summary class="equipment-panel-summary">', html)
-        self.assertLess(html.index('id="equipment"'), html.index("<h2>Objective</h2>"))
+        self.assertIn('name="title"', html)
+        self.assertIn('name="project"', html)
+        self.assertIn('name="experiment_date"', html)
+        self.assertIn('name="lot_number"', html)
+        self.assertIn('name="objective"', html)
+        self.assertIn('name="procedure"', html)
+        ordered = [
+            'name="title"', 'name="project"', 'name="experiment_date"',
+            'name="lot_number"', 'name="objective"', 'id="equipment"',
+            'id="reaction-form"', 'id="inventory-allocation"',
+            'id="procedure"', 'id="operations"', 'Attached files',
+            '<h2>References</h2>', '<h2>Sign-off</h2>', '<h2>Audit trail</h2>',
+        ]
+        positions = [html.index(marker) for marker in ordered]
+        self.assertEqual(positions, sorted(positions))
+
+    def test_new_experiment_button_creates_a_notebook_page(self):
+        client = self.app.test_client()
+        with client.session_transaction() as sess:
+            sess["_user_id"] = "admin"
+            sess["_fresh"] = True
+            sess["_csrf_token"] = "new-page-test-token"
+        response = client.get("/entries/")
+        html = response.get_data(as_text=True)
+        self.assertIn('name="quick_create" value="1"', html)
+        response = client.post("/entries/new", data={
+            "quick_create": "1", "_csrf_token": "new-page-test-token"},
+                               follow_redirects=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertRegex(response.headers["Location"], r"/entries/ELN-\d{4}-\d{4}$")
 
     def test_structure_editor_has_touch_recovery_and_rich_format_fields(self):
         client = self.app.test_client()

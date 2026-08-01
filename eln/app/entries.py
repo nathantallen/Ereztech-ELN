@@ -164,12 +164,14 @@ def new_entry():
         return redirect(url_for("auth.profile"))
     equipment_cfg = ha.load_config(storage)
     if request.method == "POST":
+        quick_create = request.form.get("quick_create") == "1"
         meta = {
             "title": request.form.get("title", "").strip() or "Untitled experiment",
             "author": current_user.username,
             "project": request.form.get("project", "").strip(),
             "lot_number": request.form.get("lot_number", "").strip(),
-            "experiment_date": request.form.get("experiment_date", ""),
+            "experiment_date": (datetime.date.today().isoformat() if quick_create
+                                else request.form.get("experiment_date", "")),
             "technique": _technique_from_form(request.form, storage),
             "tags": [t.strip() for t in request.form.get("tags", "").split(",") if t.strip()],
             "status": "draft",
@@ -410,6 +412,35 @@ def save_results(eid):
     storage.audit(eid, current_user.username, "updated results")
     flash("Results saved.", "success")
     return redirect(url_for("entries.view", eid=eid) + "#results")
+
+
+@bp.route("/<eid>/setup", methods=["POST"])
+@login_required
+def save_setup(eid):
+    """Save editable notebook-page details without leaving the page."""
+    _require_edit()
+    meta, body = _get_or_404(eid)
+    _require_draft(meta)
+    storage = _storage()
+    sections = parse_sections(body)
+    if "title" in request.form:
+        meta["title"] = request.form.get("title", "").strip() or "Untitled experiment"
+    if "project" in request.form:
+        meta["project"] = request.form.get("project", "").strip()
+    if "experiment_date" in request.form:
+        meta["experiment_date"] = request.form.get("experiment_date", "")
+    if "lot_number" in request.form:
+        meta["lot_number"] = request.form.get("lot_number", "").strip()
+    if "objective" in request.form:
+        sections["Objective"] = request.form.get("objective", "")
+    if "procedure" in request.form:
+        sections["Procedure"] = request.form.get("procedure", "")
+    meta["updated"] = utcnow()
+    storage.save_entry(eid, meta, compose_sections(sections))
+    storage.audit(eid, current_user.username, "edited notebook page")
+    flash("Notebook page saved.", "success")
+    anchor = request.form.get("return_to", "")
+    return redirect(url_for("entries.view", eid=eid) + anchor)
 
 
 @bp.route("/<eid>/repeat", methods=["POST"])
@@ -922,6 +953,7 @@ def save_reaction(eid):
             "mw": _f(g("mw")),
             "mw_auto": g("mw_auto") == "1",
             "density": _f(g("density")),
+            "purity": min(100.0, max(0.01, _f(g("purity")) or 100.0)),
             "state": g("state") if g("state") in COMPONENT_STATES else "liquid",
             "conc": _f(g("conc")),
             "equiv": _f(g("equiv")) or 1.0,

@@ -35,16 +35,41 @@
 </div>
 {% endif %}
 
+<div class="card" id="notebook-details">
+  {% if can_edit and not locked %}
+  <form method="post" action="{{ url_for('entries.save_setup', eid=meta.id) }}" class="form-grid">
+    <label class="span2">Title
+      <input type="text" name="title" value="{{ meta.title }}" required>
+    </label>
+    <label>Project
+      <input type="text" name="project" value="{{ meta.project }}">
+    </label>
+    <label>Date
+      <input type="date" name="experiment_date" value="{{ meta.experiment_date }}">
+    </label>
+    <label class="span2">Lot number
+      <input type="text" name="lot_number" value="{{ meta.lot_number or '' }}" autocomplete="off">
+    </label>
+    <label class="span2">Objective
+      <textarea name="objective" rows="5">{{ sections.get('Objective', '') }}</textarea>
+    </label>
+    <div class="span2 form-actions"><button class="btn btn-orange" type="submit">Save page details</button></div>
+  </form>
+  {% else %}
+  <dl class="notebook-details-readonly">
+    <dt>Title</dt><dd>{{ meta.title }}</dd>
+    <dt>Project</dt><dd>{{ meta.project or '—' }}</dd>
+    <dt>Date</dt><dd>{{ meta.experiment_date or '—' }}</dd>
+    <dt>Lot number</dt><dd>{{ meta.lot_number or '—' }}</dd>
+  </dl>
+  <h2>Objective</h2>
+  <div class="md-body">{{ sections.get('Objective', '') | markdown }}</div>
+  {% endif %}
+</div>
+
 {% include '_equipment.html' %}
 
-{% include '_operations.html' %}
-
-<div class="grid-main-side">
 <div>
-  <div class="card">
-    <h2>Objective</h2>
-    <div class="md-body">{{ sections.get('Objective', '') | markdown }}</div>
-  </div>
 
   {% if meta.structures %}
   <div class="card" id="structures">
@@ -71,10 +96,20 @@
 
   {% include '_inventory.html' %}
 
-  <div class="card">
+  <div class="card" id="procedure">
     <h2>Procedure</h2>
+    {% if can_edit and not locked %}
+    <form method="post" action="{{ url_for('entries.save_setup', eid=meta.id) }}">
+      <textarea name="procedure" rows="8" aria-label="Procedure">{{ sections.get('Procedure', '') }}</textarea>
+      <input type="hidden" name="return_to" value="#procedure">
+      <div class="form-actions"><button class="btn btn-orange" type="submit">Save procedure</button></div>
+    </form>
+    {% else %}
     <div class="md-body">{{ sections.get('Procedure', '') | markdown }}</div>
+    {% endif %}
   </div>
+
+  {% include '_operations.html' %}
 
   {% include '_opslog.html' %}
 
@@ -97,7 +132,7 @@
   </div>
 
   <div class="card">
-    <h2>Attached data files</h2>
+    <h2>Attached files</h2>
     {% if meta.attachments %}
     {% for att in meta.attachments %}
     <div class="attachment">
@@ -140,9 +175,6 @@
     <p class="muted small">Video (mp4, mov…), sensor logs (csv, tsv, json…), spectra, images or any other file.</p>
     {% endif %}
   </div>
-</div>
-
-<aside>
   <div class="card">
     <h2>References</h2>
     {% if meta.repeat_of %}
@@ -209,7 +241,6 @@
       {% endfor %}
     </div>
   </div>
-</aside>
 </div>
 <script src="{{ url_for('static', filename='js/stoich.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/ops.js') }}" defer></script>

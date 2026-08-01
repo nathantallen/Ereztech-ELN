@@ -7,7 +7,10 @@
     <div class="sub">{{ entries|length }} entr{{ 'y' if entries|length == 1 else 'ies' }}{% if author != 'all' %} · {{ total }} in the whole notebook{% endif %}</div>
   </div>
   {% if can_edit %}
-  <a class="btn btn-orange" href="{{ url_for('entries.new_entry') }}">+ New experiment</a>
+  <form method="post" action="{{ url_for('entries.new_entry') }}">
+    <input type="hidden" name="quick_create" value="1">
+    <button class="btn btn-orange" type="submit">+ New experiment</button>
+  </form>
   {% endif %}
 </div>
 

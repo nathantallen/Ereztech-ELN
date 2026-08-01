@@ -83,6 +83,7 @@
       limiting.querySelector(".f-limiting").checked = true;
     }
     var limMw = limiting ? num(limiting.querySelector(".f-mw")) : null;
+    var limPurity = limiting ? (num(limiting.querySelector(".f-purity")) || 100) / 100 : 1;
     var limEquiv = limiting ? (num(limiting.querySelector(".f-equiv")) || 1) : 1;
     var limMmol = null;
     if (scaleAmount != null && limiting) {
@@ -91,13 +92,14 @@
       else if (limMw) {
         var grams = scaleUnit === "kg" ? scaleAmount * 1000 :
                     scaleUnit === "mg" ? scaleAmount / 1000 : scaleAmount;
-        limMmol = grams / limMw * 1000;
+        limMmol = grams * limPurity / limMw * 1000;
       }
     }
     all.forEach(function (r) {
       var mw = num(r.querySelector(".f-mw"));
       var equiv = num(r.querySelector(".f-equiv")) || 1;
       var density = num(r.querySelector(".f-density"));
+      var purity = (num(r.querySelector(".f-purity")) || 100) / 100;
       var conc = num(r.querySelector(".f-conc"));
       var state = r.querySelector(".f-state").value;
       var role = r.querySelector(".f-role").value;
@@ -111,7 +113,7 @@
       } else if (limMmol != null) {
         solventVolumeControl.hidden = true;
         mmol = limMmol * equiv / limEquiv;
-        if (mw) mass = mmol * mw / 1000;
+        if (mw) mass = mmol * mw / 1000 / purity;
         if (state === "solution" && conc) vol = mmol / conc;
         else if (state === "liquid" && density && mass != null) vol = mass / density;
       } else {
@@ -168,6 +170,15 @@
   function initStoich() {
     var form = document.getElementById("reaction-form");
     if (!form) return;
+    // Prevent implicit form submission from text/number fields. The first
+    // submit button opens the structure editor, which should only happen when
+    // the user deliberately activates that button.
+    form.addEventListener("keydown", function (ev) {
+      if (ev.key === "Enter" && !ev.isComposing &&
+          ev.target.matches('input[type="text"], input[type="number"]')) {
+        ev.preventDefault();
+      }
+    });
     form.dataset.eid = (window.location.pathname.match(/ELN-\d{4}-\d{4}/) || [""])[0];
     var table = form.querySelector("#stoich-table");
     rows(table).forEach(function (r) { wireStoichRow(form, r); });

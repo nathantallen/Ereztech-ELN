@@ -658,13 +658,17 @@ body.sketcher-fullscreen-active { overflow: hidden; }
 }
 .table.stoich th { white-space: nowrap; }
 .table.stoich td { padding: 6px 4px; }
-.table.stoich input, .table.stoich select { padding: 5px 6px; font-size: 12px; min-width: 54px; }
-.table.stoich .f-role { width: 130px; min-width: 130px; }
-.table.stoich .f-name { width: 260px; min-width: 260px; }
-.table.stoich .f-cas { width: 125px; min-width: 125px; }
-.table.stoich th:nth-child(1), .table.stoich td:nth-child(1) { min-width: 130px; }
-.table.stoich th:nth-child(2), .table.stoich td:nth-child(2) { min-width: 260px; }
-.table.stoich th:nth-child(3), .table.stoich td:nth-child(3) { min-width: 125px; }
+.table.stoich input, .table.stoich select { padding: 5px 6px; font-size: 12px; width: 68px; min-width: 0; }
+.table.stoich .f-role { width: 92px; }
+.table.stoich .f-name { width: 150px; }
+.table.stoich .f-cas { width: 92px; }
+.table.stoich .f-state { width: 78px; }
+.table.stoich .f-mw, .table.stoich .f-density,
+.table.stoich .f-purity, .table.stoich .f-conc,
+.table.stoich .f-equiv { width: 62px; }
+.table.stoich th:nth-child(1), .table.stoich td:nth-child(1) { min-width: 92px; }
+.table.stoich th:nth-child(2), .table.stoich td:nth-child(2) { min-width: 150px; }
+.table.stoich th:nth-child(3), .table.stoich td:nth-child(3) { min-width: 92px; }
 .table.stoich-readonly th:nth-child(-n+3),
 .table.stoich-readonly td:nth-child(-n+3) { white-space: nowrap; }
 .table.stoich .calc { font-size: 12px; white-space: nowrap; color: var(--indigo); font-weight: 600; }
