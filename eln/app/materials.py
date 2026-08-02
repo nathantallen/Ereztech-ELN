@@ -9,7 +9,6 @@ from werkzeug.utils import secure_filename
 from .chem import formula_and_mw, pubchem_lookup
 from .inventory import (UNITS_BY_FAMILY, batch_quantity, format_base,
                         set_batch_quantity, to_base)
-from .organo import available_templates
 from .storage import BATCH_STATUSES, slugify, utcnow
 from .structure_files import load_preferred, save_bundle
 from .svg import namespace_svg as _ns_svg, sanitize_svg
@@ -116,8 +115,7 @@ def draw_structure(slug):
                            subtitle=meta.get("name", slug),
                            action_url=url_for("materials.save_structure", slug=slug),
                            cancel_url=url_for("materials.view", slug=slug),
-                           molfile=molfile, caption=meta.get("name", ""),
-                           structure_templates=available_templates(_storage()))
+                           molfile=molfile, caption=meta.get("name", ""))
 
 
 @bp.route("/<slug>/structure/save", methods=["POST"])

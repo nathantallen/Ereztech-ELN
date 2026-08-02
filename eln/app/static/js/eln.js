@@ -265,59 +265,6 @@
       recovery.hidden = true;
     });
 
-    function applyTemplate(template) {
-      if (!ketcher) return;
-      ketcher.getSmiles().catch(function () { return ""; }).then(function (current) {
-        if (current && current.trim() && !window.confirm(
-          "Replace the current drawing with " + template.name + "?")) return;
-        return ketcher.setMolecule(template.structure).then(function () {
-          var caption = form.querySelector('input[name="caption"]');
-          if (caption && !caption.value.trim()) caption.value = template.name;
-          setStatus("Loaded template: " + template.name + ".");
-          saveDraft();
-        });
-      }).catch(function () { setStatus("Could not load that template."); });
-    }
-
-    document.querySelectorAll(".structure-template-btn").forEach(function (button) {
-      button.addEventListener("click", function () {
-        var key = button.getAttribute("data-template-key");
-        var template = (window.STRUCTURE_TEMPLATES || []).find(function (item) {
-          return item.key === key;
-        });
-        if (template) applyTemplate(template);
-      });
-    });
-
-    var companyTemplateBtn = document.getElementById("save-company-template");
-    if (companyTemplateBtn) {
-      companyTemplateBtn.addEventListener("click", function () {
-        var nameInput = document.getElementById("company-template-name");
-        var name = nameInput.value.trim();
-        if (!name) { nameInput.focus(); setStatus("Enter a company template name."); return; }
-        companyTemplateBtn.disabled = true;
-        exportFormats().then(function (formats) {
-          if (!formats.v3000.trim()) throw new Error("The drawing is empty.");
-          var csrf = document.querySelector('meta[name="csrf-token"]').content;
-          return fetch(window.STRUCTURE_TEMPLATE_SAVE_URL, {
-            method: "POST", credentials: "same-origin",
-            headers: {"Content-Type": "application/json", "X-CSRF-Token": csrf},
-            body: JSON.stringify({name: name, structure: formats.ket || formats.v3000})
-          });
-        }).then(function (response) {
-          return response.json().then(function (body) {
-            if (!response.ok) throw new Error(body.error || "Template save failed.");
-            return body;
-          });
-        }).then(function (body) {
-          setStatus("Company template saved: " + body.template.name + ".");
-          nameInput.value = "";
-        }).catch(function (error) {
-          setStatus(error.message || "Template save failed.");
-        }).finally(function () { companyTemplateBtn.disabled = false; });
-      });
-    }
-
     function poll() {
       if (initialized) return;
       try {

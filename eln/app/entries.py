@@ -16,7 +16,6 @@ from . import ha
 from .chem import formula_and_mw
 from .inventory import (UNITS_BY_FAMILY, batch_quantity, format_base,
                         to_base, unit_family, units_for)
-from .organo import available_templates
 from .storage import (ENTRY_SECTIONS, attachment_kind, compose_sections,
                       parse_sections, utcnow)
 from .structure_files import remove_bundle, save_bundle
@@ -584,8 +583,7 @@ def edit_structure(eid, idx=None):
                            subtitle="%s — %s" % (meta["id"], meta.get("title", "")),
                            action_url=url_for("entries.save_structure", eid=eid),
                            cancel_url=url_for("entries.view", eid=eid),
-                           molfile=molfile, caption=caption,
-                           structure_templates=available_templates(_storage()))
+                           molfile=molfile, caption=caption)
 
 
 @bp.route("/<eid>/reaction/<int:cidx>/draw")
@@ -609,24 +607,7 @@ def draw_component(eid, cidx):
                            action_url=url_for("entries.save_component_structure",
                                               eid=eid, cidx=cidx),
                            cancel_url=url_for("entries.view", eid=eid) + "#reaction",
-                           molfile=molfile, caption=comp.get("name", ""),
-                           structure_templates=available_templates(_storage()))
-
-
-@bp.route("/structure-templates", methods=["POST"])
-@login_required
-def save_structure_template():
-    if not current_user.is_admin:
-        abort(403)
-    payload = request.get_json(silent=True) or {}
-    name = str(payload.get("name", "")).strip()
-    structure = str(payload.get("structure", "")).strip()
-    if not name or len(name) > 80:
-        return jsonify({"error": "Enter a template name of 80 characters or fewer."}), 400
-    if not structure or len(structure.encode("utf-8")) > 1024 * 1024:
-        return jsonify({"error": "The template is empty or too large."}), 400
-    record = _storage().save_structure_template(name, structure, current_user.username)
-    return jsonify({"ok": True, "template": record})
+                           molfile=molfile, caption=comp.get("name", ""))
 
 
 @bp.route("/<eid>/reaction/<int:cidx>/save-structure", methods=["POST"])
@@ -956,6 +937,8 @@ def save_reaction(eid):
             "purity": min(100.0, max(0.01, _f(g("purity")) or 100.0)),
             "state": g("state") if g("state") in COMPONENT_STATES else "liquid",
             "conc": _f(g("conc")),
+            "stock_conc": _f(g("stock_conc")),
+            "solubility": "insoluble" if g("solubility") == "insoluble" else "soluble",
             "equiv": _f(g("equiv")) or 1.0,
             "limiting": str(i) == limiting,
             # computed snapshot from the client (kept so the file reads standalone)

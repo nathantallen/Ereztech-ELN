@@ -10,29 +10,6 @@
 
 <div class="card sketcher-card sketcher-shell" id="sketcher-shell">
   <div class="sketcher-top-controls">
-    <details class="organo-library" open>
-      <summary>Organometallic templates and metals</summary>
-      <div class="template-groups" id="structure-template-list">
-        {% for group in (structure_templates | default([])) | groupby('group') %}
-        <div class="template-group" data-template-group="{{ group.grouper }}">
-          <span class="template-group-label">{{ group.grouper }}</span>
-          <div class="template-buttons">
-            {% for template in group.list %}
-            <button class="btn btn-xs btn-ghost structure-template-btn" type="button"
-                    data-template-key="{{ template.key }}">{{ template.name }}</button>
-            {% endfor %}
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-      <p class="small muted organo-tip">For coordination complexes, use Ketcher’s dative-bond tool and explicit charges. KET and V3000 are preserved when you save.</p>
-      {% if is_admin %}
-      <div class="company-template-save">
-        <input type="text" id="company-template-name" maxlength="80" placeholder="New company template name">
-        <button class="btn btn-xs" type="button" id="save-company-template">Save current drawing as company template</button>
-      </div>
-      {% endif %}
-    </details>
     <div class="sketcher-mode-buttons">
       <button class="btn btn-ghost" type="button" id="touch-mode-btn" aria-pressed="false">☝ Touch mode</button>
       <button class="btn btn-ghost" type="button" id="sketcher-fullscreen-btn" aria-pressed="false">⛶ Full screen</button>
@@ -61,7 +38,5 @@
 
 <script>
 window.INITIAL_MOLFILE = {{ molfile | tojson }};
-window.STRUCTURE_TEMPLATES = {{ (structure_templates | default([])) | tojson }};
-window.STRUCTURE_TEMPLATE_SAVE_URL = {{ url_for('entries.save_structure_template') | tojson }};
 </script>
 {% endblock %}

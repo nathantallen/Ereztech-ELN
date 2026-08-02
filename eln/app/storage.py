@@ -227,37 +227,6 @@ class Storage:
         d["timezone"] = tz or ""
         self.save_settings(d)
 
-    # ---------- company-wide Ketcher templates ----------
-
-    def get_structure_templates(self):
-        path = os.path.join(self.root, "structure_templates.json")
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                records = json.load(f)
-            return records if isinstance(records, list) else []
-        except (OSError, ValueError):
-            return []
-
-    def save_structure_template(self, name, structure, username):
-        key = slugify(name)
-        with _LOCK:
-            records = self.get_structure_templates()
-            record = {"key": key, "name": name, "group": "Company templates",
-                      "structure": structure, "builtin": False,
-                      "updated": utcnow(), "updated_by": username}
-            for i, existing in enumerate(records):
-                if existing.get("key") == key:
-                    records[i] = record
-                    break
-            else:
-                records.append(record)
-            path = os.path.join(self.root, "structure_templates.json")
-            tmp = path + ".tmp"
-            with open(tmp, "w", encoding="utf-8") as f:
-                json.dump(records, f, indent=2, ensure_ascii=False)
-            os.replace(tmp, path)
-        return record
-
     # ---------- techniques (customizable; seeded from the classic set) ----------
 
     def get_techniques(self):

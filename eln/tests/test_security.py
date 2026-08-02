@@ -308,15 +308,19 @@ M  END
             "comp_key": "1", "comp_role": "reactant", "comp_name": "Test reagent",
             "comp_cas": "", "comp_formula": "C2H6", "comp_mw": "30.07",
             "comp_mw_auto": "0", "comp_density": "0.8", "comp_purity": "80",
-            "comp_state": "liquid", "comp_conc": "", "comp_equiv": "1",
+            "comp_state": "liquid", "comp_conc": "0.5", "comp_stock_conc": "",
+            "comp_solubility": "insoluble", "comp_equiv": "1",
             "comp_limiting": "0", "comp_mmol": "266.046", "comp_mass_g": "10",
             "comp_volume_ml": "12.5", "comp_volume_unit": "mL",
         })
         self.assertEqual(response.status_code, 302)
         meta, _ = storage.get_entry("ELN-2026-0001")
         self.assertEqual(meta["reaction"]["components"][0]["purity"], 80.0)
+        self.assertEqual(meta["reaction"]["components"][0]["conc"], 0.5)
+        self.assertEqual(meta["reaction"]["components"][0]["solubility"], "insoluble")
         page = client.get("/entries/ELN-2026-0001")
         self.assertIn(b'class="f-purity" value="80.0"', page.data)
+        self.assertIn(b'Insoluble in solvent', page.data)
 
     def test_user_notebook_identity_and_sequential_pages(self):
         storage = self.app.extensions["storage"]
@@ -477,13 +481,15 @@ M  END
         self.assertIn(b'id="sketcher-recovery"', response.data)
         self.assertIn(b'name="molfile_v2000"', response.data)
         self.assertIn(b'name="ket"', response.data)
-        self.assertIn(b"Trimethylgallium", response.data)
+        self.assertNotIn(b"Organometallic templates", response.data)
+        self.assertNotIn(b"structure-template-btn", response.data)
+        self.assertNotIn(b"save-company-template", response.data)
         self.assertNotIn(b"Cyclopentadienyl", response.data)
         self.assertNotIn(b"Acetylacetonate", response.data)
         self.assertNotIn(b"Amidinate", response.data)
         self.assertNotIn(b"Carbonyl ligand", response.data)
 
-    def test_admin_can_save_company_structure_template(self):
+    def test_structure_template_endpoint_is_removed(self):
         client = self.app.test_client()
         with client.session_transaction() as sess:
             sess["_user_id"] = "admin"
@@ -491,13 +497,9 @@ M  END
             sess["_csrf_token"] = "template-test-token"
         response = client.post(
             "/entries/structure-templates",
-            json={"name": "Test ligand", "structure": "C[N-]C(=N)C"},
             headers={"X-CSRF-Token": "template-test-token"},
         )
-        self.assertEqual(response.status_code, 200)
-        templates = self.app.extensions["storage"].get_structure_templates()
-        self.assertEqual(templates[0]["name"], "Test ligand")
-        self.assertEqual(templates[0]["updated_by"], "admin")
+        self.assertIn(response.status_code, (404, 405))
 
     def test_top_search_finds_entry_metadata_across_all_books(self):
         storage = self.app.extensions["storage"]

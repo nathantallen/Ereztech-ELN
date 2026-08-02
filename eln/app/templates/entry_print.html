@@ -107,20 +107,23 @@
     <p class="muted" style="font-size:12px; margin:0 0 8px;">Scale: {{ reaction.scale_amount }} {{ reaction.scale_unit }} of the limiting component.</p>
     {% endif %}
     <table class="summary-table">
-      <thead><tr><th>Role</th><th>Name</th><th>CAS</th><th>Formula</th><th>MW</th><th>d</th><th>Equiv</th><th>mmol</th><th>Amount</th><th>Volume</th></tr></thead>
+      <thead><tr><th>Role</th><th>Name</th><th>Structure</th><th>Equiv</th><th>Purity</th><th>Conc</th><th>Limit</th><th>Amount</th><th>Volume</th><th>mmol</th><th>M/W</th><th>Density</th><th>CAS</th></tr></thead>
       <tbody>
       {% for c in components %}
       <tr>
-        <td>{{ c.role }}{% if c.limiting %} <span class="pill pill-air">limiting</span>{% endif %}</td>
+        <td>{{ c.role }}</td>
         <td>{{ c.name }}</td>
-        <td class="mono">{{ c.cas }}</td>
-        <td class="mono">{{ c.formula }}</td>
-        <td>{{ c.mw if c.mw is not none }}</td>
-        <td>{{ c.density if c.density is not none }}</td>
+        <td>{% if c.svg_row %}<div class="stoich-struct">{{ c.svg_row | safe }}</div>{% else %}<span class="mono">{{ c.formula }}</span>{% endif %}</td>
         <td>{{ c.equiv }}</td>
-        <td>{{ '%.2f' | format(c.mmol) if c.mmol is not none }}</td>
+        <td>{{ c.purity if c.purity is not none else 100 }}%</td>
+        <td>{{ 'Insoluble' if c.solubility == 'insoluble' else (('%.3f' | format(c.conc)) if c.conc is not none else '') }}</td>
+        <td>{{ 'Yes' if c.limiting else '' }}</td>
         <td>{{ '%.3f g' | format(c.mass_g) if c.mass_g is not none }}</td>
         <td>{% if c.volume_ml is not none %}{% set unit = c.volume_unit or 'mL' %}{% if unit == 'µL' %}{{ '%.1f µL' | format(c.volume_ml * 1000) }}{% elif unit == 'L' %}{{ '%.3f L' | format(c.volume_ml / 1000) }}{% else %}{{ '%.2f mL' | format(c.volume_ml) }}{% endif %}{% endif %}</td>
+        <td>{{ '%.2f' | format(c.mmol) if c.mmol is not none }}</td>
+        <td>{{ c.mw if c.mw is not none }}</td>
+        <td>{{ c.density if c.density is not none }}</td>
+        <td class="mono">{{ c.cas }}</td>
       </tr>
       {% endfor %}
       </tbody>
