@@ -366,9 +366,10 @@ M  END
         self.assertEqual(storage.get_entry(first["id"])[0]["notebook_number"], "NB-7")
 
         page = client.get("/entries/%s" % resumed["id"])
-        self.assertIn(b"Chemist C-1042", page.data)
-        self.assertIn(b"Notebook NB-7", page.data)
-        self.assertIn(b"Page 3", page.data)
+        self.assertIn(b"C-1042 / NB-7 / 3", page.data)
+        self.assertIn(("Internal reference %s" % resumed["id"]).encode(), page.data)
+        self.assertNotIn(("<h1><span class=\"mono\">%s</span>" % resumed["id"]).encode(),
+                         page.data)
 
     def test_login_attempt_cache_is_bounded(self):
         from app import auth

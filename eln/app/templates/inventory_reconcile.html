@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Reconcile inventory — {{ meta.id }} — Ereztech ELN{% endblock %}
+{% block title %}Reconcile inventory — {{ meta | notebook_ref }} — Ereztech ELN{% endblock %}
 {% block content %}
 <div class="page-head">
   <div>
     <h1>Reconcile inventory</h1>
-    <div class="sub"><span class="mono">{{ meta.id }}</span> — {{ meta.title }}</div>
+    <div class="sub"><span class="mono">{{ meta | notebook_ref }}</span> — {{ meta.title }}{% if meta.chemist_number and meta.notebook_number and meta.page_number %} · Internal reference {{ meta.id }}{% endif %}</div>
   </div>
 </div>
 

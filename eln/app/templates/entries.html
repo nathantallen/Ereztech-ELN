@@ -44,7 +44,7 @@
     <tbody>
     {% for e in entries %}
       <tr>
-        <td class="mono"><a href="{{ url_for('entries.view', eid=e.id) }}">{% if e.chemist_number and e.notebook_number and e.page_number %}{{ e.chemist_number }} / {{ e.notebook_number }} / {{ e.page_number }}{% else %}{{ e.id }}{% endif %}</a></td>
+        <td class="mono"><a href="{{ url_for('entries.view', eid=e.id) }}">{{ e | notebook_ref }}</a></td>
         <td class="mono">{{ e.lot_number or '—' }}</td>
         <td><a href="{{ url_for('entries.view', eid=e.id) }}">{{ e.title }}</a></td>
         <td>{{ e.project }}</td>

@@ -1,10 +1,11 @@
 {% extends "base.html" %}
-{% block title %}{{ 'Edit ' + meta.id if meta else 'New experiment' }} — Ereztech ELN{% endblock %}
+{% block title %}{{ ('Edit ' + (meta | notebook_ref)) if meta else 'New experiment' }} — Ereztech ELN{% endblock %}
 {% block container_class %}container-wide{% endblock %}
 {% block content %}
 <div class="page-head">
   <div>
-    <h1>{{ 'Edit ' + meta.id if meta else 'New experiment' }}</h1>
+    <h1>{{ ('Edit ' + (meta | notebook_ref)) if meta else 'New experiment' }}</h1>
+    {% if meta and meta.chemist_number and meta.notebook_number and meta.page_number %}<div class="sub">Internal reference {{ meta.id }}</div>{% endif %}
     <div class="sub">Entries are editable while in draft; signing locks the record.</div>
   </div>
 </div>

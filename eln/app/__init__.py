@@ -220,6 +220,18 @@ def create_app():
                              protocols={"http", "https", "mailto"}, strip=True)
         return Markup(clean)
 
+    @app.template_filter("notebook_ref")
+    def notebook_ref(record):
+        """User-facing immutable notebook identity, with legacy ID fallback."""
+        if not record:
+            return ""
+        chemist = str(record.get("chemist_number", "") or "").strip()
+        notebook = str(record.get("notebook_number", "") or "").strip()
+        page = record.get("page_number")
+        if chemist and notebook and page not in (None, ""):
+            return "%s / %s / %s" % (chemist, notebook, page)
+        return str(record.get("id", "") or "")
+
     @app.template_filter("nicedate")
     def nicedate(value):
         # Timestamps are stored in UTC (unambiguous in the files). Emit a <time>
