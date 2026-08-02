@@ -45,6 +45,20 @@
   {% endif %}
 </div>
 
+<div class="card">
+  <h2>Finalized records &amp; notifications</h2>
+  {% if is_admin %}
+  <form method="post" action="{{ url_for('main.set_integrations') }}" class="form-grid">
+    <label class="span2">Mounted SharePoint finalized-records folder
+      <input name="sharepoint_finalized_root" value="{{ integrations.sharepoint_finalized_root or '' }}" placeholder="/mnt/sharepoint/Ereztech Labs Documents">
+      <span class="muted small">When set, witnessed experiments publish their immutable final package here under R&amp;D/ELN. Mount or sync the SharePoint library on the server first.</span>
+    </label>
+    <label class="span2">Teams workflow webhook URL <input type="password" name="teams_webhook_url" value="{{ integrations.teams_webhook_url or '' }}" autocomplete="new-password" placeholder="Optional — finalized record notifications"></label>
+    <div class="span2 form-actions"><button class="btn btn-orange">Save integrations</button></div>
+  </form>
+  {% else %}<p class="muted small">An administrator configures the SharePoint publishing folder and Teams notifications.</p>{% endif %}
+</div>
+
 <div class="grid-2">
   <div class="card">
     <h2>Data location</h2>

@@ -6,4 +6,5 @@ bleach==6.2.0
 defusedxml==0.7.1
 gunicorn==23.0.0
 requests==2.32.3
+qrcode[pil]==8.0
 tzdata==2024.1

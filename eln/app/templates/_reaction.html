@@ -76,6 +76,7 @@
           <select name="comp_role" class="f-role">
             {% for r in component_roles %}<option value="{{ r }}" {{ 'selected' if c.role == r }}>{{ r }}</option>{% endfor %}
           </select>
+          <a class="btn btn-xs" target="_blank" rel="noopener" href="{{ url_for('entries.reaction_component_label', eid=meta.id, cidx=loop.index0) }}" title="Print in-process label">Label</a>
           <select name="comp_state" class="f-state" aria-label="Physical state">
             {% for s in component_states %}<option value="{{ s }}" {{ 'selected' if c.state == s }}>{{ s }}</option>{% endfor %}
           </select>
@@ -188,7 +189,7 @@
     <tbody>
     {% for c in components %}
     <tr>
-      <td>{{ c.role }}{% if c.limiting %} <span class="pill pill-air">limiting</span>{% endif %}</td>
+      <td>{{ c.role }} <a class="btn btn-xs" target="_blank" rel="noopener" href="{{ url_for('entries.reaction_component_label', eid=meta.id, cidx=loop.index0) }}">Label</a>{% if c.limiting %} <span class="pill pill-air">limiting</span>{% endif %}</td>
       <td>{{ c.name }}</td>
       <td class="struct-cell">{% if c.svg_row %}<div class="stoich-struct">{{ c.svg_row | safe }}</div>{% elif c.formula %}<span class="mono">{{ c.formula }}</span>{% endif %}</td>
       <td>{{ c.equiv }}</td><td>{{ c.purity if c.purity is not none else 100 }}%</td>

@@ -131,6 +131,28 @@
     {% endif %}
   </div>
 
+  <div class="card" id="analytics">
+    <h2>Analytical data</h2>
+    {% for a in meta.analytics or [] %}
+    <div class="attachment">
+      <div class="attachment-head"><span class="att-kind att-data">{{ a.technique }}</span>
+        <strong>{{ a.outcome }}</strong>{% if a.summary %}<span>{{ a.summary }}</span>{% endif %}
+        {% if a.file %}<a href="{{ url_for('entries.serve_file', eid=meta.id, relpath=a.file) }}">Open data file</a>{% endif %}
+        <span class="muted small">{{ a.recorded_by }} · {{ a.recorded_at | nicedate }}</span>
+      </div>
+    </div>
+    {% else %}<p class="muted">No analytical records added.</p>{% endfor %}
+    {% if can_edit and not locked %}
+    <form method="post" action="{{ url_for('entries.add_analytical_record', eid=meta.id) }}" enctype="multipart/form-data" class="form-grid">
+      <label>Technique<select name="technique" required><option value="">Select…</option>{% for t in ['NMR','TGA','DSC','GC','ICP-MS','Elemental analysis','Other'] %}<option>{{ t }}</option>{% endfor %}</select></label>
+      <label>Outcome<select name="outcome"><option>Recorded</option><option>Pass</option><option>Fail</option><option>Inconclusive</option></select></label>
+      <label class="span2">Summary<textarea name="summary" rows="2" placeholder="Key result or interpretation"></textarea></label>
+      <label>Raw data or report<input type="file" name="file"></label>
+      <div class="form-actions"><button class="btn" type="submit">Add analytical record</button></div>
+    </form>
+    {% endif %}
+  </div>
+
   <div class="card">
     <h2>Attached files</h2>
     {% if meta.attachments %}
@@ -175,6 +197,28 @@
     <p class="muted small">Video (mp4, mov…), sensor logs (csv, tsv, json…), spectra, images or any other file.</p>
     {% endif %}
   </div>
+
+  {% if meta.status == 'witnessed' %}
+  <div class="card" id="finalized-records">
+    <h2>Finalized record &amp; amendments</h2>
+    {% for f in finalizations %}<p class="small"><strong>{{ f.version }}</strong> published {{ f.published_at | nicedate }} by {{ f.published_by }}<br><span class="mono muted">{{ f.path }}</span></p>{% else %}<p class="muted">This witnessed entry has not yet been published as a finalized record.</p>{% endfor %}
+    {% if can_edit and not finalizations %}<form method="post" action="{{ url_for('entries.finalize', eid=meta.id) }}"><button class="btn btn-orange" type="submit">Publish finalized record</button></form>{% endif %}
+    {% if finalizations and can_edit %}<p><a class="btn btn-ghost" href="{{ url_for('entries.new_amendment', eid=meta.id) }}">Create signed amendment</a></p>{% endif %}
+    {% for a in amendments %}<p class="small"><a href="{{ url_for('entries.view_amendment', eid=meta.id, amendment_id=a.id) }}"><strong>{{ a.version }}</strong> — {{ a.reason }}</a> <span class="pill">{{ a.status }}</span></p>{% endfor %}
+  </div>
+  {% endif %}
+
+  {% if meta.status == 'witnessed' and can_edit %}
+  <div class="card">
+    <h2>Reusable experiment template</h2>
+    <p class="small muted">Save this witnessed setup as an approved starting point for future experiments. It does not restore the removed structure-editor templates.</p>
+    <form method="post" action="{{ url_for('entries.save_as_template', eid=meta.id) }}" class="form-grid">
+      <label>Template name<input name="name" required placeholder="e.g. Standard TMGa distillation"></label>
+      <label>Description<input name="description" placeholder="Optional guidance"></label>
+      <div class="form-actions"><button class="btn" type="submit">Save approved template</button></div>
+    </form>
+  </div>
+  {% endif %}
   <div class="card">
     <h2>References</h2>
     {% if meta.repeat_of %}

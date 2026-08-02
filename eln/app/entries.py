@@ -1,11 +1,14 @@
 import csv
+import base64
 import datetime
 import io
 import json
 import os
+import shutil
 import uuid
 
 import requests
+import qrcode
 from flask import (Blueprint, abort, current_app, flash, jsonify, redirect,
                    render_template, request, send_from_directory, url_for)
 from flask_login import current_user, login_required
@@ -13,6 +16,7 @@ from werkzeug.security import check_password_hash
 from werkzeug.utils import secure_filename
 
 from . import ha
+from .notifications import teams as notify_teams
 from .chem import formula_and_mw
 from .inventory import (UNITS_BY_FAMILY, batch_quantity, format_base,
                         to_base, unit_family, units_for)
@@ -162,16 +166,18 @@ def new_entry():
         flash("Set your chemist number and notebook number before creating an experiment.", "error")
         return redirect(url_for("auth.profile"))
     equipment_cfg = ha.load_config(storage)
+    template = storage.get_experiment_template(request.values.get("template", ""))
     if request.method == "POST":
         quick_create = request.form.get("quick_create") == "1"
+        defaults = (template or {}).get("defaults") or {}
         meta = {
             "title": request.form.get("title", "").strip() or "Untitled experiment",
             "author": current_user.username,
-            "project": request.form.get("project", "").strip(),
+            "project": request.form.get("project", "").strip() or defaults.get("project", ""),
             "lot_number": request.form.get("lot_number", "").strip(),
             "experiment_date": (datetime.date.today().isoformat() if quick_create
                                 else request.form.get("experiment_date", "")),
-            "technique": _technique_from_form(request.form, storage),
+            "technique": _technique_from_form(request.form, storage) or defaults.get("technique", ""),
             "tags": [t.strip() for t in request.form.get("tags", "").split(",") if t.strip()],
             "status": "draft",
             "created": utcnow(),
@@ -179,8 +185,23 @@ def new_entry():
             "attachments": [],
             "equipment": _equipment_from_form(request.form, storage),
         }
-        body = compose_sections(_sections_from_form(request.form))
+        if not any(meta["equipment"].values()):
+            meta["equipment"] = defaults.get("equipment") or {}
+        if template:
+            meta["reaction"] = defaults.get("reaction") or {}
+            meta["structures"] = defaults.get("structures") or []
+            meta["template"] = {"id": template["id"], "name": template.get("name", "")}
+        sections = defaults.get("sections") or {}
+        sections.update({k: v for k, v in _sections_from_form(request.form).items() if v})
+        body = compose_sections(sections)
         eid = storage.create_entry(meta, body)
+        if template and template.get("source_entry"):
+            src = storage.entry_dir(template["source_entry"])
+            dest = storage.entry_dir(eid)
+            for folder in ("structures",):
+                source_folder = os.path.join(src, folder)
+                if os.path.isdir(source_folder):
+                    shutil.copytree(source_folder, os.path.join(dest, folder), dirs_exist_ok=True)
         # Optional chemical structure drawn on the create form.
         if request.form.get("struct_molfile", "").strip():
             record = _new_structure_record(storage, eid, request.form)
@@ -190,14 +211,18 @@ def new_entry():
         storage.audit(eid, current_user.username, "created", meta["title"])
         flash("Entry %s created." % eid, "success")
         return redirect(url_for("entries.view", eid=eid))
-    return render_template("entry_form.html", meta=None, sections={},
+    initial_meta = dict((template or {}).get("defaults") or {})
+    initial_meta.update({"title": (template or {}).get("name", ""), "tags": []})
+    return render_template("entry_form.html", meta=None, sections=(template or {}).get("defaults", {}).get("sections", {}),
                            techniques=storage.get_techniques(),
                            section_names=SETUP_SECTIONS,
                            equipment_cfg=equipment_cfg,
                            ha_configured=ha.configured(equipment_cfg)
                                          or bool(equipment_cfg.get("ip_cameras")),
                            recording_fps=RECORDING_FPS,
-                           recording_resolutions=RECORDING_RESOLUTIONS)
+                           recording_resolutions=RECORDING_RESOLUTIONS,
+                           templates=storage.list_experiment_templates(),
+                           selected_template=template, initial_meta=initial_meta)
 
 
 @bp.route("/<eid>")
@@ -282,7 +307,10 @@ def view(eid):
                            inventory_transactions=storage.inventory_transactions(eid=eid),
                            recording=ha.recording_status(eid),
                            recording_fps=RECORDING_FPS,
-                           recording_resolutions=RECORDING_RESOLUTIONS)
+                           recording_resolutions=RECORDING_RESOLUTIONS,
+                           templates=storage.list_experiment_templates(),
+                           finalizations=storage.finalizations(eid),
+                           amendments=storage.list_amendments(eid))
 
 
 def _read_rel(storage, eid, rel):
@@ -293,6 +321,43 @@ def _read_rel(storage, eid, rel):
             return f.read()
     except OSError:
         return ""
+
+
+def _label_qr(value):
+    image = qrcode.make(value)
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
+
+
+@bp.route("/<eid>/reaction/<int:cidx>/label")
+@login_required
+def reaction_component_label(eid, cidx):
+    """Print a traceable label for an in-process reaction component."""
+    meta, _ = _get_or_404(eid)
+    components = (meta.get("reaction") or {}).get("components") or []
+    if cidx < 0 or cidx >= len(components):
+        abort(404)
+    component = components[cidx]
+    # Reuse the controlled hazard statement from the material catalogue when
+    # the component is a recorded raw material. A blank field is deliberately
+    # called out on the label rather than silently implying the material is safe.
+    hazards = (component.get("hazards") or "").strip()
+    if not hazards:
+        component_cas = (component.get("cas") or "").strip()
+        component_name = (component.get("name") or "").strip().lower()
+        for material in _storage().list_materials():
+            if (component_cas and component_cas == (material.get("cas") or "").strip()) or \
+                    (component_name and component_name == (material.get("name") or "").strip().lower()):
+                hazards = (material.get("hazards") or "").strip()
+                break
+    author = _storage().find_user(meta.get("author")) or {}
+    code = "ELN-%s-C%s" % (eid, component.get("key") or (cidx + 1))
+    return render_template("process_label.html", meta=meta, component=component,
+                           code=code, qr_data_uri=_label_qr(code), hazards=hazards,
+                           scientist=author.get("full_name") or meta.get("author"),
+                           label_format=request.args.get("format", "dymo-30252"),
+                           component_index=cidx)
 
 
 def _crossrefs(storage, eid, own_text, all_entries=None):
@@ -811,6 +876,176 @@ def delete_structure(eid, idx):
         storage.audit(eid, current_user.username, "removed structure", s.get("caption", ""))
         flash("Structure removed.", "success")
     return redirect(url_for("entries.view", eid=eid))
+
+
+# ---------- reusable experiment templates ----------
+
+@bp.route("/<eid>/templates/save", methods=["POST"])
+@login_required
+def save_as_template(eid):
+    _require_edit()
+    meta, body = _get_or_404(eid)
+    if meta.get("status") != "witnessed":
+        flash("Only witnessed experiments can become reusable templates.", "error")
+        return redirect(url_for("entries.view", eid=eid))
+    name = request.form.get("name", "").strip()
+    if not name:
+        flash("A template name is required.", "error")
+        return redirect(url_for("entries.view", eid=eid))
+    storage = _storage()
+    key = "tpl-" + uuid.uuid4().hex[:10]
+    defaults = {
+        "project": meta.get("project", ""), "technique": meta.get("technique", ""),
+        "equipment": meta.get("equipment") or {},
+        "reaction": meta.get("reaction") or {}, "structures": meta.get("structures") or [],
+        "sections": {k: v for k, v in parse_sections(body).items()
+                     if k in ("Objective", "Procedure")},
+    }
+    storage.save_experiment_template({
+        "id": key, "name": name,
+        "description": request.form.get("description", "").strip(),
+        "source_entry": eid, "created_at": utcnow(), "created_by": current_user.username,
+        "defaults": defaults,
+    })
+    storage.audit(eid, current_user.username, "saved experiment template", name)
+    flash("Reusable experiment template saved.", "success")
+    return redirect(url_for("entries.view", eid=eid))
+
+
+# ---------- analytical records ----------
+
+@bp.route("/<eid>/analytics", methods=["POST"])
+@login_required
+def add_analytical_record(eid):
+    _require_edit()
+    meta, body = _get_or_404(eid)
+    _require_draft(meta)
+    technique = request.form.get("technique", "").strip()
+    if not technique:
+        flash("Select an analytical technique.", "error")
+        return redirect(url_for("entries.view", eid=eid) + "#analytics")
+    record = {"id": uuid.uuid4().hex[:10], "technique": technique,
+              "summary": request.form.get("summary", "").strip(),
+              "outcome": request.form.get("outcome", "").strip() or "Recorded",
+              "recorded_at": utcnow(), "recorded_by": current_user.username}
+    f = request.files.get("file")
+    if f and f.filename:
+        name = secure_filename(f.filename)
+        if name:
+            name = "%s-%s" % (record["id"], name)
+            dest = os.path.join(_storage().entry_dir(eid), "analytical-data")
+            os.makedirs(dest, exist_ok=True)
+            f.save(os.path.join(dest, name))
+            record["file"] = "analytical-data/" + name
+    meta.setdefault("analytics", []).append(record)
+    _storage().save_entry(eid, meta, body)
+    _storage().audit(eid, current_user.username, "recorded analytical data", technique)
+    flash("Analytical record added.", "success")
+    return redirect(url_for("entries.view", eid=eid) + "#analytics")
+
+
+# ---------- finalized records and amendments ----------
+
+@bp.route("/<eid>/finalize", methods=["POST"])
+@login_required
+def finalize(eid):
+    _require_edit()
+    meta, _ = _get_or_404(eid)
+    if meta.get("status") != "witnessed":
+        flash("An entry must be witnessed before it can be finalized.", "error")
+        return redirect(url_for("entries.view", eid=eid))
+    try:
+        row = _storage().publish_final_record(eid, meta, current_user.username)
+    except (OSError, ValueError) as exc:
+        flash("Could not publish finalized record: %s" % exc, "error")
+        return redirect(url_for("entries.view", eid=eid))
+    _storage().audit(eid, current_user.username, "published finalized record", row["version"])
+    notify_teams(_storage(), "ELN finalized record published",
+                 "%s (%s) was published as %s by %s." %
+                 (meta.get("title"), eid, row["version"], current_user.full_name))
+    flash("Finalized record published to %s." % row["destination"], "success")
+    return redirect(url_for("entries.view", eid=eid) + "#finalized-records")
+
+
+@bp.route("/<eid>/amendments/new", methods=["GET", "POST"])
+@login_required
+def new_amendment(eid):
+    _require_edit()
+    meta, _ = _get_or_404(eid)
+    if meta.get("status") != "witnessed" or not _storage().finalizations(eid):
+        flash("Finalize the witnessed entry before creating an amendment.", "error")
+        return redirect(url_for("entries.view", eid=eid))
+    if request.method == "POST":
+        reason = request.form.get("reason", "").strip()
+        changes = request.form.get("changes", "").strip()
+        if not reason or not changes:
+            flash("A reason and the exact correction are required.", "error")
+            return redirect(request.url)
+        number = len(_storage().list_amendments(eid)) + 1
+        amendment_id = "amendment-%03d" % number
+        amend_meta = {"id": amendment_id, "entry_id": eid, "version": "v1.%d" % number,
+                      "status": "draft", "reason": reason, "created_at": utcnow(),
+                      "created_by": current_user.username,
+                      "base_version": _storage().finalizations(eid)[-1]["version"]}
+        _storage().save_amendment(eid, amendment_id, amend_meta, changes)
+        _storage().audit(eid, current_user.username, "created amendment", amendment_id)
+        return redirect(url_for("entries.view_amendment", eid=eid, amendment_id=amendment_id))
+    return render_template("amendment_form.html", meta=meta)
+
+
+@bp.route("/<eid>/amendments/<amendment_id>")
+@login_required
+def view_amendment(eid, amendment_id):
+    meta, _ = _get_or_404(eid)
+    amendment, body = _storage().get_amendment(eid, amendment_id)
+    if amendment is None:
+        abort(404)
+    return render_template("amendment_view.html", meta=meta, amendment=amendment, body=body)
+
+
+@bp.route("/<eid>/amendments/<amendment_id>/sign", methods=["POST"])
+@login_required
+def sign_amendment(eid, amendment_id):
+    _require_edit()
+    amendment, body = _storage().get_amendment(eid, amendment_id)
+    if amendment is None:
+        abort(404)
+    if amendment.get("status") != "draft" or not _check_password(request.form.get("password")):
+        flash("Amendment could not be signed. Confirm your password and draft status.", "error")
+    else:
+        amendment["status"] = "signed"
+        amendment["signed"] = {"by": current_user.username, "name": current_user.full_name, "at": utcnow()}
+        _storage().save_amendment(eid, amendment_id, amendment, body)
+        _storage().audit(eid, current_user.username, "signed amendment", amendment_id)
+        flash("Amendment signed; awaiting witness.", "success")
+    return redirect(url_for("entries.view_amendment", eid=eid, amendment_id=amendment_id))
+
+
+@bp.route("/<eid>/amendments/<amendment_id>/witness", methods=["POST"])
+@login_required
+def witness_amendment(eid, amendment_id):
+    _require_edit()
+    amendment, body = _storage().get_amendment(eid, amendment_id)
+    if amendment is None:
+        abort(404)
+    if (amendment.get("status") != "signed" or amendment.get("signed", {}).get("by") == current_user.username
+            or not _check_password(request.form.get("password"))):
+        flash("Amendment could not be witnessed. A different user must confirm their password.", "error")
+    else:
+        amendment["status"] = "witnessed"
+        amendment["witnessed"] = {"by": current_user.username, "name": current_user.full_name, "at": utcnow()}
+        try:
+            amendment["published"] = _storage().publish_amendment_record(
+                eid, amendment, current_user.username)
+        except (OSError, ValueError) as exc:
+            flash("Amendment witnessed, but publishing failed: %s" % exc, "error")
+        _storage().save_amendment(eid, amendment_id, amendment, body)
+        _storage().audit(eid, current_user.username, "witnessed amendment", amendment_id)
+        notify_teams(_storage(), "ELN amendment witnessed",
+                     "%s for %s was witnessed by %s." %
+                     (amendment.get("version"), eid, current_user.full_name))
+        flash("Amendment witnessed and permanently retained with the original record.", "success")
+    return redirect(url_for("entries.view_amendment", eid=eid, amendment_id=amendment_id))
 
 
 # ---------- sign & witness ----------

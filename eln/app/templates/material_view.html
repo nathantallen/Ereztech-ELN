@@ -78,7 +78,7 @@
         </details>
         {% endif %}
       </td>
-      <td>{% if can_edit %}<a href="{{ url_for('materials.batch_form', slug=meta.slug, lot_slug=b.lot_slug) }}">edit</a>{% endif %}</td>
+      <td><a href="{{ url_for('materials.batch_label', slug=meta.slug, lot_slug=b.lot_slug) }}" target="_blank" rel="noopener">label</a>{% if can_edit %} · <a href="{{ url_for('materials.batch_form', slug=meta.slug, lot_slug=b.lot_slug) }}">edit</a>{% endif %}</td>
     </tr>
     {% if b._notes %}<tr class="batch-notes"><td colspan="10" class="muted small">{{ b._notes }}</td></tr>{% endif %}
     {% endfor %}
