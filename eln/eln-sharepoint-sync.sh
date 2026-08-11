@@ -71,6 +71,41 @@ fi
 rm -f "$STAGE/users.json"
 find "$STAGE" -name "*.tmp" -delete 2>/dev/null || true
 
+# Notebook folders are named by the internal ELN-YYYY-NNNN key on disk, which is
+# not what a page is called in the lab and must not appear in SharePoint. Rename
+# each to its chemist-notebook-page reference before upload. The id itself is
+# preserved inside entry.md, so nothing is lost by renaming the folder. Entries
+# with no page reference yet are dropped rather than filed under a wrong name.
+python3 - "$STAGE" <<'RELABEL'
+import os, re, shutil, sys
+stage = sys.argv[1]
+root = os.path.join(stage, "notebook")
+if os.path.isdir(root):
+    for book in os.listdir(root):
+        bookdir = os.path.join(root, book)
+        if not os.path.isdir(bookdir):
+            continue
+        for eid in list(os.listdir(bookdir)):
+            src = os.path.join(bookdir, eid)
+            md = os.path.join(src, "entry.md")
+            if not (re.fullmatch(r"ELN-\d{4}-\d{4}", eid) and os.path.isfile(md)):
+                continue
+            # frontmatter scalars only; avoids requiring PyYAML on the host
+            head = open(md, encoding="utf-8", errors="replace").read(4000)
+            def field(name):
+                m = re.search(r"^%s:\s*['\"]?([0-9]+)" % name, head, re.M)
+                return "%03d" % int(m.group(1)) if m else None
+            c, n, pg = field("chemist_number"), field("notebook_number"), field("page_number")
+            if not (c and n and pg):
+                shutil.rmtree(src, ignore_errors=True)   # unlabelled: keep it off SharePoint
+                continue
+            dst = os.path.join(bookdir, "%s-%s-%s" % (c, n, pg))
+            if os.path.exists(dst):
+                shutil.rmtree(src, ignore_errors=True)
+            else:
+                os.rename(src, dst)
+RELABEL
+
 if [ -e "$STAGE/users.json" ]; then
   echo "$(date -Is) ERROR: users.json still present in snapshot — refusing to sync." | tee -a "$LOG"
   exit 1

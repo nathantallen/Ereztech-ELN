@@ -659,6 +659,15 @@ def archive_entry(eid):
     if not (current_user.username == meta.get("author") or current_user.is_admin):
         abort(403)
 
+    # Everything in OneDrive is filed under the notebook page label, never the
+    # internal ELN id. Without a page reference there is nothing correct to
+    # call the folder, so refuse rather than invent one.
+    label = archive.page_ref(meta)
+    if not label:
+        flash("This entry has no chemist/notebook/page number yet, so it cannot "
+              "be filed in OneDrive. Set those on the entry first.", "error")
+        return redirect(url_for("entries.view", eid=eid))
+
     pdf_bytes = None
     if entrypdf.available():
         try:
@@ -674,7 +683,8 @@ def archive_entry(eid):
 
     try:
         result = archive.archive_entry(storage.entry_dir(eid), eid,
-                                       current_user.username, pdf_bytes=pdf_bytes)
+                                       current_user.username, pdf_bytes=pdf_bytes,
+                                       label=label)
     except archive.ArchiveError as exc:
         flash("Archiving failed, nothing was deleted: %s" % exc, "error")
         return redirect(url_for("entries.view", eid=eid))

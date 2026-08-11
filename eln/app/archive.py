@@ -50,6 +50,29 @@ class ArchiveError(RuntimeError):
     """Archiving failed. Nothing has been deleted when this is raised."""
 
 
+def page_ref(meta):
+    """The notebook page label: zero-padded chemist-notebook-page, e.g. 067-001-009.
+
+    This is what a page is called in the lab. The ELN-YYYY-NNNN id is an
+    internal key — it names the directory on disk and is what storage.py's
+    id allocation and cross-references run on — but it is never what anything
+    outside the app should be labelled with.
+
+    Returns None when the entry has no page reference yet; such an entry cannot
+    be archived, because there would be nothing correct to call it.
+    """
+    def part(value):
+        digits = "".join(ch for ch in str(value or "") if ch.isdigit())
+        return "%03d" % int(digits) if digits else None
+
+    chemist = part(meta.get("chemist_number"))
+    notebook = part(meta.get("notebook_number"))
+    page = part(meta.get("page_number"))
+    if not (chemist and notebook and page):
+        return None
+    return "%s-%s-%s" % (chemist, notebook, page)
+
+
 def _rclone_bin():
     return os.environ.get("ELN_RCLONE_BIN", "rclone")
 
@@ -77,11 +100,11 @@ def _run(args, timeout=900):
     return proc.stdout
 
 
-def entry_remote(eid):
+def entry_remote(label):
     base = remote_base()
     if not base:
         raise ArchiveError("ELN_ARCHIVE_REMOTE is not set.")
-    return "%s/%s" % (base.rstrip("/"), eid)
+    return "%s/%s" % (base.rstrip("/"), label)
 
 
 # ---------- manifest ----------
@@ -142,7 +165,7 @@ def _safe_join(entry_dir, relpath):
 
 # ---------- archive ----------
 
-def archive_entry(entry_dir, eid, username, pdf_bytes=None):
+def archive_entry(entry_dir, eid, username, pdf_bytes=None, label=None):
     """Upload this entry's bulk files, verify them, then delete them locally.
 
     Verification downloads the uploaded copies and compares content — metadata
@@ -154,12 +177,17 @@ def archive_entry(entry_dir, eid, username, pdf_bytes=None):
             "Archiving is not configured. Set ELN_ARCHIVE_REMOTE (e.g. "
             "'sharepoint:Ereztech ELN/archive')."
         )
+    if not label:
+        raise ArchiveError(
+            "This entry has no chemist/notebook/page number, so there is no "
+            "notebook page label to file it under. Set those on the entry first."
+        )
     with _LOCK:
         # Write the rendered record alongside the files so it is uploaded and
         # verified by exactly the same path as everything else.
         pdf_rel = None
         if pdf_bytes:
-            pdf_rel = PDF_NAME % eid
+            pdf_rel = PDF_NAME % label
             pdf_dir = os.path.join(entry_dir, "document")
             os.makedirs(pdf_dir, exist_ok=True)
             tmp = os.path.join(pdf_dir, pdf_rel + ".tmp")
@@ -171,9 +199,10 @@ def archive_entry(entry_dir, eid, username, pdf_bytes=None):
         if not files:
             return {"archived": 0, "bytes": 0, "message": "No files to archive."}
 
-        remote = entry_remote(eid)
+        remote = entry_remote(label)
         manifest = {
             "eid": eid,
+            "label": label,
             "archived_at": datetime.datetime.now(datetime.timezone.utc)
                             .replace(microsecond=0).isoformat(),
             "archived_by": username,
@@ -227,6 +256,17 @@ def archive_entry(entry_dir, eid, username, pdf_bytes=None):
 
 # ---------- read-back ----------
 
+def _remote_for(entry_dir, eid):
+    """Where this entry's files live, taken from the manifest written at archive
+    time so a later change to the labelling scheme cannot orphan them."""
+    m = read_manifest(entry_dir) or {}
+    if m.get("remote"):
+        return m["remote"]
+    if m.get("label"):
+        return entry_remote(m["label"])
+    raise ArchiveError("no archive location recorded for %s" % eid)
+
+
 def ensure_local(entry_dir, eid, relpath):
     """Make `relpath` readable on local disk, fetching it back if archived.
 
@@ -253,7 +293,7 @@ def ensure_local(entry_dir, eid, relpath):
         if os.path.isfile(full):  # another thread won the race
             return True
         os.makedirs(os.path.dirname(full), exist_ok=True)
-        _run(["copyto", "%s/%s" % (entry_remote(eid), rel_key), full,
+        _run(["copyto", "%s/%s" % (_remote_for(entry_dir, eid), rel_key), full,
               "--retries", "3"], timeout=300)
         if not os.path.isfile(full):
             raise ArchiveError("fetched %s but it did not appear locally" % rel_key)
@@ -299,7 +339,7 @@ def ensure_entry_local(entry_dir, eid):
             return 0
         for sub in ARCHIVE_SUBDIRS:
             if any(rel.startswith(sub + "/") for rel in missing):
-                _run(["copy", "%s/%s" % (entry_remote(eid), sub),
+                _run(["copy", "%s/%s" % (_remote_for(entry_dir, eid), sub),
                       os.path.join(entry_dir, sub),
                       "--transfers", "4", "--retries", "3"], timeout=600)
         return len(missing)
