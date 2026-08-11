@@ -32,6 +32,14 @@ STAMP="$(date +%F-%H%M%S)"
 mkdir -p "$LOG_DIR"
 
 # Refuse to run rather than fail obscurely mid-sync.
+# Distinguish "never configured" from "configured but unreadable" — the second
+# happens if something running as root rewrites rclone.conf and takes ownership,
+# and it is not obvious from a "remote not configured" message.
+CONF="${RCLONE_CONFIG:-$HOME/.config/rclone/rclone.conf}"
+if [ -e "$CONF" ] && [ ! -r "$CONF" ]; then
+  echo "$(date -Is) ERROR: $CONF exists but is not readable by $(id -un) (owner $(stat -c %U "$CONF" 2>/dev/null)). Fix ownership; see ELN-SHAREPOINT.md." | tee -a "$LOG"
+  exit 1
+fi
 if ! "$RCLONE" listremotes 2>/dev/null | grep -qx "${REMOTE}:"; then
   echo "$(date -Is) ERROR: rclone remote '${REMOTE}:' is not configured. See ELN-SHAREPOINT.md." | tee -a "$LOG"
   exit 1
@@ -106,6 +114,31 @@ if os.path.isdir(root):
                 os.rename(src, dst)
 RELABEL
 
+# A PDF of every entry travels with the notebook, so the SharePoint copy is
+# readable by someone who has the folder and nothing else. Rendering happens in
+# the container (it needs the app's templates) and is content-cached, so an
+# unchanged entry yields byte-identical output and rclone skips re-uploading it.
+PDF_CACHE="/home/nallen/ereztech-eln/pdf-cache"
+mkdir -p "$PDF_CACHE"
+if docker exec "$ELN_CONTAINER" sh -c 'rm -rf /tmp/eln-pdfs && mkdir -p /tmp/eln-pdfs /tmp/eln-pdfcache' 2>/dev/null; then
+  docker cp "$PDF_CACHE/." "${ELN_CONTAINER}:/tmp/eln-pdfcache/" >/dev/null 2>&1 || true
+  if docker exec "$ELN_CONTAINER" python -m app.renderpdf /tmp/eln-pdfs /tmp/eln-pdfcache \
+        > "$STAGE/.pdfmap" 2>>"$LOG"; then
+    docker cp "${ELN_CONTAINER}:/tmp/eln-pdfs/." "$STAGE/.pdfs/" >/dev/null 2>&1 || true
+    docker cp "${ELN_CONTAINER}:/tmp/eln-pdfcache/." "$PDF_CACHE/" >/dev/null 2>&1 || true
+    # file each PDF beside the entry it documents
+    while read -r label author; do
+      [ -n "$label" ] || continue
+      dest="$STAGE/notebook/$author/$label"
+      [ -d "$dest" ] && [ -f "$STAGE/.pdfs/$label.pdf" ] && cp "$STAGE/.pdfs/$label.pdf" "$dest/"
+    done < "$STAGE/.pdfmap"
+    echo "$(date -Is) rendered PDFs for $(wc -l < "$STAGE/.pdfmap") entries" >> "$LOG"
+  else
+    echo "$(date -Is) WARNING: PDF rendering failed; syncing files without PDFs." >> "$LOG"
+  fi
+  rm -rf "$STAGE/.pdfs" "$STAGE/.pdfmap"
+fi
+
 if [ -e "$STAGE/users.json" ]; then
   echo "$(date -Is) ERROR: users.json still present in snapshot — refusing to sync." | tee -a "$LOG"
   exit 1
@@ -119,6 +152,7 @@ fi
   --exclude "users.json" \
   --exclude "*.tmp" \
   --exclude ".*" \
+  --exclude "document/**" \
   --backup-dir "${REMOTE}:${DEST_PATH}-superseded/${STAMP}" \
   --transfers 4 \
   --retries 3 \

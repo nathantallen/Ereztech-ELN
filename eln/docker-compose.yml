@@ -15,8 +15,13 @@ services:
       - ${ELN_DATA_DIR:-./data}:/data
       - eln_config:/config
       - ${ELN_NAS_DIR:-./nas}:/nas
-      # rclone OAuth token; read-write because rclone rewrites it on refresh.
-      - ${ELN_RCLONE_CONFIG_DIR:-./rclone-config}:/rclone
+      # rclone OAuth token, READ-ONLY on purpose. This container runs as root;
+      # with a writable mount its rclone rewrites the file on token refresh and
+      # it becomes root-owned 0600, locking the host account out of its own
+      # config and silently breaking the hourly backup. The host owns the token
+      # lifecycle; the container only reads it.
+      # compose does not expand "~" — set an absolute path in .env.
+      - ${ELN_RCLONE_CONFIG_DIR:-./rclone-config}:/rclone:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8091/login')"]
       interval: 15s
