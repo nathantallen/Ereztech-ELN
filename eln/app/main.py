@@ -54,7 +54,8 @@ def settings():
                            browse_roots=location.browse_roots(),
                            config_dir=location.config_dir(),
                            timezone=current_tz, tz_options=tz_options,
-                           max_upload_mb=current_app.config["MAX_CONTENT_LENGTH"] // (1024 * 1024))
+                           max_upload_mb=current_app.config["MAX_CONTENT_LENGTH"] // (1024 * 1024),
+                           integrations=storage.get_settings())
 
 
 @bp.route("/settings/timezone", methods=["POST"])
@@ -73,6 +74,20 @@ def set_timezone():
     _storage().set_timezone(tz)
     current_app.config["TIMEZONE"] = tz
     flash("Time zone set to %s." % (tz or "viewer's local time"), "success")
+    return redirect(url_for("main.settings"))
+
+
+@bp.route("/settings/integrations", methods=["POST"])
+@login_required
+def set_integrations():
+    if not current_user.is_admin:
+        abort(403)
+    storage = _storage()
+    settings = storage.get_settings()
+    settings["sharepoint_finalized_root"] = request.form.get("sharepoint_finalized_root", "").strip()
+    settings["teams_webhook_url"] = request.form.get("teams_webhook_url", "").strip()
+    storage.save_settings(settings)
+    flash("SharePoint and Teams integration settings saved.", "success")
     return redirect(url_for("main.settings"))
 
 

@@ -6,4 +6,10 @@ bleach==6.2.0
 defusedxml==0.7.1
 gunicorn==23.0.0
 requests==2.32.3
+qrcode[pil]==8.0
 tzdata==2024.1
+# PDF of each entry for the OneDrive archive. pydyf is pinned deliberately:
+# WeasyPrint 62.x uses the pre-0.11 pydyf Stream API, and a newer pydyf fails at
+# render time with "'super' object has no attribute 'transform'".
+WeasyPrint==62.3
+pydyf==0.10.0

@@ -90,3 +90,58 @@ Answer `n` to "Use auto config?" and paste a token from `rclone authorize
 "onedrive"` on a machine with a browser — both sides must be on the same rclone
 version. Alternatively reconnect over an SSH forward
 (`ssh -L 53682:localhost:53682 …`) and answer `y`, which needs no paste.
+
+---
+
+# Archiving closed-out entries (`app/archive.py`)
+
+Separate from the hourly backup above. A per-entry **Archive to OneDrive** button
+on the entry page (author or admin) renders the entry to PDF, uploads it with the
+entry's `structures/`, `photos/` and `attachments/`, verifies everything, and only
+then frees the local copies.
+
+| | |
+|---|---|
+| Trigger | Manual, per entry. Nothing moves on its own. |
+| Destination | `sharepoint:Ereztech ELN/archive/<ELN-id>/` |
+| Enabled by | `ELN_ARCHIVE_REMOTE` in `.env` (unset → button hidden) |
+
+**What never moves:** `entry.md` and `audit.log`. `list_entries()`,
+`next_entry_id()` and `next_page_number()` all read them off the filesystem, so
+removing them would make the index need a network round trip per entry and — far
+worse — let the app reissue an entry id or a page number that already exists.
+They total tens of KB across the whole notebook.
+
+**Verification before deletion:** files are uploaded, then `rclone check
+--download` compares actual bytes, not size and timestamp. Nothing is deleted
+unless every file matches. Restored files are re-checked against the SHA-256 in
+the manifest and refused if they differ.
+
+**Reading is unchanged:** opening an archived entry pulls its files back in one
+transfer (not one call per drawing) and they are served normally. `.archived.json`
+records what is in OneDrive, so the entry list stays instant and offline.
+
+## Interaction with the hourly backup
+
+The two write to different paths and together hold the whole notebook:
+
+* `notebook-backup/` mirrors what is **currently on local disk**
+* `archive/<ELN-id>/` holds what has been **moved off local disk**
+
+When an entry is archived, its files leave the local directory, so the next hourly
+`rclone sync` moves them out of `notebook-backup/` into
+`notebook-backup-superseded/<timestamp>/`. That is expected — the authoritative
+copy is under `archive/`. Do not treat a file vanishing from `notebook-backup/`
+as data loss.
+
+## PDF rendering
+
+WeasyPrint renders `entry_print.html`, the same layout the print dialog uses.
+Two deliberate differences: no JavaScript (so timestamps stay as the server
+rendered them, which is what an archived record wants) and no network (the URL
+fetcher serves only the app's own static files, so a slow webfont CDN cannot
+stall an archive).
+
+`pydyf` is pinned to 0.10.0. WeasyPrint 62.x uses the pre-0.11 pydyf Stream API;
+a newer pydyf fails at render time with
+`'super' object has no attribute 'transform'`.

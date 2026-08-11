@@ -83,6 +83,7 @@
       limiting.querySelector(".f-limiting").checked = true;
     }
     var limMw = limiting ? num(limiting.querySelector(".f-mw")) : null;
+    var limPurity = limiting ? (num(limiting.querySelector(".f-purity")) || 100) / 100 : 1;
     var limEquiv = limiting ? (num(limiting.querySelector(".f-equiv")) || 1) : 1;
     var limMmol = null;
     if (scaleAmount != null && limiting) {
@@ -91,28 +92,39 @@
       else if (limMw) {
         var grams = scaleUnit === "kg" ? scaleAmount * 1000 :
                     scaleUnit === "mg" ? scaleAmount / 1000 : scaleAmount;
-        limMmol = grams / limMw * 1000;
+        limMmol = grams * limPurity / limMw * 1000;
       }
     }
+    var totalSolventMl = all.reduce(function (total, r) {
+      if (r.querySelector(".f-role").value !== "solvent") return total;
+      return total + (volumeToMl(num(r.querySelector(".f-solvent-volume")),
+        r.querySelector(".f-volume-unit").value) || 0);
+    }, 0);
     all.forEach(function (r) {
       var mw = num(r.querySelector(".f-mw"));
       var equiv = num(r.querySelector(".f-equiv")) || 1;
       var density = num(r.querySelector(".f-density"));
-      var conc = num(r.querySelector(".f-conc"));
+      var purity = (num(r.querySelector(".f-purity")) || 100) / 100;
+      var stockConc = num(r.querySelector(".f-stock-conc"));
       var state = r.querySelector(".f-state").value;
       var role = r.querySelector(".f-role").value;
+      var solubility = r.querySelector(".f-solubility");
+      var concField = r.querySelector(".f-conc");
+      var concText = r.querySelector(".c-conc");
+      var stockConcField = r.querySelector(".f-stock-conc");
       var solventVolume = r.querySelector(".f-solvent-volume");
       var solventVolumeControl = r.querySelector(".solvent-volume-control");
       var solventVolumeUnit = r.querySelector(".f-volume-unit");
       var mmol = null, mass = null, vol = null;
       if (role === "solvent") {
         vol = volumeToMl(num(solventVolume), solventVolumeUnit.value);
+        if (vol != null && density != null) mass = vol * density;
         solventVolumeControl.hidden = false;
       } else if (limMmol != null) {
         solventVolumeControl.hidden = true;
         mmol = limMmol * equiv / limEquiv;
-        if (mw) mass = mmol * mw / 1000;
-        if (state === "solution" && conc) vol = mmol / conc;
+        if (mw) mass = mmol * mw / 1000 / purity;
+        if (state === "solution" && stockConc) vol = mmol / stockConc;
         else if (state === "liquid" && density && mass != null) vol = mass / density;
       } else {
         solventVolumeControl.hidden = true;
@@ -125,6 +137,13 @@
       r.querySelector(".f-mmol").value = mmol != null ? mmol.toFixed(3) : "";
       r.querySelector(".f-mass").value = mass != null ? mass.toFixed(4) : "";
       r.querySelector(".f-volume").value = vol != null ? vol.toFixed(3) : "";
+      stockConcField.hidden = state !== "solution";
+      solubility.hidden = role === "solvent";
+      var reactionConc = role !== "solvent" && mmol != null && totalSolventMl > 0 &&
+        solubility.value !== "insoluble" ? mmol / totalSolventMl : null;
+      concField.value = reactionConc != null ? reactionConc.toFixed(6) : "";
+      concText.textContent = solubility.value === "insoluble" && role !== "solvent" ?
+        "Insoluble" : (reactionConc != null ? reactionConc.toFixed(3) : "");
     });
     updateOpsQuantities(all);
   }
@@ -168,6 +187,15 @@
   function initStoich() {
     var form = document.getElementById("reaction-form");
     if (!form) return;
+    // Prevent implicit form submission from text/number fields. The first
+    // submit button opens the structure editor, which should only happen when
+    // the user deliberately activates that button.
+    form.addEventListener("keydown", function (ev) {
+      if (ev.key === "Enter" && !ev.isComposing &&
+          ev.target.matches('input[type="text"], input[type="number"]')) {
+        ev.preventDefault();
+      }
+    });
     form.dataset.eid = (window.location.pathname.match(/ELN-\d{4}-\d{4}/) || [""])[0];
     var table = form.querySelector("#stoich-table");
     rows(table).forEach(function (r) { wireStoichRow(form, r); });

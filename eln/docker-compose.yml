@@ -3,27 +3,28 @@ services:
     build: .
     image: ereztech-eln
     ports:
-      - "8091:8091"
+      - "8092:8091"
     environment:
       - ELN_SECRET_KEY=${ELN_SECRET_KEY:-}
       - ELN_MAX_UPLOAD_MB=${ELN_MAX_UPLOAD_MB:-512}
-      # Folders the in-app "Change location" browser is allowed to walk. Mount
-      # your NAS/SharePoint shares under one of these (e.g. /nas) below.
       - ELN_BROWSE_ROOTS=${ELN_BROWSE_ROOTS:-/nas:/data}
+      # Cold storage for closed-out entries. Unset -> Archive button hidden.
+      - ELN_ARCHIVE_REMOTE=${ELN_ARCHIVE_REMOTE:-}
+      - RCLONE_CONFIG=/rclone/rclone.conf
     volumes:
-      # Initial storage location (used until an admin re-points it in the app).
       - ${ELN_DATA_DIR:-./data}:/data
-      # Tiny persistent volume for the storage-location pointer, so the chosen
-      # folder is remembered across restarts (lives outside the movable data dir).
       - eln_config:/config
-      # Network storage made browsable in-app. Point ELN_NAS_DIR at a mounted
-      # NAS/SharePoint share on the host; browse to it under /nas in Storage.
       - ${ELN_NAS_DIR:-./nas}:/nas
+      # rclone OAuth token; read-write because rclone rewrites it on refresh.
+      - ${ELN_RCLONE_CONFIG_DIR:-./rclone-config}:/rclone
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8091/login')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
 
-  # Demo-only stand-in for Home Assistant (fake hood cameras + sensors).
-  # Start with: docker compose --profile demo up -d
-  # Then point Equipment -> URL at http://mockha:8123 with any token.
   mockha:
     build: ./mock_ha
     image: ereztech-eln-mockha

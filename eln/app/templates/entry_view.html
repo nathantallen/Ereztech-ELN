@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}{{ meta.id }} — Ereztech ELN{% endblock %}
+{% block title %}{{ meta | notebook_ref }} — Ereztech ELN{% endblock %}
 {% block content %}
 {% set locked = meta.status != 'draft' %}
 <div class="page-head">
   <div>
-    <h1><span class="mono">{{ meta.id }}</span> — {{ meta.title }}</h1>
+    <h1><span class="mono">{{ meta | notebook_ref }}</span> — {{ meta.title }}</h1>
     <div class="sub">
-      {% if meta.chemist_number and meta.notebook_number and meta.page_number %}<strong>Chemist {{ meta.chemist_number }} · Notebook {{ meta.notebook_number }} · Page {{ meta.page_number }}</strong> · {% endif %}
+      {% if meta.chemist_number and meta.notebook_number and meta.page_number %}<span class="internal-ref">Internal reference {{ meta.id }}</span> · {% endif %}
       {% if meta.lot_number %}<strong>Lot {{ meta.lot_number }}</strong> · {% endif %}
       {{ meta.project }}{{ ' · ' if meta.project }}{{ meta.experiment_date }} · {{ meta.technique or meta.atmosphere }}
       · by {{ meta.author }}
@@ -35,16 +35,41 @@
 </div>
 {% endif %}
 
+<div class="card" id="notebook-details">
+  {% if can_edit and not locked %}
+  <form method="post" action="{{ url_for('entries.save_setup', eid=meta.id) }}" class="form-grid">
+    <label class="span2">Title
+      <input type="text" name="title" value="{{ meta.title }}" required>
+    </label>
+    <label>Project
+      <input type="text" name="project" value="{{ meta.project }}">
+    </label>
+    <label>Date
+      <input type="date" name="experiment_date" value="{{ meta.experiment_date }}">
+    </label>
+    <label class="span2">Lot number
+      <input type="text" name="lot_number" value="{{ meta.lot_number or '' }}" autocomplete="off">
+    </label>
+    <label class="span2">Objective
+      <textarea name="objective" class="objective-input" rows="1">{{ sections.get('Objective', '') }}</textarea>
+    </label>
+    <div class="span2 form-actions"><button class="btn btn-orange" type="submit">Save page details</button></div>
+  </form>
+  {% else %}
+  <dl class="notebook-details-readonly">
+    <dt>Title</dt><dd>{{ meta.title }}</dd>
+    <dt>Project</dt><dd>{{ meta.project or '—' }}</dd>
+    <dt>Date</dt><dd>{{ meta.experiment_date or '—' }}</dd>
+    <dt>Lot number</dt><dd>{{ meta.lot_number or '—' }}</dd>
+  </dl>
+  <h2>Objective</h2>
+  <div class="md-body">{{ sections.get('Objective', '') | markdown }}</div>
+  {% endif %}
+</div>
+
 {% include '_equipment.html' %}
 
-{% include '_operations.html' %}
-
-<div class="grid-main-side">
 <div>
-  <div class="card">
-    <h2>Objective</h2>
-    <div class="md-body">{{ sections.get('Objective', '') | markdown }}</div>
-  </div>
 
   {% if meta.structures %}
   <div class="card" id="structures">
@@ -71,10 +96,20 @@
 
   {% include '_inventory.html' %}
 
-  <div class="card">
+  <div class="card" id="procedure">
     <h2>Procedure</h2>
+    {% if can_edit and not locked %}
+    <form method="post" action="{{ url_for('entries.save_setup', eid=meta.id) }}">
+      <textarea name="procedure" rows="8" aria-label="Procedure">{{ sections.get('Procedure', '') }}</textarea>
+      <input type="hidden" name="return_to" value="#procedure">
+      <div class="form-actions"><button class="btn btn-orange" type="submit">Save procedure</button></div>
+    </form>
+    {% else %}
     <div class="md-body">{{ sections.get('Procedure', '') | markdown }}</div>
+    {% endif %}
   </div>
+
+  {% include '_operations.html' %}
 
   {% include '_opslog.html' %}
 
@@ -96,8 +131,30 @@
     {% endif %}
   </div>
 
+  <div class="card" id="analytics">
+    <h2>Analytical data</h2>
+    {% for a in meta.analytics or [] %}
+    <div class="attachment">
+      <div class="attachment-head"><span class="att-kind att-data">{{ a.technique }}</span>
+        <strong>{{ a.outcome }}</strong>{% if a.summary %}<span>{{ a.summary }}</span>{% endif %}
+        {% if a.file %}<a href="{{ url_for('entries.serve_file', eid=meta.id, relpath=a.file) }}">Open data file</a>{% endif %}
+        <span class="muted small">{{ a.recorded_by }} · {{ a.recorded_at | nicedate }}</span>
+      </div>
+    </div>
+    {% else %}<p class="muted">No analytical records added.</p>{% endfor %}
+    {% if can_edit and not locked %}
+    <form method="post" action="{{ url_for('entries.add_analytical_record', eid=meta.id) }}" enctype="multipart/form-data" class="form-grid">
+      <label>Technique<select name="technique" required><option value="">Select…</option>{% for t in ['NMR','TGA','DSC','GC','ICP-MS','Elemental analysis','Other'] %}<option>{{ t }}</option>{% endfor %}</select></label>
+      <label>Outcome<select name="outcome"><option>Recorded</option><option>Pass</option><option>Fail</option><option>Inconclusive</option></select></label>
+      <label class="span2">Summary<textarea name="summary" rows="2" placeholder="Key result or interpretation"></textarea></label>
+      <label>Raw data or report<input type="file" name="file"></label>
+      <div class="form-actions"><button class="btn" type="submit">Add analytical record</button></div>
+    </form>
+    {% endif %}
+  </div>
+
   <div class="card">
-    <h2>Attached data files</h2>
+    <h2>Attached files</h2>
     {% if meta.attachments %}
     {% for att in meta.attachments %}
     <div class="attachment">
@@ -140,9 +197,28 @@
     <p class="muted small">Video (mp4, mov…), sensor logs (csv, tsv, json…), spectra, images or any other file.</p>
     {% endif %}
   </div>
-</div>
 
-<aside>
+  {% if meta.status == 'witnessed' %}
+  <div class="card" id="finalized-records">
+    <h2>Finalized record &amp; amendments</h2>
+    {% for f in finalizations %}<p class="small"><strong>{{ f.version }}</strong> published {{ f.published_at | nicedate }} by {{ f.published_by }}<br><span class="mono muted">{{ f.path }}</span></p>{% else %}<p class="muted">This witnessed entry has not yet been published as a finalized record.</p>{% endfor %}
+    {% if can_edit and not finalizations %}<form method="post" action="{{ url_for('entries.finalize', eid=meta.id) }}"><button class="btn btn-orange" type="submit">Publish finalized record</button></form>{% endif %}
+    {% if finalizations and can_edit %}<p><a class="btn btn-ghost" href="{{ url_for('entries.new_amendment', eid=meta.id) }}">Create signed amendment</a></p>{% endif %}
+    {% for a in amendments %}<p class="small"><a href="{{ url_for('entries.view_amendment', eid=meta.id, amendment_id=a.id) }}"><strong>{{ a.version }}</strong> — {{ a.reason }}</a> <span class="pill">{{ a.status }}</span></p>{% endfor %}
+  </div>
+  {% endif %}
+
+  {% if meta.status == 'witnessed' and can_edit %}
+  <div class="card">
+    <h2>Reusable experiment template</h2>
+    <p class="small muted">Save this witnessed setup as an approved starting point for future experiments. It does not restore the removed structure-editor templates.</p>
+    <form method="post" action="{{ url_for('entries.save_as_template', eid=meta.id) }}" class="form-grid">
+      <label>Template name<input name="name" required placeholder="e.g. Standard TMGa distillation"></label>
+      <label>Description<input name="description" placeholder="Optional guidance"></label>
+      <div class="form-actions"><button class="btn" type="submit">Save approved template</button></div>
+    </form>
+  </div>
+  {% endif %}
   <div class="card">
     <h2>References</h2>
     {% if meta.repeat_of %}
@@ -197,6 +273,39 @@
   </div>
 
   <div class="card">
+    <h2>Storage</h2>
+    {% if archive_warning %}
+    <p class="small" style="color:#b00020">{{ archive_warning }}</p>
+    {% endif %}
+    {% if archive_status and archive_status.archived %}
+    <p class="small">Drawings, photos and attachments are held in <strong>OneDrive</strong>,
+      together with a PDF of this record.</p>
+    <p class="small muted">
+      {{ archive_status.count }} file(s), {{ (archive_status.bytes / 1024) | round(1) }} KB ·
+      archived {{ archive_status.at | nicedate }} by {{ archive_status.by }}<br>
+      {{ archive_status.cached_locally }} of {{ archive_status.count }} cached on this server.
+    </p>
+    <p class="small muted">The entry text and audit trail always stay on this server, so
+      the notebook index works without a network connection. Archived files are fetched
+      back automatically the first time you open the entry.</p>
+    {% elif archive_configured %}
+    <p class="small">All files are on this server.</p>
+    <p class="small muted">Archiving renders this entry to PDF, uploads it with the
+      drawings, photos and attachments, verifies every file by downloading it back and
+      comparing content, and only then frees the local copies. The entry text and audit
+      trail are never moved.{% if not pdf_available %} <strong>PDF rendering is
+      unavailable in this container — files would be archived without one.</strong>{% endif %}</p>
+    <form method="post" action="{{ url_for('entries.archive_entry', eid=meta.id) }}"
+          onsubmit="return confirm('Archive this entry to OneDrive?\n\nA PDF of the record is uploaded with the drawings, photos and attachments. Nothing is deleted unless every file is verified byte-for-byte, and the entry text and audit trail stay on this server.')">
+      <button class="btn" type="submit">Archive to OneDrive</button>
+    </form>
+    {% else %}
+    <p class="small muted">All files are on this server. OneDrive archiving is not
+      configured.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
     <h2>Audit trail</h2>
     <div class="audit-log">
       {% for row in audit | reverse %}
@@ -209,7 +318,6 @@
       {% endfor %}
     </div>
   </div>
-</aside>
 </div>
 <script src="{{ url_for('static', filename='js/stoich.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/ops.js') }}" defer></script>

@@ -40,6 +40,11 @@
   <label>Container
     <input type="text" name="container" value="{{ meta.container if meta }}" placeholder="SS-316 bubbler #14">
   </label>
+  <label>Barcode / QR label code
+    <input type="text" name="barcode" value="{{ meta.barcode if meta else '' }}" inputmode="text" autocomplete="off" placeholder="Scan supplier or ELN label">
+    <button class="btn btn-xs" type="button" id="scan-barcode">Scan with camera</button>
+    <span class="muted small" id="barcode-scan-status"></span>
+  </label>
   <label>Storage location
     <input type="text" name="location" value="{{ meta.location if meta }}" placeholder="Gas cabinet 2, slot A">
   </label>
@@ -65,4 +70,36 @@
     <a class="btn btn-ghost" href="{{ url_for('materials.view', slug=material.slug) }}">Cancel</a>
   </div>
 </form>
+<script>
+(() => {
+  const button = document.getElementById('scan-barcode');
+  const input = document.querySelector('input[name="barcode"]');
+  const status = document.getElementById('barcode-scan-status');
+  if (!button || !input) return;
+  button.addEventListener('click', async () => {
+    if (!('BarcodeDetector' in window) || !navigator.mediaDevices) {
+      status.textContent = 'Camera scanning is unavailable in this browser; use a handheld scanner or enter the code.';
+      return;
+    }
+    let stream;
+    const video = document.createElement('video'); video.autoplay = true; video.playsInline = true;
+    const dialog = document.createElement('dialog'); dialog.className = 'dlg';
+    dialog.innerHTML = '<p>Point the camera at the supplier barcode or ELN label.</p><button class="btn btn-ghost" type="button">Cancel</button>';
+    dialog.append(video); document.body.append(dialog); dialog.showModal();
+    dialog.querySelector('button').addEventListener('click', () => dialog.close());
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});
+      video.srcObject = stream;
+      const detector = new BarcodeDetector({formats:['code_39','code_128','qr_code','ean_13','ean_8','upc_a','upc_e']});
+      const scan = async () => {
+        const found = await detector.detect(video);
+        if (found[0]) { input.value = found[0].rawValue; status.textContent = 'Scanned.'; dialog.close(); return; }
+        if (dialog.open) requestAnimationFrame(scan);
+      };
+      requestAnimationFrame(scan);
+    } catch (err) { status.textContent = 'Camera access was not available.'; dialog.close(); }
+    dialog.addEventListener('close', () => { if (stream) stream.getTracks().forEach(t => t.stop()); dialog.remove(); }, {once:true});
+  });
+})();
+</script>
 {% endblock %}

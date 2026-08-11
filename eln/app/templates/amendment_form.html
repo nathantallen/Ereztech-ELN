@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}New amendment — {{ meta | notebook_ref }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>New signed amendment</h1><div class="sub">{{ meta | notebook_ref }} — the original finalized record will remain unchanged.</div></div></div>
+<form method="post" class="card form-grid">
+  <label class="span2">Reason for amendment<input name="reason" required placeholder="Why is this correction necessary?"></label>
+  <label class="span2">Exact correction<textarea name="changes" rows="8" required placeholder="State the corrected information and its impact. Do not overwrite the original record."></textarea></label>
+  <div class="span2 form-actions"><button class="btn btn-orange">Create amendment draft</button><a class="btn btn-ghost" href="{{ url_for('entries.view', eid=meta.id) }}">Cancel</a></div>
+</form>
+{% endblock %}

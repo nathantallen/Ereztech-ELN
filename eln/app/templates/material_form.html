@@ -18,6 +18,9 @@
   <label>Default supplier
     <input type="text" name="supplier" value="{{ meta.supplier if meta }}">
   </label>
+  <label>Material barcode / supplier code
+    <input type="text" name="barcode" value="{{ meta.barcode if meta else '' }}" inputmode="text" autocomplete="off" placeholder="Scan or enter code">
+  </label>
   <label class="check-label">
     <input type="checkbox" name="air_sensitive" {{ 'checked' if meta and meta.air_sensitive }}>
     Air / moisture sensitive

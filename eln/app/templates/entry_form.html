@@ -1,20 +1,30 @@
 {% extends "base.html" %}
-{% block title %}{{ 'Edit ' + meta.id if meta else 'New experiment' }} — Ereztech ELN{% endblock %}
+{% block title %}{{ ('Edit ' + (meta | notebook_ref)) if meta else 'New experiment' }} — Ereztech ELN{% endblock %}
 {% block container_class %}container-wide{% endblock %}
 {% block content %}
 <div class="page-head">
   <div>
-    <h1>{{ 'Edit ' + meta.id if meta else 'New experiment' }}</h1>
+    <h1>{{ ('Edit ' + (meta | notebook_ref)) if meta else 'New experiment' }}</h1>
+    {% if meta and meta.chemist_number and meta.notebook_number and meta.page_number %}<div class="sub">Internal reference {{ meta.id }}</div>{% endif %}
     <div class="sub">Entries are editable while in draft; signing locks the record.</div>
   </div>
 </div>
 
 <form method="post" class="card form-grid" id="entry-form">
+  {% if not meta and templates %}
+  <label class="span2">Start from approved experiment template
+    <select name="template" onchange="if (this.value) window.location='{{ url_for('entries.new_entry') }}?template='+encodeURIComponent(this.value)">
+      <option value="">Blank experiment</option>
+      {% for t in templates %}<option value="{{ t.id }}" {{ 'selected' if selected_template and selected_template.id == t.id }}>{{ t.name }}{% if t.description %} — {{ t.description }}{% endif %}</option>{% endfor %}
+    </select>
+    <span class="muted small">Templates copy approved reaction setup and procedure into a new editable draft.</span>
+  </label>
+  {% endif %}
   <label class="span2">Title
-    <input type="text" name="title" value="{{ meta.title if meta }}" required placeholder="e.g. TMGa adduct purification — distillation trial 13">
+    <input type="text" name="title" value="{{ meta.title if meta else initial_meta.title if initial_meta else '' }}" required placeholder="e.g. TMGa adduct purification — distillation trial 13">
   </label>
   <label>Project
-    <input type="text" name="project" value="{{ meta.project if meta }}" placeholder="e.g. TMGa 6N purity">
+    <input type="text" name="project" value="{{ meta.project if meta else initial_meta.project if initial_meta else '' }}" placeholder="e.g. TMGa 6N purity">
   </label>
   <label>Lot number
     <input type="text" name="lot_number" value="{{ meta.lot_number if meta else '' }}" placeholder="e.g. TMG-2607-B" autocomplete="off">
@@ -22,7 +32,7 @@
   <label>Experiment date
     <input type="date" name="experiment_date" value="{{ meta.experiment_date if meta }}">
   </label>
-  {% set current_technique = (meta.technique or meta.atmosphere) if meta else '' %}
+  {% set current_technique = (meta.technique or meta.atmosphere) if meta else (initial_meta.technique if initial_meta else '') %}
   <label>Technique
     <select name="technique" id="technique-select">
       {% for t in techniques %}

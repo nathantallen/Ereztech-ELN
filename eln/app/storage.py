@@ -23,9 +23,11 @@ owns them.
 """
 import datetime
 import copy
+import hashlib
 import json
 import os
 import re
+import shutil
 import threading
 import uuid
 from contextlib import contextmanager
@@ -140,6 +142,7 @@ class Storage:
         self.users_file = os.path.join(self.root, "users.json")
         self.roles_file = os.path.join(self.root, "roles.json")
         self.inventory_file = os.path.join(self.root, "inventory_transactions.jsonl")
+        self.templates_file = os.path.join(self.root, "experiment_templates.json")
         from .chem import PropertyDB
         self.properties = PropertyDB(os.path.join(self.root, "properties.json"))
         # eid -> containing folder; an entry never moves once created, so this
@@ -216,6 +219,7 @@ class Storage:
             tmp = path + ".tmp"
             with open(tmp, "w", encoding="utf-8") as f:
                 json.dump(d, f, indent=2, ensure_ascii=False)
+            _chmod_private(tmp)
             os.replace(tmp, path)
 
     def get_timezone(self):
@@ -227,36 +231,153 @@ class Storage:
         d["timezone"] = tz or ""
         self.save_settings(d)
 
-    # ---------- company-wide Ketcher templates ----------
+    # ---------- reusable experiment templates ----------
 
-    def get_structure_templates(self):
-        path = os.path.join(self.root, "structure_templates.json")
+    def list_experiment_templates(self):
         try:
-            with open(path, "r", encoding="utf-8") as f:
-                records = json.load(f)
-            return records if isinstance(records, list) else []
+            with open(self.templates_file, "r", encoding="utf-8") as f:
+                rows = json.load(f).get("templates", [])
+        except (OSError, ValueError):
+            rows = []
+        return sorted(rows, key=lambda r: (r.get("name") or "").lower())
+
+    def get_experiment_template(self, key):
+        return next((row for row in self.list_experiment_templates()
+                     if row.get("id") == key), None)
+
+    def save_experiment_template(self, row):
+        with _LOCK:
+            rows = [r for r in self.list_experiment_templates()
+                    if r.get("id") != row.get("id")]
+            rows.append(row)
+            tmp = self.templates_file + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump({"templates": rows}, f, indent=2, ensure_ascii=False)
+            os.replace(tmp, self.templates_file)
+
+    # ---------- finalized records and amendments ----------
+
+    def finalization_index_path(self, eid):
+        return os.path.join(self.entry_dir(eid), "finalizations.json")
+
+    def finalizations(self, eid):
+        try:
+            with open(self.finalization_index_path(eid), "r", encoding="utf-8") as f:
+                return json.load(f).get("versions", [])
         except (OSError, ValueError):
             return []
 
-    def save_structure_template(self, name, structure, username):
-        key = slugify(name)
-        with _LOCK:
-            records = self.get_structure_templates()
-            record = {"key": key, "name": name, "group": "Company templates",
-                      "structure": structure, "builtin": False,
-                      "updated": utcnow(), "updated_by": username}
-            for i, existing in enumerate(records):
-                if existing.get("key") == key:
-                    records[i] = record
-                    break
-            else:
-                records.append(record)
-            path = os.path.join(self.root, "structure_templates.json")
-            tmp = path + ".tmp"
-            with open(tmp, "w", encoding="utf-8") as f:
-                json.dump(records, f, indent=2, ensure_ascii=False)
-            os.replace(tmp, path)
-        return record
+    def _save_finalizations(self, eid, rows):
+        path = self.finalization_index_path(eid)
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({"versions": rows}, f, indent=2, ensure_ascii=False)
+        os.replace(tmp, path)
+
+    @staticmethod
+    def _record_hashes(root):
+        hashes = {}
+        for base, _, names in os.walk(root):
+            for name in sorted(names):
+                if name == "manifest.json":
+                    continue
+                path = os.path.join(base, name)
+                rel = os.path.relpath(path, root).replace(os.sep, "/")
+                digest = hashlib.sha256()
+                with open(path, "rb") as f:
+                    for block in iter(lambda: f.read(1024 * 1024), b""):
+                        digest.update(block)
+                hashes[rel] = digest.hexdigest()
+        return hashes
+
+    def publish_final_record(self, eid, meta, username):
+        """Copy a witnessed record into an immutable, SharePoint-ready package.
+
+        An administrator may configure ``sharepoint_finalized_root`` to a mounted
+        synced library. Until then the package lives under the entry itself.
+        """
+        versions = self.finalizations(eid)
+        version = "v%d" % (len(versions) + 1)
+        configured_root = (self.get_settings().get("sharepoint_finalized_root") or "").strip()
+        if configured_root:
+            root = os.path.abspath(configured_root)
+            target = os.path.join(root, "R&D", "ELN",
+                                  str(meta.get("chemist_number") or meta.get("author")),
+                                  "Notebook-" + str(meta.get("notebook_number") or "unassigned"),
+                                  "Page-" + str(meta.get("page_number") or meta.get("id")), version)
+            destination_kind = "SharePoint library"
+        else:
+            target = os.path.join(self.entry_dir(eid), "finalized", version)
+            destination_kind = "local finalized-records folder"
+        if os.path.exists(target):
+            raise ValueError("That finalized version already exists.")
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        src = self.entry_dir(eid)
+        shutil.copytree(src, target, ignore=shutil.ignore_patterns(
+            "finalized", "amendments", "finalizations.json", "*.tmp"))
+        manifest = {
+            "record_type": "finalized_experiment", "entry_id": eid,
+            "notebook_reference": "%s / %s / %s" % (
+                meta.get("chemist_number", ""), meta.get("notebook_number", ""), meta.get("page_number", "")),
+            "version": version, "published_at": utcnow(), "published_by": username,
+            "source_status": meta.get("status"), "files": self._record_hashes(target),
+        }
+        with open(os.path.join(target, "manifest.json"), "w", encoding="utf-8") as f:
+            json.dump(manifest, f, indent=2, ensure_ascii=False)
+        row = {"version": version, "published_at": manifest["published_at"],
+               "published_by": username, "path": target,
+               "destination": destination_kind}
+        versions.append(row)
+        self._save_finalizations(eid, versions)
+        return row
+
+    def amendments_dir(self, eid):
+        return os.path.join(self.entry_dir(eid), "amendments")
+
+    def list_amendments(self, eid):
+        rows = []
+        directory = self.amendments_dir(eid)
+        if not os.path.isdir(directory):
+            return rows
+        for name in sorted(os.listdir(directory)):
+            path = os.path.join(directory, name, "amendment.md")
+            if os.path.isfile(path):
+                meta, body = load_md(path)
+                meta["_body"] = body
+                rows.append(meta)
+        return rows
+
+    def get_amendment(self, eid, amendment_id):
+        if not re.fullmatch(r"amendment-\d{3}", amendment_id or ""):
+            return None, None
+        path = os.path.join(self.amendments_dir(eid), amendment_id, "amendment.md")
+        return load_md(path) if os.path.isfile(path) else (None, None)
+
+    def save_amendment(self, eid, amendment_id, meta, body):
+        directory = os.path.join(self.amendments_dir(eid), amendment_id)
+        os.makedirs(directory, exist_ok=True)
+        dump_md(os.path.join(directory, "amendment.md"), meta, body)
+
+    def publish_amendment_record(self, eid, amendment, username):
+        """Publish a witnessed amendment next to its immutable base record."""
+        versions = self.finalizations(eid)
+        if not versions:
+            raise ValueError("No finalized base record exists.")
+        base_path = versions[-1]["path"]
+        target = os.path.join(os.path.dirname(base_path), "amendments", amendment["version"])
+        if os.path.exists(target):
+            raise ValueError("That amendment version is already published.")
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        source = os.path.join(self.amendments_dir(eid), amendment["id"])
+        shutil.copytree(source, target)
+        manifest = {"record_type": "signed_amendment", "entry_id": eid,
+                    "amendment_id": amendment["id"], "version": amendment["version"],
+                    "published_at": utcnow(), "published_by": username,
+                    "files": self._record_hashes(target)}
+        with open(os.path.join(target, "manifest.json"), "w", encoding="utf-8") as f:
+            json.dump(manifest, f, indent=2, ensure_ascii=False)
+        return {"path": target, "published_at": manifest["published_at"],
+                "published_by": username}
 
     # ---------- techniques (customizable; seeded from the classic set) ----------
 

@@ -1,5 +1,9 @@
+import base64
+import io
 import os
 import re
+
+import qrcode
 
 from flask import (Blueprint, abort, current_app, flash, redirect, render_template,
                    request, send_from_directory, url_for)
@@ -9,16 +13,49 @@ from werkzeug.utils import secure_filename
 from .chem import formula_and_mw, pubchem_lookup
 from .inventory import (UNITS_BY_FAMILY, batch_quantity, format_base,
                         set_batch_quantity, to_base)
-from .organo import available_templates
 from .storage import BATCH_STATUSES, slugify, utcnow
 from .structure_files import load_preferred, save_bundle
 from .svg import namespace_svg as _ns_svg, sanitize_svg
 
 bp = Blueprint("materials", __name__, url_prefix="/materials")
 
-MATERIAL_FIELDS = ("name", "cas", "formula", "supplier", "hazards", "storage")
+_CODE39 = {
+    "0": "nnnwwnwnn", "1": "wnnwnnnnw", "2": "nnwwnnnnw", "3": "wnwwnnnnn",
+    "4": "nnnwwnnnw", "5": "wnnwwnnnn", "6": "nnwwwnnnn", "7": "nnnwnnwnw",
+    "8": "wnnwnnwnn", "9": "nnwwnnwnn", "A": "wnnnnwnnw", "B": "nnwnnwnnw",
+    "C": "wnwnnwnnn", "D": "nnnnwwnnw", "E": "wnnnwwnnn", "F": "nnwnwwnnn",
+    "G": "nnnnnwwnw", "H": "wnnnnwwnn", "I": "nnwnnwwnn", "J": "nnnnwwwnn",
+    "K": "wnnnnnnww", "L": "nnwnnnnww", "M": "wnwnnnnwn", "N": "nnnnwnnww",
+    "O": "wnnnwnnwn", "P": "nnwnwnnwn", "Q": "nnnnnnwww", "R": "wnnnnnwwn",
+    "S": "nnwnnnwwn", "T": "wnwnnnwnn", "U": "nnnnwnwwn", "V": "wnnnwnwwn",
+    "W": "nnwnwnwwn", "X": "nnnnnnwww", "Y": "wnnnnnwww", "Z": "nnwnnnwww",
+    "-": "nnnnwnnww", ".": "wnnnwnnww", " ": "nnwnwnnww", "$": "nwnwnwnnn",
+    "/": "nwnwnnnwn", "+": "nwnnnwnwn", "%": "nnnwnwnwn", "*": "nwnnwnwnn",
+}
+
+
+def _code39_svg(value):
+    value = "*" + "".join(c for c in value.upper() if c in _CODE39 and c != "*") + "*"
+    x, bars = 20, []
+    for char in value:
+        for i, width_name in enumerate(_CODE39[char]):
+            width = 5 if width_name == "w" else 2
+            if i % 2 == 0:
+                bars.append('<rect x="%d" y="4" width="%d" height="72"/>' % (x, width))
+            x += width
+        x += 3
+    return '<svg class="barcode" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %d 80" role="img" aria-label="Barcode"><rect width="100%%" height="100%%" fill="white"/>%s</svg>' % (x + 20, "".join(bars))
+
+
+def _qr_data_uri(value):
+    image = qrcode.make(value)
+    buf = io.BytesIO()
+    image.save(buf, format="PNG")
+    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
+
+MATERIAL_FIELDS = ("name", "cas", "formula", "supplier", "hazards", "storage", "barcode")
 BATCH_FIELDS = ("lot", "supplier", "received", "expiry", "purity",
-                "container", "location", "status")
+                "container", "location", "status", "barcode")
 
 
 def _storage():
@@ -44,10 +81,19 @@ def _get_material_or_404(slug):
 @login_required
 def list_materials():
     q = request.args.get("q", "").strip().lower()
-    mats = _storage().list_materials()
+    storage = _storage()
+    mats = storage.list_materials()
     if q:
-        mats = [m for m in mats if q in " ".join(
-            str(m.get(k, "")) for k in ("name", "cas", "formula", "supplier")).lower()]
+        filtered = []
+        for m in mats:
+            hay = " ".join(str(m.get(k, "")) for k in
+                           ("name", "cas", "formula", "supplier", "barcode")).lower()
+            batch_hit = any(q in str(b.get("barcode", "")).lower()
+                            or q == ("eln-%s-%s" % (m.get("slug"), b.get("lot_slug"))).lower()
+                            for b in storage.list_batches(m.get("slug")))
+            if q in hay or batch_hit:
+                filtered.append(m)
+        mats = filtered
     for i, m in enumerate(mats):
         m["_svg"] = _material_svg(m.get("slug", ""), "ml%d" % i)
     return render_template("materials.html", materials=mats, q=request.args.get("q", ""))
@@ -116,8 +162,7 @@ def draw_structure(slug):
                            subtitle=meta.get("name", slug),
                            action_url=url_for("materials.save_structure", slug=slug),
                            cancel_url=url_for("materials.view", slug=slug),
-                           molfile=molfile, caption=meta.get("name", ""),
-                           structure_templates=available_templates(_storage()))
+                           molfile=molfile, caption=meta.get("name", ""))
 
 
 @bp.route("/<slug>/structure/save", methods=["POST"])
@@ -283,3 +328,18 @@ def batch_attach(slug, lot_slug):
 def serve_file(slug, relpath):
     _get_material_or_404(slug)
     return send_from_directory(_storage().material_dir(slug), relpath)
+
+
+@bp.route("/<slug>/batches/<lot_slug>/label")
+@login_required
+def batch_label(slug, lot_slug):
+    """A printer-friendly internal label. Barcode scanners can enter this code
+    directly into the barcode fields; QR labels can be added by a label printer.
+    """
+    material, _ = _get_material_or_404(slug)
+    batch, _ = _storage().get_batch(slug, lot_slug)
+    if batch is None:
+        abort(404)
+    code = batch.get("barcode") or ("ELN-%s-%s" % (slug, lot_slug)).upper()
+    return render_template("batch_label.html", material=material, batch=batch, code=code,
+                           barcode_svg=_code39_svg(code), qr_data_uri=_qr_data_uri(code))
