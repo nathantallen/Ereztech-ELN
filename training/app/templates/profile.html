@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}My password — Ereztech Safety Training{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>My password</h1>
+    <div class="sub">You also use this password to sign your training record.</div>
+  </div>
+</div>
+<form method="post" class="card form-grid" style="max-width: 560px;">
+  <label class="span2">Current password
+    <input type="password" name="current_password" autocomplete="current-password" required>
+  </label>
+  <label>New password
+    <input type="password" name="new_password" autocomplete="new-password" minlength="8" required>
+  </label>
+  <label>Confirm new password
+    <input type="password" name="confirm_password" autocomplete="new-password" minlength="8" required>
+  </label>
+  <div class="span2 form-actions">
+    <button class="btn btn-orange" type="submit">Change password</button>
+    <a class="btn btn-ghost" href="{{ url_for('main.dashboard') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Quiz result {{ att.id }} — Ereztech Safety Training{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="sub"><a href="{{ url_for('records.detail', username=person.username) }}">{{ person.full_name }}</a> › Quiz attempt <span class="mono">{{ att.id }}</span></div>
+    <h1>{{ att.score }} / {{ att.total }} · {{ att.pct }}%</h1>
+    <div class="sub">{{ att.at | nicedate }} · {{ att.version }}</div>
+  </div>
+  <div class="head-actions">
+    <span class="badge {{ 'badge-approved' if att.passed else 'badge-rejected' }} pill-lg">{{ 'Pass' if att.passed else 'Below pass mark' }}</span>
+    {% if person.username == current_user.username %}
+    <a class="btn btn-ghost" href="{{ url_for('quiz.take') }}">Retake quiz</a>
+    <a class="btn" href="{{ url_for('main.dashboard') }}">My training</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid-main-side">
+  <div>
+    {% if not same_version %}
+    <div class="lockbar">This attempt was scored against {{ att.version }}. The questions have changed since,
+      so only the score is shown. Missed: {% for n in att.missed %}Q{{ n }}{{ ', ' if not loop.last }}{% else %}none{% endfor %}.</div>
+    {% endif %}
+    {% for q, mine in review %}
+    {% set ok = mine == q.answer %}
+    <div class="card q-review {{ 'q-ok' if ok else 'q-bad' }}">
+      <div class="q-review-head">
+        <span class="q-num">Q{{ q.n }}</span>
+        <strong>{{ q.question }}</strong>
+        {% if q.site %}<span class="tag tag-site">{{ q.site }}</span>{% endif %}
+      </div>
+      <ul class="plain-list q-options-review">
+        {% for opt in q.options %}
+        {% set letter = 'ABCD'[loop.index0] %}
+        <li class="{{ 'opt-answer' if letter == q.answer }} {{ 'opt-wrong' if letter == mine and not ok }}">
+          <span class="opt-letter">{{ letter }}</span> {{ opt }}
+          {% if letter == q.answer %}<span class="muted small">correct</span>{% elif letter == mine %}<span class="muted small">your answer</span>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      <p class="small"><strong>{{ 'Correct.' if ok else 'Incorrect.' }}</strong> {{ q.why }}</p>
+      <p class="muted small">Source: {{ q.source }}</p>
+    </div>
+    {% endfor %}
+  </div>
+  <div>
+    <div class="card">
+      <h2>By part</h2>
+      <table class="table">
+        <tbody>
+        {% for part, row in att.per_part.items() %}
+        <tr><td><span class="muted">Part {{ part }}</span> {{ part_titles.get(part, '') }}</td>
+            <td class="num {{ 'text-bad' if row.right < row.total }}">{{ row.right }}/{{ row.total }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

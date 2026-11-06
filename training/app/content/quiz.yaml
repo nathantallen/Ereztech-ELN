@@ -1,0 +1,783 @@
+# Ereztech Chemical Safety Assessment. Scored on the server; answers never
+# reach the browser before submission. `answer` is the option letter.
+# Changing questions? Bump `version` so new attempts are labelled.
+title: Chemical Safety Assessment
+version: Version 3 (55 questions), November 2026
+pass_mark: 80
+questions:
+- n: 1
+  part: 1
+  question: In the ACS risk management framework, what does RAMP stand for?
+  options:
+  - Recognize, Assess, Minimize, Prepare
+  - Recognize, Analyze, Monitor, Plan
+  - Review, Audit, Manage, Prevent
+  - Record, Assess, Monitor, Proceed
+  answer: A
+  why: >-
+    RAMP is the ACS framework behind Part 1: recognize the hazards, assess the risk, minimize
+    it, and prepare for emergencies.
+  source: 'ACS: From Chemical Safety Rules to Risk Management'
+- n: 2
+  part: 1
+  question: In the ACS videos, risk is described as a combination of which two factors?
+  options:
+  - Toxicity of the chemical and the total volume being used
+  - Hazard class and storage location
+  - Cost of controls and time to complete the work
+  - Severity of the hazard and likelihood of exposure
+  answer: D
+  why: >-
+    A severe hazard can still be low risk if exposure is unlikely. The risk matrix ranks severity
+    against likelihood.
+  source: 'ACS: Assessing Risks in the Chemistry Laboratory'
+- n: 3
+  part: 1
+  question: You need to dilute concentrated sulfuric acid. What is the safe method?
+  options:
+  - Add the water slowly to the acid while stirring
+  - Add the acid slowly to the water while stirring
+  - Pour both into a large beaker at once to spread the heat
+  - Preheat the water so the acid mixes in faster
+  answer: B
+  why: >-
+    Dilution is strongly exothermic. Adding acid to water lets the larger mass of water absorb
+    the heat. Water added to acid can boil locally and spatter acid.
+  source: 'ACS: Assessing Risks in the Chemistry Laboratory'
+- n: 4
+  part: 1
+  question: >-
+    A procedure that works at 1 L is moving to a 100 L jacketed reactor. What has to happen
+    before the first scaled-up batch?
+  options:
+  - Run one 100 L batch with extra PPE to see how it behaves
+  - A documented hazard review, including what happens if cooling fails
+  - Scale every quantity by 100 and keep the same addition times and temperatures
+  - Nothing new, since the chemistry was already proven at 1 L
+  answer: B
+  why: >-
+    Heat removal does not scale with volume. Process hazard analysis, and both CSB cases in
+    Part 7, point to a formal review before any scale-up.
+  source: 'WorkSafeBC: Process Safety; CSB case studies (Part 7)'
+- n: 5
+  part: 2
+  question: >-
+    Which SDS section tells you whether a solvent is incompatible with acids or oxidizers?
+  options:
+  - 'Section 4: First-Aid Measures'
+  - 'Section 8: Exposure Controls/Personal Protection'
+  - 'Section 10: Stability and Reactivity'
+  - 'Section 15: Regulatory Information'
+  answer: C
+  why: >-
+    Section 10 lists incompatible materials and hazardous reactions. Check it before mixing
+    chemicals or combining waste streams.
+  source: 'ACS College Safety Video #2: Chemical Safety Information Resources'
+- n: 6
+  part: 2
+  question: >-
+    Before pyrophoric or water-reactive work, which SDS section tells you which extinguishing
+    agent to stage at the hood?
+  options:
+  - 'Section 7: Handling and Storage'
+  - 'Section 9: Physical and Chemical Properties'
+  - 'Section 13: Disposal Considerations'
+  - 'Section 5: Firefighting Measures'
+  answer: D
+  why: >-
+    Section 5 lists suitable and unsuitable extinguishing media. Water and foam are unsuitable
+    for pyrophoric organometallics, and some also rule out CO2.
+  source: Safety Data Sheet (SDS) videos, ACS
+- n: 7
+  part: 2
+  question: >-
+    What is the recommended way to transfer larger volumes of a pyrophoric liquid between
+    septum-sealed vessels?
+  options:
+  - A plastic disposable syringe fitted with a long wide-bore needle
+  - Pouring quickly inside a high-flow fume hood
+  - A double-tipped needle (cannula) under inert gas pressure
+  - A glass powder funnel under a nitrogen blanket
+  answer: C
+  why: >-
+    Syringes are for small volumes. Larger transfers go by cannula so the reagent never contacts
+    air.
+  source: 'UCLA: Pyrophoric Liquid Safety'
+- n: 8
+  part: 2
+  question: >-
+    Why must a liquid-nitrogen cold trap on a Schlenk line never be left open to air, or cooled
+    while the line has a leak?
+  options:
+  - Nitrogen will freeze the bubbler oil
+  - Liquid oxygen can condense in it and explode when it warms
+  - Room moisture will freeze on the dewar and crack it
+  - The vacuum pump will lose its oil seal
+  answer: B
+  why: >-
+    Oxygen condenses at liquid-nitrogen temperature as a pale blue liquid. Mixed with organic
+    residue it can explode, and it boils off violently when the trap warms.
+  source: 'University of York: Schlenk Lines, Introduction & Overview'
+- n: 9
+  part: 2
+  question: >-
+    Why does OSHA have a separate standard (29 CFR 1910.1052) for methylene chloride (DCM)?
+  options:
+  - Long-term exposure can damage organs and cause cancer
+  - It is a Category 1 flammable liquid with a very low flash point
+  - It can ignite on contact with air, like a pyrophoric reagent
+  - It reacts violently with water and releases hydrogen chloride gas
+  answer: A
+  why: >-
+    DCM is not classed as a flammable liquid. Repeated exposure is linked to heart, liver
+    and brain damage and cancer, so use it in a fume hood and keep containers closed.
+  source: 'CDC: Fundamentals of Methylene Chloride Safety'
+- n: 10
+  part: 2
+  question: Which GHS pictogram marks an oxidizer?
+  options:
+  - Flame over circle
+  - Flame
+  - Exploding bomb
+  - Exclamation mark
+  answer: A
+  why: >-
+    The plain flame marks flammables, pyrophorics and water-reactives, which must be stored
+    away from anything carrying the flame-over-circle oxidizer pictogram.
+  source: 'ProCPR: Hazard Communication Pictograms'
+- n: 11
+  part: 2
+  question: How should chemicals be arranged on storage shelves?
+  options:
+  - Alphabetically, so anyone can find them
+  - By supplier, so reorders are easier
+  - By date received, with the oldest in front
+  - By compatibility class, with incompatible groups apart
+  answer: D
+  why: >-
+    Alphabetical order puts incompatible chemicals side by side. Keep acids from bases, oxidizers
+    from flammables, and water-reactives away from water.
+  source: Chemical Storage Hazards
+- n: 12
+  part: 2
+  question: You find an old bottle of ether with crystals around the cap. What do you do?
+  options:
+  - Open it in the fume hood and test it with a strip
+  - Leave it in place, don't open it, and report it
+  - Loosen the cap gently and add an inhibitor
+  - Rinse the crystals off with water, then test it
+  answer: B
+  why: >-
+    The crystals may be peroxides, which can detonate from the friction of opening the cap.
+    Test strips are for containers with no visible crystals.
+  source: 'Berkeley Lab: Testing Peroxide-forming Chemicals'
+- n: 13
+  part: 2
+  question: How should sodium or potassium metal be stored?
+  options:
+  - Submerged in a sealed jar of water
+  - Under mineral oil or inert gas
+  - In an open dish inside a desiccator
+  - Wrapped in foil in the flammables cabinet
+  answer: B
+  why: >-
+    Alkali metals react with water and release hydrogen, and potassium can form a shock-sensitive
+    superoxide crust in air. Report old potassium with a yellow or orange crust.
+  source: 'UC San Diego: Working with Reactive Metals, Ep. 3'
+- n: 14
+  part: 3
+  question: >-
+    Why is bonding and grounding required when dispensing flammable liquid from a 55-gallon
+    steel drum?
+  options:
+  - To prevent a static discharge from igniting the vapors
+  - To meet hazardous waste tracking and labeling rules
+  - To keep the drum from tipping over
+  - To keep the liquid from freezing in winter
+  answer: A
+  why: >-
+    Flowing liquid builds static charge. A spark between two containers at different potentials
+    can ignite flammable vapor.
+  source: 'Toyota: Flammable Liquids Safety Training'
+- n: 15
+  part: 3
+  question: >-
+    You are filling a metal safety can from a grounded 55-gallon solvent drum. How should
+    the can be connected?
+  options:
+  - Set on a rubber mat so it stays insulated from the grounded floor
+  - Not connected at all, since only the drum needs a ground
+  - Bonded to the drum with a bonding wire during the transfer
+  - Connected once filling is finished
+  answer: C
+  why: >-
+    Bonding puts the drum and the can at the same potential so no spark can jump between them.
+    Grounding drains the charge to earth. You need both.
+  source: 'Toyota: Flammable Liquids Safety Training'
+- n: 16
+  part: 3
+  question: >-
+    A gas meter reads 10% LEL for a solvent whose LEL is 1.0% by volume. What is the vapor
+    concentration in the air?
+  options:
+  - 10% by volume, the same as the meter reading
+  - 0.1% by volume (about 1,000 ppm)
+  - 1.0% by volume
+  - 0.01% by volume (about 100 ppm)
+  answer: B
+  why: >-
+    LEL meters read percent of the lower explosive limit, not percent of the air. 10% of a
+    1.0% LEL is 0.1% by volume.
+  source: 'Delta Hazmat: A Crash Course on LEL Sensor Readings'
+- n: 17
+  part: 3
+  site: EEOP
+  question: >-
+    In a Saukville explosion-proof area, the blue warning light comes on and stays steady.
+    What does the EEOP require?
+  options:
+  - 'Evacuate the building: vapors have reached 25% of the LEL'
+  - Keep working and open the doors to ventilate
+  - 'Shut down the process: vapors have reached 10% of the LEL'
+  - 'Nothing: a steady light is a routine self-test'
+  answer: C
+  why: >-
+    Steady blue means 10% LEL and process shutdown. Flashing blue means 25% LEL and full evacuation.
+    These site thresholds apply at Saukville, not the general 'leave at 10%' advice in the
+    Delta Hazmat video.
+  source: Ereztech EEOP
+- n: 18
+  part: 3
+  site: EEOP
+  question: The blue warning light starts flashing. What does the EEOP require?
+  options:
+  - 'Shut down the process and stay to monitor: vapors have reached 10% of the LEL'
+  - Reset the light and continue if you notice no odor
+  - 'Full evacuation: vapors have reached 25% of the LEL'
+  - 'Go to the tornado shelters in Bathrooms #108 and #109'
+  answer: C
+  why: >-
+    Flashing blue (25% LEL) means full evacuation to the assembly point. Steady blue (10%
+    LEL) means process shutdown.
+  source: Ereztech EEOP
+- n: 19
+  part: 3
+  question: >-
+    Under OSHA 29 CFR 1910.106, a flammable liquid is Category 1 or 2 (the most hazardous)
+    when its flash point is:
+  options:
+  - Below 140 °F (60 °C)
+  - Below 73.4 °F (23 °C)
+  - Below 199.4 °F (93 °C)
+  - Above 100 °F (37.8 °C)
+  answer: B
+  why: >-
+    Categories 1 and 2 have flash points below 73.4 °F and are split by boiling point (95
+    °F). Category 3 runs to 140 °F and Category 4 to 199.4 °F.
+  source: 'Toyota: Flammable Liquids Safety Training; 29 CFR 1910.106'
+- n: 20
+  part: 4
+  question: What does PASS stand for when using a portable fire extinguisher?
+  options:
+  - Push, Activate, Spray, Secure
+  - Pull, Aim, Squeeze, Sweep
+  - Point, Assess, Shoot, Sweep
+  - Pin, Aim, Spray, Stop
+  answer: B
+  why: >-
+    Pull the pin, aim at the base of the fire (not the flames), squeeze the handle, and sweep
+    side to side.
+  source: 'San José Fire Department: How to Use a Fire Extinguisher'
+- n: 21
+  part: 4
+  question: >-
+    Before you try to put out a small lab fire with an extinguisher, what must already be
+    true?
+  options:
+  - You have checked the inspection tag on the extinguisher
+  - The fire alarm is silenced so you can hear
+  - You have moved the burning material into a fume hood
+  - Others are alerted, 911 is called, and your exit is clear
+  answer: D
+  why: >-
+    Only fight a fire you can escape from. If it grows or the extinguisher empties, leave.
+  source: 'San José Fire Department: How to Use a Fire Extinguisher'
+- n: 22
+  part: 4
+  question: >-
+    Chemical splashes in your eyes. How long should you flush at the eyewash station?
+  options:
+  - 30 seconds, then dry gently
+  - 2 minutes, or until the stinging stops completely
+  - At least 15 minutes, holding the eyelids open
+  - Until a supervisor arrives
+  answer: C
+  why: >-
+    Fifteen minutes is the minimum. Hold your eyelids open and roll your eyes so the water
+    reaches the whole surface.
+  source: 'ACS College Safety Video #6: Emergencies in the Chemistry Laboratory'
+- n: 23
+  part: 4
+  site: CHP
+  question: Where is the main spill kit at the Saukville facility?
+  options:
+  - 'Hazard Mat Storage Room #137'
+  - 'Breezeway #124'
+  - The receiving dock
+  - Under each lab's fume hood
+  answer: B
+  why: >-
+    The CHP places the main spill kit in Breezeway #124. Know the route to it from your work
+    area.
+  source: Ereztech CHP
+- n: 24
+  part: 4
+  site: EEOP
+  question: Where are the Saukville assembly points during an evacuation?
+  options:
+  - 'Primary: the receiving lot. Secondary: across the street.'
+  - 'Primary: the front parking lot. Secondary: Breezeway #124.'
+  - 'Primary: Bathrooms #108 and #109. Secondary: the receiving lot.'
+  - 'Primary: across the street. Secondary: the receiving lot.'
+  answer: D
+  why: >-
+    Go to the primary point across the street unless it is unsafe or you are told otherwise,
+    then use the receiving lot.
+  source: Ereztech EEOP
+- n: 25
+  part: 4
+  site: EEOP
+  question: During a tornado warning, where is the safest shelter in the Saukville building?
+  options:
+  - The assembly point across the street
+  - 'Hazard Mat Storage Room #137'
+  - 'Breezeway #124'
+  - 'Bathrooms #108 and #109'
+  answer: D
+  why: >-
+    The EEOP names Bathrooms #108 and #109 as the safest tornado shelters. Assembly points
+    are for fire and chemical evacuations, not severe weather.
+  source: Ereztech EEOP
+- n: 26
+  part: 4
+  question: >-
+    During a permit-required confined space entry, the entrant collapses. What does the attendant
+    do?
+  options:
+  - Go in right away and pull the entrant out
+  - Shut off the ventilation fan and wait
+  - Stay outside and call the rescue team
+  - Send the nearest coworker in to help
+  answer: C
+  why: >-
+    Many confined-space deaths are would-be rescuers. The attendant never enters; rescue is
+    done by the trained team or by retrieval line from outside.
+  source: Confined Space, Module 1; 29 CFR 1910.146
+- n: 27
+  part: 5
+  question: >-
+    At what 8-hour time-weighted average noise exposure does OSHA require a hearing conservation
+    program?
+  options:
+  - 60 dBA
+  - 100 dBA
+  - 85 dBA
+  - 120 dBA peak
+  answer: C
+  why: >-
+    85 dBA averaged over an 8-hour shift is the OSHA action level. Ringing in the ears (tinnitus)
+    and muffled voices are early warning signs of hearing loss.
+  source: 'TRADESAFE: Signs of Hearing Loss'
+- n: 28
+  part: 5
+  question: Where must the pump for an ambient-air supplied-air respirator be set up?
+  options:
+  - Inside the work area, so the hose stays short
+  - Next to the fume hood exhaust, where airflow is strongest
+  - Anywhere, since the pump filters out contaminants
+  - In clean air, away from the contaminated area
+  answer: D
+  why: >-
+    The pump delivers whatever air it draws in. These systems are for atmospheres that are
+    not immediately dangerous to life or health (non-IDLH).
+  source: 'Allegro: Supplied Air Respirators'
+- n: 29
+  part: 5
+  question: >-
+    Before an employee is fit tested for and wears a tight-fitting respirator, OSHA 29 CFR
+    1910.134 requires:
+  options:
+  - A hearing test
+  - A medical evaluation clearing them to wear it
+  - Watching the respirator training video and signing for it
+  - Verbal approval from a supervisor
+  answer: B
+  why: >-
+    The medical evaluation comes first, then the fit test, and the fit test is repeated at
+    least once a year.
+  source: 'OSHA: Respiratory Protection in General Industry'
+- n: 30
+  part: 5
+  question: What does glove "permeation" mean?
+  options:
+  - The chemical passes through intact glove material at the molecular level
+  - The glove swells, softens or cracks on contact
+  - Liquid leaks through a hole or a seam in the glove
+  - The glove dissolves completely in the chemical
+  answer: A
+  why: >-
+    Permeation leaves no visible damage, so check breakthrough times on the glove chart. Thin
+    nitrile lasts only minutes against methylene chloride.
+  source: 'Northwestern University: Glove Penetration, Permeation, and Degradation'
+- n: 31
+  part: 5
+  question: Where should you work inside a chemical fume hood?
+  options:
+  - Right at the front edge, where you can see best
+  - At least 6 inches inside the sash
+  - With the sash fully raised for more airflow
+  - With equipment pushed against the rear baffles
+  answer: B
+  why: >-
+    Keep the sash at or below the marked height, keep the baffles clear, don't store chemicals
+    in the hood, and keep your head outside.
+  source: 'Supreme Science: How To Use a Fume Hood; Fume Hood Safety: DOs and DON''Ts'
+- n: 32
+  part: 6
+  question: >-
+    In the 8-step lockout/tagout sequence, what comes right after applying locks and tags?
+  options:
+  - Try to start the equipment
+  - Remove the tags briefly to test the circuit
+  - Release or block stored energy
+  - Begin the maintenance work
+  answer: C
+  why: >-
+    Stored energy includes springs, capacitors, pressure and gravity. The order is: identify
+    sources, notify, shut down, isolate, apply locks and tags, release stored energy, verify
+    isolation, then work (29 CFR 1910.147(d)).
+  source: 'TRADESAFE: Lockout Tagout Procedure'
+- n: 33
+  part: 6
+  question: How do you verify isolation before starting work on locked-out equipment?
+  options:
+  - Try the normal start controls, then return them to off
+  - Check that your own lock is still in place
+  - Ask the operator whether it was shut down properly
+  - Wait five minutes for the motor to stop
+  answer: A
+  why: >-
+    A lock on the wrong disconnect looks the same as a lock on the right one. Only a start
+    attempt proves the energy is isolated.
+  source: 'TRADESAFE: Lockout Tagout Procedure'
+- n: 34
+  part: 6
+  question: >-
+    Another employee's lock is on a pump you need, and that employee has gone home. What do
+    you do?
+  options:
+  - Leave the lock on and contact your supervisor
+  - Cut the lock, since the work is urgent
+  - Remove it if the pump looks safe and tag it instead
+  - Ask a coworker to witness while you remove it
+  answer: A
+  why: >-
+    Only the person who applied a lock removes it, unless the employer's documented removal
+    procedure is followed.
+  source: 'Schneider Electric: Electrical Safety Basic Training'
+- n: 35
+  part: 6
+  question: What protection should outlets near sinks, water baths and other wet areas have?
+  options:
+  - A surge-protector power strip rated for lab use
+  - A two-prong adapter
+  - A ground-fault circuit interrupter (GFCI)
+  - A higher-amperage breaker
+  answer: C
+  why: >-
+    A GFCI trips in milliseconds when current leaks to ground through water or a person. In
+    the US, electrical safe work practices follow NFPA 70E (the Schneider video cites Canada's
+    CSA Z462).
+  source: 'Atlantic Training: Designing Safe Labs and Preventing Electrical Hazards'
+- n: 36
+  part: 7
+  question: >-
+    According to the CSB, what was a primary systemic failure behind the Texas Tech lab explosion?
+  options:
+  - Scaling up past the 100 mg limit without a hazard analysis
+  - Buying expired chemicals from an unverified online vendor
+  - Skipping fire drills and leaving evacuation routes blocked
+  - Using the wrong extinguisher on a metal fire
+  answer: A
+  why: >-
+    The 100 mg limit was only verbal and never documented, no formal hazard analysis was done
+    for the larger batch, and PPE use was not enforced.
+  source: 'CSB: Texas Tech Lab Explosion'
+- n: 37
+  part: 7
+  question: What caused the reactor at T2 Laboratories to burst?
+  options:
+  - Cooling failed and the exothermic reaction ran away
+  - Static discharge ignited solvent during a drum transfer
+  - A contaminated raw material from a supplier
+  - A pyrophoric reagent leaked from a cracked transfer line
+  answer: A
+  why: >-
+    The explosion equaled about 1,400 lb of TNT. The hazard of a cooling failure was not understood
+    before the process went into production.
+  source: 'CSB: Runaway: Explosion at T2 Laboratories'
+- n: 38
+  part: 7
+  question: >-
+    In the Sentis video, the worker who removed his gloves for convenience illustrates which
+    chain?
+  options:
+  - Rules shape attitude, and attitude drives training
+  - Attitude shapes behavior, and behavior drives results
+  - Results change attitude only after an injury
+  - Behavior depends on PPE availability, not attitude
+  answer: B
+  why: >-
+    The shortcut began as an attitude ('it's quicker'), became a behavior, and ended in a
+    cut that turned septic.
+  source: 'Sentis: Safety Attitudes at Work'
+- n: 39
+  part: 8
+  question: >-
+    What is the main hidden hazard of dispensing large volumes of liquid nitrogen in a poorly
+    ventilated room?
+  options:
+  - Flammable vapor collecting at floor level
+  - Ionizing radiation from the supply tank
+  - A severe allergic respiratory reaction
+  - Oxygen displacement causing sudden collapse
+  answer: D
+  why: >-
+    Nitrogen has no odor or warning signs. A breath or two of oxygen-deficient air can cause
+    collapse.
+  source: 'UCLA: Being Safe With Liquid Nitrogen; CSB: Hazards of Nitrogen Asphyxiation'
+- n: 40
+  part: 8
+  question: One liter of liquid nitrogen boils off to roughly how much nitrogen gas?
+  options:
+  - About 7 L
+  - About 70 L
+  - About 700 L
+  - About 7,000 L
+  answer: C
+  why: >-
+    This large expansion is why a small spill or a dewar boiling off in a closed room can
+    push oxygen levels down quickly.
+  source: 'UCLA: Being Safe With Liquid Nitrogen'
+- n: 41
+  part: 8
+  question: How should you open a compressed gas cylinder valve?
+  options:
+  - Fully and quickly, to seat the regulator
+  - Slowly, standing to the side, away from the regulator outlet
+  - Standing directly in front of the gauge so you can read it clearly
+  - Using the outlet flow valve to set the delivery pressure
+  answer: B
+  why: >-
+    After opening, set delivery pressure with the regulator's adjusting knob, not the outlet
+    valve. Keep cylinders strapped or chained upright.
+  source: 'CDC: Handling Compressed Gas Cylinders Safely'
+- n: 42
+  part: 8
+  question: >-
+    Why does a J-KEM temperature controller ask you to set a power level based on solution
+    volume?
+  options:
+  - To set the over-temperature safety cutoff
+  - To calibrate the thermocouple against the setpoint
+  - So heating matches the volume and doesn't overshoot
+  - To tell it which mantle size is attached
+  answer: C
+  why: >-
+    A high power setting on a small volume overshoots. The thermocouple must also sit in the
+    solution, or the controller keeps heating.
+  source: 'JKEM Scientific: J-KEM Temperature Controller Quick Start'
+- n: 43
+  part: 8
+  question: How should you move a compressed gas cylinder to another lab?
+  options:
+  - Roll it on its bottom edge with the regulator on
+  - Remove the regulator, cap the valve, and strap it to a cart
+  - Carry it by the valve cap
+  - Drag it, if the distance is short
+  answer: B
+  why: >-
+    A cylinder with a broken-off valve can become a projectile. Never roll, drag or lift a
+    cylinder by its cap.
+  source: 'Berkeley Lab: How to Safely Transport Gas Cylinders'
+- n: 44
+  part: 9
+  question: >-
+    Under EPA RCRA rules, how must a hazardous waste container in a satellite accumulation
+    area (SAA) be kept?
+  options:
+  - Open with a funnel in place so it can vent
+  - Emptied and triple-rinsed at the end of every shift
+  - Refrigerated below 32 °F
+  - Closed except when adding or removing waste
+  answer: D
+  why: >-
+    SAA containers must be at or near the point of generation, under the operator's control,
+    labeled, and closed. A funnel left in the opening counts as open.
+  source: Hazardous Waste Training 2025; 40 CFR 262.15
+- n: 45
+  part: 9
+  question: What are the four characteristics that make a waste hazardous under RCRA?
+  options:
+  - Ignitable, corrosive, reactive, toxic
+  - Flammable, oxidizing, explosive, infectious
+  - Ignitable, acidic, radioactive, toxic
+  - Listed, mixed, universal, spent
+  answer: A
+  why: >-
+    These are the D-coded characteristic wastes. Listed wastes (F, K, P and U codes) are the
+    other category.
+  source: Hazardous Waste Training 2025
+- n: 46
+  part: 9
+  site: CHP
+  question: >-
+    A satellite accumulation container reaches the 55-gallon limit. What do RCRA and the Ereztech
+    CHP require?
+  options:
+  - Date it and move it to 90-day storage within 3 days
+  - Keep filling it to 95% full, then call the waste vendor
+  - Move it to the storage room within 30 days
+  - Leave it in place until the next scheduled pickup
+  answer: A
+  why: >-
+    RCRA allows 3 consecutive calendar days once the 55-gallon limit is reached. The CHP sends
+    the container to the 90-day storage area.
+  source: Ereztech CHP; 40 CFR 262.15
+- n: 47
+  part: 9
+  site: CHP
+  question: >-
+    As a Small Quantity Generator, Saukville could legally keep hazardous waste on site for
+    up to 180 days under RCRA. What limit does the Ereztech CHP set?
+  options:
+  - 180 days, the RCRA limit for an SQG
+  - 270 days, since the disposal facility is far away
+  - No time limit while the room has space
+  - 90 days, the stricter limit you follow
+  answer: D
+  why: >-
+    The CHP applies a stricter 90-day limit. RCRA allows an SQG up to 180 days (270 if the
+    disposal facility is over 200 miles away) and caps total waste on site at 6,000 kg.
+  source: Ereztech CHP; 40 CFR 262.16
+- n: 48
+  part: 9
+  site: CHP
+  question: >-
+    What is the maximum number of 55-gallon drums allowed in Hazard Mat Storage Room #137?
+  options:
+  - '24'
+  - '12'
+  - '36'
+  - '48'
+  answer: A
+  why: >-
+    The CHP caps Room #137 at 24 drums. Plan pickups before the room approaches that number.
+  source: Ereztech CHP
+- n: 49
+  part: 9
+  question: Why must nitric acid waste never go into the organic solvent waste container?
+  options:
+  - It reacts with organics, making heat and gas that can burst the container
+  - It dilutes the solvent so it can no longer be recycled
+  - It changes the waste code, so the vendor will reject the drum
+  - It raises the freezing point of the mixed solvent waste
+  answer: A
+  why: >-
+    Collect nitric acid waste separately, with a vented cap where gas may form. This includes
+    waste from the HNO3 baths.
+  source: 'Northwestern University: Nitric Acid Waste; Vented Caps'
+- n: 50
+  part: 10
+  question: HF splashes on your forearm. What is the correct first aid?
+  options:
+  - Neutralize with sodium bicarbonate solution and bandage it
+  - Flush for 15 minutes; nothing else is needed if pain is mild
+  - Apply burn cream and watch it for 24 hours
+  - Flush with water, then apply 2.5% calcium gluconate gel
+  answer: D
+  why: >-
+    Calcium gluconate binds fluoride ions. Then get medical care: HF pain can be delayed,
+    so every exposure needs evaluation even if it does not hurt yet.
+  source: 'Jeff Suchard: Hydrofluoric Acid (Fluorides & Antidotal Calcium)'
+- n: 51
+  part: 10
+  question: Why is HF more dangerous to tissue than most other acids?
+  options:
+  - It penetrates deeply and fluoride binds calcium
+  - It is the strongest acid used in the lab
+  - It forms a crust that traps the acid on the skin surface
+  - It is only hazardous at concentrations above 50%
+  answer: A
+  why: >-
+    HF is a weak acid that stays undissociated until it is deep in tissue. Free fluoride then
+    strips calcium and magnesium, causing deep damage, severe pain and possible heart rhythm
+    problems.
+  source: 'ACS: Hydrogen Fluoride, Dangerous and Surprisingly Useful'
+- n: 52
+  part: 10
+  question: Which material must NOT be used to absorb an HF spill?
+  options:
+  - A calcium carbonate HF neutralizer
+  - Calcium hydroxide (slaked lime)
+  - Sand or other silica-based absorbent
+  - An HF-rated spill pillow from the HF kit
+  answer: C
+  why: >-
+    HF reacts with silica (sand, kitty litter) to form toxic silicon tetrafluoride gas. Use
+    a calcium-based neutralizer or an HF-specific kit.
+  source: 'j@nette: Hydrofluoric Acid Safety'
+- n: 53
+  part: 10
+  question: Which glove setup does the HF safety video call for?
+  options:
+  - A single pair of thin nitrile gloves
+  - Latex gloves taped at the cuff
+  - Cotton liners under vinyl gloves
+  - PVC or butyl gloves worn over nitrile gloves
+  answer: D
+  why: >-
+    Add goggles, a face shield and a waterproof apron, work in a fume hood, and never work
+    with HF alone.
+  source: 'j@nette: Hydrofluoric Acid Safety'
+- n: 54
+  part: 10
+  site: CHP
+  question: >-
+    Per the CHP, glassware in ABF (ammonium bifluoride) or nitric acid baths must be removed
+    within what time?
+  options:
+  - 15 minutes
+  - 4 hours
+  - End of shift
+  - 1 hour
+  answer: D
+  why: >-
+    ABF solutions contain HF-forming fluoride, so treat skin contact from a bath like an HF
+    exposure.
+  source: Ereztech CHP
+- n: 55
+  part: 11
+  question: Before heating a closed reaction vessel, what must you confirm?
+  options:
+  - The seals are tight enough that no vapor at all can escape during the run
+  - The heater is set to its maximum rate so the run finishes before pressure builds
+  - >-
+    Its pressure and temperature ratings exceed the run conditions, and it has a working relief
+    device
+  - The same vessel has been used for this reaction at least once before
+  answer: C
+  why: >-
+    Vessels fail when run past their rating, with damaged seals, or without relief. Use a
+    blast shield. Jacketed glass reactors are usually rated for little or no positive pressure.
+  source: 'Northwestern University: Lessons Learned: Pressure Vessels'

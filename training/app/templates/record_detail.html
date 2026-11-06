@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}{{ person.full_name }} — Training record{% endblock %}
+{% block content %}
+{% set mine = person.username == current_user.username %}
+<div class="page-head">
+  <div>
+    {% if can_verify %}<div class="sub"><a href="{{ url_for('records.matrix') }}">Training records</a> › {{ person.full_name }}</div>{% endif %}
+    <h1>{{ person.full_name }}</h1>
+    <div class="sub mono">{{ person.username }}{{ ' · inactive' if not person.get('active', True) }}</div>
+  </div>
+  <span class="badge {{ status.badge }} pill-lg">{{ status.label }}</span>
+</div>
+
+<div class="grid-main-side">
+  <div>
+    {% for c in completions %}
+    <div class="card completion">
+      <div class="card-title-row">
+        <h2><span class="mono">{{ c.id }}</span>
+          <span class="badge {{ {'verified': 'badge-approved', 'signed': 'badge-pending', 'returned': 'badge-rejected'}[c.status] }}">{{ c.status }}</span></h2>
+        <span class="muted small">{{ c.curriculum }}</span>
+      </div>
+      <dl class="kv kv-cols">
+        <div><dt>Signed</dt><dd>{{ c.signed.name }} · {{ c.signed.at | nicedate }}</dd></div>
+        {% if c.verified %}<div><dt>Verified</dt><dd>{{ c.verified.name }} · {{ c.verified.at | nicedate }}{% if c.verified.note %}<div class="muted small">{{ c.verified.note }}</div>{% endif %}</dd></div>{% endif %}
+        {% if c.returned %}<div><dt>Returned</dt><dd>{{ c.returned.name }} · {{ c.returned.at | nicedate }}<div class="small">“{{ c.returned.reason }}”</div></dd></div>{% endif %}
+        <div><dt>Quiz</dt><dd><a href="{{ url_for('quiz.attempt', username=person.username, attempt_id=c.quiz.attempt) }}">{{ c.quiz.score }}/{{ c.quiz.total }} ({{ c.quiz.pct }}%)</a></dd></div>
+        <div><dt>Tracks</dt><dd>{% for t in c.tracks %}<span class="tag tag-track">{{ track_labels.get(t, t) }}</span>{% endfor %}</dd></div>
+        <div><dt>Videos</dt><dd>{{ c.videos | length }} watched</dd></div>
+      </dl>
+      <details class="inline-details"><summary class="small">Videos on this record</summary>
+        <ul class="plain-list small">{% for v in c.videos %}<li>{{ v.title }} <span class="muted">· {{ v.watched_at | nicedate }}</span></li>{% endfor %}</ul>
+      </details>
+      {% if c.status == 'signed' and can_verify and not mine %}
+      <div class="grid-2 verify-forms">
+        <form method="post" action="{{ url_for('records.verify', username=person.username, cid=c.id) }}" class="signoff-form">
+          <strong>Verify</strong>
+          <label>Note (optional)<input type="text" name="note" maxlength="500" placeholder="e.g. Reviewed HF first aid in person"></label>
+          <label>Your password<input type="password" name="password" autocomplete="current-password" required></label>
+          <div><button class="btn btn-orange" type="submit">Verify record</button></div>
+        </form>
+        <form method="post" action="{{ url_for('records.return_record', username=person.username, cid=c.id) }}" class="signoff-form">
+          <strong>Return to trainee</strong>
+          <label>Reason<input type="text" name="reason" maxlength="500" required placeholder="What needs to be fixed"></label>
+          <div><button class="btn btn-danger" type="submit">Return record</button></div>
+        </form>
+      </div>
+      {% elif c.status == 'signed' and mine %}
+      <p class="muted small">Waiting for a trainer to verify.</p>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="card"><p class="muted">No signed training records yet.</p></div>
+    {% endfor %}
+
+    <div class="card">
+      <h2>Current cycle</h2>
+      <p class="small muted">{{ 'Since the last verified record on ' ~ (status.cycle_start | day) if status.cycle_start else 'No verified record yet.' }}
+        {{ status.watched_required | length }} of {{ status.required_ids | length }} assigned videos watched.</p>
+      <div class="table-scroll">
+      <table class="table">
+        <thead><tr><th></th><th>Video</th><th>Watched</th></tr></thead>
+        <tbody>
+        {% for v in status.required %}
+        <tr><td>{% if v.id in status.watched %}<span class="watched">✓</span>{% endif %}</td>
+            <td><a href="{{ url_for('playlist.video', vid=v.id) }}">{{ v.title }}</a> <span class="muted small">Part {{ v.part }}</span></td>
+            <td>{{ status.watched[v.id] | nicedate if v.id in status.watched else '' }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h2>Tracks</h2>
+      {% for t in status.tracks %}<span class="tag tag-track">{{ track_labels.get(t, t) }}</span>{% endfor %}
+      {% if is_admin %}<p class="small"><a href="{{ url_for('admin.user_form', username=person.username) }}">Change tracks</a></p>{% endif %}
+    </div>
+    <div class="card">
+      <h2>Quiz attempts</h2>
+      {% if attempts %}
+      <ul class="plain-list">
+        {% for a in attempts %}
+        <li><a href="{{ url_for('quiz.attempt', username=person.username, attempt_id=a.id) }}">{{ a.pct }}%</a>
+          <span class="badge {{ 'badge-approved' if a.passed else 'badge-rejected' }}">{{ 'pass' if a.passed else 'below' }}</span>
+          <div class="muted small">{{ a.at | nicedate }}</div></li>
+        {% endfor %}
+      </ul>
+      {% else %}<p class="muted small">No attempts yet.</p>{% endif %}
+    </div>
+    <div class="card">
+      <h2>Audit trail</h2>
+      <div class="audit-log small">
+        {% for row in audit %}
+        <div class="audit-row"><strong>{{ row.action }}</strong> · {{ row.by }}<div class="muted">{{ row.at | nicedate }}{% if row.detail %} · {{ row.detail }}{% endif %}</div></div>
+        {% else %}<p class="muted">Nothing recorded yet.</p>{% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

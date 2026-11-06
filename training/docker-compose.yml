@@ -1,0 +1,13 @@
+services:
+  training:
+    build: .
+    image: ereztech-training
+    ports:
+      - "8092:8092"
+    environment:
+      - TRAINING_SECRET_KEY=${TRAINING_SECRET_KEY:-}
+    volumes:
+      # Training records + curriculum. Point TRAINING_DATA_DIR at a mounted NAS
+      # share or SharePoint-synced folder on the host to keep records there.
+      - ${TRAINING_DATA_DIR:-./data}:/data
+    restart: unless-stopped

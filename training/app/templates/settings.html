@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Settings — Ereztech Safety Training{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Settings</h1>
+</div>
+<div class="grid-2">
+  <form method="post" class="card form-grid">
+    <h2 class="span2">Retraining</h2>
+    <label>Retrain every (months)
+      <input type="number" name="retrain_months" min="1" max="60" value="{{ settings.retrain_months }}" required>
+    </label>
+    <label>Flag as due soon (days before)
+      <input type="number" name="due_soon_days" min="0" max="365" value="{{ settings.due_soon_days }}" required>
+    </label>
+    <label class="span2">Lab timezone
+      <input type="text" name="timezone" value="{{ settings.timezone }}" placeholder="America/Chicago">
+      <span class="muted small">IANA name. Leave blank to show each viewer's local time. Records are stored in UTC.</span>
+    </label>
+    <div class="span2 form-actions">
+      <button class="btn btn-orange" type="submit">Save settings</button>
+    </div>
+  </form>
+  {% if playlist %}
+  <div class="card">
+    <h2>Curriculum</h2>
+    <dl class="kv">
+      <dt>Playlist</dt><dd>{{ playlist.version }} · {{ playlist.videos | length }} videos · {{ playlist.tracks | length }} tracks</dd>
+      <dt>Quiz</dt><dd>{{ quiz.version }} · pass mark {{ quiz.pass_mark }}%</dd>
+      <dt>Data folder</dt><dd class="mono">{{ data_dir }}</dd>
+    </dl>
+    <p class="muted small">To change videos, tracks or questions, edit
+      <span class="mono">curriculum/playlist.yaml</span> and <span class="mono">curriculum/quiz.yaml</span>
+      in the data folder. Changes load on the next page view. Bump the quiz <span class="mono">version</span>
+      when questions change so old attempts stay labelled.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

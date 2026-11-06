@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Playlist — Ereztech Safety Training{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Playlist</h1>
+    <div class="sub">{{ playlist.version }} · {{ playlist.videos | length }} videos in {{ playlist.parts | length }} parts</div>
+  </div>
+</div>
+
+<form class="filter-row" method="get">
+  <select name="track" onchange="this.form.submit()" aria-label="Filter by track">
+    <option value="" {{ 'selected' if not track }}>All videos</option>
+    <option value="mine" {{ 'selected' if track == 'mine' }}>My assigned videos</option>
+    {% for t in playlist.tracks %}
+    <option value="{{ t.key }}" {{ 'selected' if track == t.key }}>{{ t.label }} track</option>
+    {% endfor %}
+  </select>
+  <noscript><button class="btn btn-ghost" type="submit">Filter</button></noscript>
+</form>
+
+{% for part, vids in parts %}
+<div class="card">
+  <div class="part-head">
+    <span class="part-num">Part {{ part.number }}</span>
+    <h2>{{ part.title }}</h2>
+  </div>
+  <div class="table-scroll">
+  <table class="table video-table">
+    <thead><tr><th style="width:2.2em"></th><th>Video</th><th>Publisher</th><th>Tracks</th><th></th></tr></thead>
+    <tbody>
+    {% for v in vids %}
+    <tr id="v-{{ v.id }}">
+      <td>{% if v.id in status.watched %}<span class="watched" title="Watched {{ status.watched[v.id] }}">✓</span>{% endif %}</td>
+      <td><a href="{{ url_for('playlist.video', vid=v.id) }}">{{ v.title }}</a></td>
+      <td class="muted">{{ v.publisher }}</td>
+      <td>{% for t in v.tracks %}<span class="tag tag-track {{ 'tag-mine' if t in mine }}">{{ track_labels.get(t, t) }}</span>{% endfor %}</td>
+      <td class="row-action">
+        {% if v.id not in status.watched %}
+        <form method="post" action="{{ url_for('playlist.mark_watched', vid=v.id) }}" class="inline">
+          <input type="hidden" name="next" value="playlist">
+          <input type="hidden" name="track" value="{{ track }}">
+          <button class="btn btn-ghost btn-xs" type="submit">Mark watched</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% if part.notes %}<div class="site-rule md-body">{{ part.notes | markdown }}</div>{% endif %}
+</div>
+{% else %}
+<div class="card"><p class="muted">No videos match this filter.</p></div>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,831 @@
+# Ereztech Chemical Safety Training: playlist and video context.
+# This file IS the curriculum. Edit it on the share to add, retire or reword
+# videos; the app reloads it automatically. Keep video ids stable once people
+# have watched them (watch history is keyed by id).
+# from_transcript: false = context written from the topic/publisher, not a transcript.
+title: Chemical Safety Training Playlist
+version: 2026-11 (revised)
+site: Saukville, WI
+tracks:
+- key: core
+  label: Core
+  who: Everyone with lab or plant access (always assigned)
+- key: air-sensitive
+  label: Air-sensitive
+  who: >-
+    Anyone handling pyrophoric or water-reactive organometallics, gloveboxes or Schlenk lines
+- key: scale-up
+  label: Scale-up
+  who: Anyone running jacketed glass reactors (up to 100 L)
+- key: hf
+  label: HF
+  who: Anyone using HF, ABF baths or other fluoride etchants
+- key: drums-cylinders
+  label: Drums & cylinders
+  who: Anyone dispensing from 55-gallon drums or moving drums and gas cylinders
+- key: waste
+  label: Waste
+  who: 'Anyone who manages SAA containers or Hazard Mat Storage Room #137'
+- key: respirator
+  label: Respirator users
+  who: People enrolled in the respiratory protection program
+- key: first-aid
+  label: First-aid responders
+  who: Designated first-aid responders only
+- key: confined-space
+  label: Confined space
+  who: Anyone who enters or attends a permit-required confined space
+parts:
+- number: 1
+  title: The RAMP Framework & Risk Assessment
+- number: 2
+  title: Chemical Handling & Documentation
+- number: 3
+  title: Flammable Liquids
+- number: 4
+  title: Incident Response & Emergency Action
+- number: 5
+  title: Respiratory Protection & PPE
+- number: 6
+  title: Electrical Safety & Lockout/Tagout
+- number: 7
+  title: Safety Attitude
+- number: 8
+  title: Equipment & Facility Safety
+- number: 9
+  title: Hazardous Waste & SAA Compliance
+- number: 10
+  title: Hydrofluoric Acid (HF) Safety
+  notes: >-
+    **Site rule (CHP):** remove glassware from ABF (ammonium bifluoride) and nitric acid baths
+    within 1 hour. ABF solutions contain HF-forming fluoride, so treat skin contact like an
+    HF exposure.
+- number: 11
+  title: Scale-Up & Reactor Safety
+  notes: >-
+    The Scale-up track also takes Process Safety (WorkSafeBC, Part 1), T2 Laboratories (CSB,
+    Part 7) and the J-KEM controller (Part 8).
+videos:
+- id: acs-rules-to-risk
+  part: 1
+  title: From Chemical Safety Rules to Risk Management
+  publisher: ACS
+  url: https://www.youtube.com/watch?v=DWSymRPCDN4
+  tracks:
+  - core
+  from_transcript: true
+  context: >-
+    Introduces RAMP: Recognize hazards, Assess the risk, Minimize the risk, and Prepare for
+    emergencies. Defines risk as the severity of a hazard combined with the likelihood of
+    exposure, and stresses that a positive safety culture needs the right attitude and ethics.
+- id: acs-why-risk-assessments
+  part: 1
+  title: Why Should We Do Laboratory Chemical Risk Assessments?
+  publisher: ACS
+  url: https://www.youtube.com/watch?v=mYTaITYUEKE
+  tracks:
+  - core
+  from_transcript: true
+  context: >-
+    Uses crossing the street as an analogy: even routine experiments carry risk because conditions
+    change. Distinguishes a hazard assessment (what could go wrong) from a risk assessment
+    (which of those is most likely to cause harm).
+- id: acs-assessing-risks
+  part: 1
+  title: Assessing Risks in the Chemistry Laboratory
+  publisher: ACS
+  url: https://www.youtube.com/watch?v=PhwyPQ0_5K0
+  tracks:
+  - core
+  from_transcript: true
+  context: >-
+    Shows a risk matrix of severity against likelihood. Examples include pouring strong acid
+    into a buret (use a funnel) and diluting concentrated sulfuric acid (add acid slowly to
+    water while stirring to control the heat).
+- id: worksafebc-process-safety
+  part: 1
+  title: 'Process Safety: Managing Risk in High-Hazard Sectors'
+  publisher: WorkSafeBC
+  url: https://www.youtube.com/watch?v=8VS4SmI9UbU
+  tracks:
+  - core
+  - scale-up
+  from_transcript: true
+  context: >-
+    Covers Process Safety Management, including cross-functional Process Hazard Analyses to
+    prevent catastrophic releases of hazardous chemicals and energy during scale-up and production.
+- id: acs-sds-video-2
+  part: 2
+  title: Safety Data Sheet (SDS), Video 2
+  publisher: ACS
+  url: https://www.youtube.com/watch?v=TWxvPhtAQ4Q
+  tracks:
+  - core
+  from_transcript: false
+  context: >-
+    Introduces the SDS as the main hazard reference for each chemical and its 16-section GHS
+    format. Pair it with College Safety Video #2, which walks through the sections.
+- id: acs-info-resources
+  part: 2
+  title: 'Chemical Safety Information Resources (College Safety Video #2)'
+  publisher: ACS
+  url: https://www.youtube.com/watch?v=iQDbrR04tbU
+  tracks:
+  - core
+  from_transcript: true
+  context: >-
+    How to navigate the 16 SDS sections. Emphasizes Section 2 (hazards and pictograms), Section
+    4 (first aid), Section 8 (exposure limits such as TWA), Sections 9 and 10 (flash point,
+    stability and incompatibilities, to avoid mixing dangerous waste) and Section 11 (toxicity).
+    Section 5 lists suitable extinguishing media, which matters before pyrophoric work.
+- id: procpr-pictograms
+  part: 2
+  title: Hazard Communication Pictograms
+  publisher: ProCPR
+  url: https://www.youtube.com/watch?v=7Cw1Kg67uFw
+  tracks:
+  - core
+  from_transcript: false
+  context: >-
+    The eight pictograms OSHA's Hazard Communication Standard requires on labels: flame (flammables,
+    pyrophorics, water-reactives, organic peroxides), flame over circle (oxidizers), exploding
+    bomb (explosives, self-reactives), gas cylinder (gases under pressure), corrosion, skull
+    and crossbones (acute toxicity), exclamation mark (irritant, sensitizer, harmful) and
+    health hazard (carcinogen, reproductive or target-organ toxicity). "Danger" is the more
+    severe signal word, "Warning" the less severe.
+- id: chemical-storage-hazards
+  part: 2
+  title: Chemical Storage Hazards
+  publisher: Not confirmed
+  url: https://www.youtube.com/watch?v=vT8R6gYCn_0
+  tracks:
+  - core
+  from_transcript: false
+  context: >-
+    Store by compatibility class, never alphabetically. Keep acids from bases, oxidizers from
+    flammables and organics, and water-reactives away from water sources. Nitric acid is stored
+    apart from organic acids such as acetic acid. Flammables go in rated cabinets, with secondary
+    containment for liquids.
+- id: lbl-peroxide-testing
+  part: 2
+  title: Testing Peroxide-forming Chemicals
+  publisher: Berkeley Lab
+  url: https://training.lbl.gov/videos/PeroxideTesting.html
+  tracks:
+  - core
+  from_transcript: false
+  context: >-
+    How to test ethers such as THF with peroxide test strips. Date containers when received
+    and opened, and test before distilling or concentrating. Never open or move a container
+    with crystals around the cap or a stuck lid; leave it and report it.
+- id: cornell-sharps
+  part: 2
+  title: Safe Sharps Handling in the Laboratory
+  publisher: Cornell EHS
+  url: https://www.youtube.com/watch?v=IR8GZh6Pa9A
+  tracks:
+  - core
+  from_transcript: false
+  context: >-
+    Safe use and disposal of needles, cannulas and broken glass. Never recap needles by hand;
+    put sharps straight into a sharps container. Applies to syringe and cannula transfers.
+- id: cdc-methylene-chloride
+  part: 2
+  title: Fundamentals of Methylene Chloride Safety
+  publisher: CDC
+  url: https://www.youtube.com/watch?v=LVfT-36oTng
+  tracks:
+  - core
+  from_transcript: true
+  context: >-
+    Long-term or repeated exposure can damage the heart, liver and brain and increases cancer
+    risk, which is why OSHA has a specific standard, 29 CFR 1910.1052.
+- id: ucla-pyrophoric-liquids
+  part: 2
+  title: Pyrophoric Liquid Safety
+  publisher: UCLA
+  url: https://www.youtube.com/watch?v=21iC4YEgOAs
+  tracks:
+  - air-sensitive
+  from_transcript: true
+  context: >-
+    Handling organolithium and alkyl aluminum reagents. Work in a fume hood or glovebox, wear
+    a fire-resistant lab coat or apron, use a syringe for under 10 mL and a double-tipped
+    needle (cannula) for 10 mL or more. Covers quenching with an unreactive solvent followed
+    by methanol; at Ereztech, quenching is taught hands-on through mentorship.
+- id: ucsd-reactive-metals
+  part: 2
+  title: Working with Reactive Metals, Ep. 3
+  publisher: UC San Diego
+  url: https://www.youtube.com/watch?v=ozmddj0fIpk
+  tracks:
+  - air-sensitive
+  from_transcript: false
+  context: >-
+    Alkali metals such as sodium, potassium and lithium react with water and release hydrogen.
+    Store them under mineral oil or inert gas and cut them under oil. Old potassium with a
+    yellow or orange crust can explode when cut; report it rather than handling it.
+- id: york-schlenk-lines
+  part: 2
+  title: 'Schlenk Lines: Introduction & Overview'
+  publisher: University of York
+  url: https://www.youtube.com/watch?v=NOfiYEO5Ux0
+  tracks:
+  - air-sensitive
+  from_transcript: true
+  context: >-
+    The core parts of a Schlenk line in a fume hood: vacuum manifold, solvent trap in a liquid
+    nitrogen dewar to protect the pump from condensable gases, double oblique taps to switch
+    between vacuum and gas, and a nitrogen line with a bubbler to show pressure.
+- id: lbl-schlenk-inspection
+  part: 2
+  title: Inspecting a Schlenk Line
+  publisher: Berkeley Lab (Molecular Foundry)
+  url: https://training.lbl.gov/videos/SchlenkInspection.html
+  tracks:
+  - air-sensitive
+  from_transcript: false
+  context: >-
+    The pre-use check: glassware free of star cracks and chips, hoses and clamps secure, bubbler
+    oil at the right level, cold trap clean, pump oil and exhaust in order. Cracked glass
+    under vacuum can implode.
+- id: vacuum-cold-trap
+  part: 2
+  title: 'Vacuum Cold Trap: How to Use'
+  publisher: Science Equip
+  url: https://www.youtube.com/watch?v=HJLNyOptVVM
+  tracks:
+  - air-sensitive
+  from_transcript: false
+  context: >-
+    The trap condenses solvent vapor before it reaches the pump. Never cool a trap in liquid
+    nitrogen while it is open to air, because liquid oxygen can condense in it. Empty and
+    warm traps in the hood.
+- id: glove-box
+  part: 2
+  title: How to Use a Glove Box
+  publisher: Supreme Science
+  url: https://www.youtube.com/watch?v=sJvNc4NMAa4
+  tracks:
+  - air-sensitive
+  from_transcript: false
+  context: >-
+    Working in an inert-atmosphere box. Run the antechamber evacuate-and-refill cycles before
+    opening the inner door, never open both doors at once, watch the oxygen and moisture readings,
+    and check the gloves for holes before use.
+- id: toyota-flammable-liquids
+  part: 3
+  title: Flammable Liquids Safety Training
+  publisher: Toyota Material Handling
+  url: https://www.youtube.com/watch?v=3S6s6gT4MMk
+  tracks:
+  - core
+  from_transcript: true
+  context: >-
+    OSHA sorts flammable liquids into four categories by flash point. Covers drum management,
+    gravity flow versus pump extraction, self-closing valves, and bonding the receiving container
+    to the grounded drum to drain static.
+- id: delta-lel-readings
+  part: 3
+  title: A Crash Course on LEL Sensor Readings
+  publisher: Delta Hazmat
+  url: https://www.youtube.com/watch?v=7dBqUaEsyKc
+  tracks:
+  - core
+  from_transcript: true
+  context: >-
+    The percent reading on an LEL meter is percent of the lower explosive limit, not percent
+    of the air. A 10% reading means you are 10% of the way to an explosive mixture. The video
+    says to leave at 10% LEL.
+  site_rule: >-
+    **EEOP:** at Saukville a steady blue light (10% LEL) means process shutdown, and a flashing
+    blue light (25% LEL) means full evacuation.
+- id: justrite-55-gallon
+  part: 3
+  title: Flammable Liquids Management for 55 Gallon Drums
+  publisher: Justrite
+  url: https://www.youtube.com/watch?v=zP2rF_T7xg0
+  tracks:
+  - drums-cylinders
+  from_transcript: false
+  context: >-
+    A drum dispensing setup: self-closing faucet or pump, a pressure/vacuum drum vent, bonding
+    and grounding wires, a drip can with a flame arrester, and secondary containment under
+    the drum.
+- id: safety360-static
+  part: 3
+  title: Static Electricity Fire Hazard in Chemical Drum Storage
+  publisher: Safety360
+  url: https://www.youtube.com/watch?v=P9O3cYb-Rw8
+  tracks:
+  - drums-cylinders
+  from_transcript: false
+  context: >-
+    Flowing liquid builds static charge. Ground the drum, bond the receiving container to
+    it, and make sure clamps bite into bare metal. Plastic containers cannot be bonded the
+    same way.
+- id: eap-overview
+  part: 4
+  title: 'Emergency Action Plan: Overview'
+  publisher: Not confirmed
+  url: https://www.youtube.com/watch?v=cW6AHGPDJO8
+  tracks:
+  - core
+  from_transcript: false
+  context: >-
+    What an emergency action plan covers under 29 CFR 1910.38: how alarms are raised, evacuation
+    routes, assembly points, accounting for everyone, and who does what.
+  site_rule: >-
+    **EEOP:** primary assembly point across the street, secondary at the receiving lot; tornado
+    shelters are Bathrooms #108 and #109.
+- id: acs-emergencies
+  part: 4
+  title: 'Emergencies in the Chemistry Laboratory (College Safety Video #6)'
+  publisher: ACS
+  url: https://www.youtube.com/watch?v=rPNQH3usdzI
+  tracks:
+  - core
+  from_transcript: true
+  context: >-
+    Sweep broken glass with a dustpan, flush eyes for 15 minutes at the eyewash, use the safety
+    shower for large splashes, and contain bench spills with a spill kit. Explains the PASS
+    method (Pull, Aim, Squeeze, Sweep) for ABC extinguishers.
+- id: sanjose-extinguisher
+  part: 4
+  title: How to Use a Fire Extinguisher
+  publisher: San José Fire Department
+  url: https://www.youtube.com/watch?v=DQeAwADGi0M
+  tracks:
+  - core
+  from_transcript: true
+  context: >-
+    Repeats PASS and the steps before fighting a fire: know your escape route, warn others
+    and call 911.
+- id: nu-incidental-spills
+  part: 4
+  title: Responding to Incidental Chemical Spills
+  publisher: Northwestern University
+  url: https://vimeo.com/nuors/respondingtochemicalspills
+  tracks:
+  - core
+  from_transcript: false
+  context: >-
+    An incidental spill is small, of a known material, and one you are trained and equipped
+    to clean up with no fire or serious exposure risk. Anything else: leave, warn others and
+    call for help.
+  site_rule: '**CHP:** the main spill kit is in Breezeway #124.'
+- id: bionetwork-general-hazards
+  part: 4
+  title: Other General Hazards (Lab Safety Video Part 6)
+  publisher: BioNetwork
+  url: https://www.youtube.com/watch?v=q8UiamEWz4Q
+  tracks:
+  - core
+  from_transcript: true
+  context: >-
+    Electrical shock (keep liquids away, inspect equipment), thermal burns (autoclaves, GC-MS)
+    and cold burns (dry ice, -80 °C freezers). Compressed gas cylinders must be secured with
+    a heavy-duty clamp and strap.
+- id: oregon-osha-co
+  part: 4
+  title: Carbon Monoxide Educational Outreach Training
+  publisher: Oregon OSHA
+  url: https://www.youtube.com/watch?v=DOKWj-LBLIs
+  tracks:
+  - core
+  from_transcript: false
+  context: >-
+    Carbon monoxide is colorless and odorless and binds to hemoglobin, so early signs are
+    headache, dizziness and nausea. Common sources are engines and fuel-burning equipment.
+    At Ereztech, metal carbonyl products such as CO8250 can release CO as they decompose.
+- id: bloodborne-pathogens
+  part: 4
+  title: Bloodborne Pathogen Training
+  publisher: Simple OSHA Guide
+  url: https://www.youtube.com/watch?v=Z0-McgNSqoQ
+  tracks:
+  - first-aid
+  from_transcript: true
+  context: >-
+    29 CFR 1910.1030: universal precautions, sharps containers and other engineering controls,
+    the Hepatitis B vaccine, and the exposure control plan.
+- id: confined-space-module-1
+  part: 4
+  title: 'Confined Space, Module 1: Roles & Responsibilities'
+  publisher: Not confirmed
+  url: https://www.youtube.com/watch?v=vZOcc2tntZE
+  tracks:
+  - confined-space
+  from_transcript: false
+  context: >-
+    The three roles in a permit-required confined space entry under 29 CFR 1910.146: entrant,
+    attendant and entry supervisor. The air is tested for oxygen, flammables and toxics before
+    and during entry. The attendant stays outside, watches the entrant and calls rescue, and
+    never goes in.
+- id: acs-dress-ppe
+  part: 5
+  title: How to Dress for the Lab, and PPE (Video 3)
+  publisher: ACS
+  url: https://www.youtube.com/watch?v=i1D6zpSw_6Q
+  tracks:
+  - core
+  from_transcript: false
+  context: >-
+    Lab dress basics: closed-toe shoes, long pants, a lab coat, safety glasses or goggles,
+    and gloves chosen for the chemical in use.
+- id: nu-glove-permeation
+  part: 5
+  title: Glove Penetration, Permeation, and Degradation
+  publisher: Northwestern University
+  url: https://vimeo.com/151051923
+  tracks:
+  - core
+  from_transcript: false
+  context: >-
+    Three ways gloves fail: degradation (the material swells, softens or cracks), penetration
+    (liquid gets through holes or seams) and permeation (the chemical passes through intact
+    material at the molecular level). Check breakthrough times on the glove chart. Thin nitrile
+    is not universal: methylene chloride gets through it in minutes.
+- id: fume-hood-how-to
+  part: 5
+  title: How To Use a Fume Hood
+  publisher: Supreme Science
+  url: https://www.youtube.com/watch?v=WlEgeQoqZkQ
+  tracks:
+  - core
+  from_transcript: false
+  context: >-
+    Keep the sash at or below the marked height, work at least 6 inches inside, don't block
+    the rear baffles, check the airflow monitor, and keep your head outside the hood.
+- id: fume-hood-dos-donts
+  part: 5
+  title: 'Fume Hood Safety: DOs and DON''Ts'
+  publisher: Not confirmed
+  url: https://www.youtube.com/watch?v=yqU5bGP0i5I
+  tracks:
+  - core
+  from_transcript: false
+  context: >-
+    Don't use the hood as storage or crowd it with equipment, keep the sash closed when not
+    working, limit traffic in front of an open hood, and report airflow alarms rather than
+    silencing them.
+- id: tradesafe-hearing
+  part: 5
+  title: Signs of Hearing Loss
+  publisher: TRADESAFE
+  url: https://www.youtube.com/watch?v=-6ljVXI5Yes
+  tracks:
+  - core
+  from_transcript: true
+  context: >-
+    Five early warning signs of permanent hearing loss: trouble hearing in noise, ringing
+    or buzzing (tinnitus), needing more volume, muffled voices and a feeling of fullness in
+    the ears. OSHA requires a hearing conservation program at 85 dBA (8-hour TWA). Saukville
+    exposures do not reach that level, so this video is awareness only.
+- id: osha-respiratory
+  part: 5
+  title: Respiratory Protection in General Industry
+  publisher: OSHA
+  url: https://www.youtube.com/watch?v=p1yYmABesZE
+  tracks:
+  - respirator
+  from_transcript: false
+  context: >-
+    What 29 CFR 1910.134 requires: a written program, a medical evaluation before use, fit
+    testing before first use and every year after, training, and respirator maintenance.
+- id: osha-respirator-types
+  part: 5
+  title: Respirator Types
+  publisher: OSHA
+  url: https://www.youtube.com/watch?v=u_Dovk_khLw
+  tracks:
+  - respirator
+  from_transcript: false
+  context: >-
+    Air-purifying respirators (filtering facepieces, half and full facepiece, PAPRs) clean
+    the surrounding air and cannot be used in oxygen-deficient or IDLH atmospheres. Atmosphere-supplying
+    respirators (supplied-air, SCBA) deliver clean air from another source.
+- id: allegro-sar
+  part: 5
+  title: Supplied Air Respirators
+  publisher: Allegro Safety
+  url: https://www.youtube.com/watch?v=RAxsj1-5I88
+  tracks:
+  - respirator
+  from_transcript: true
+  context: >-
+    Supplied-air respirators for non-IDLH work. Set the ambient air pump in a clean area,
+    connect it correctly, and maintain it, including filters and carbon vanes.
+- id: atlantic-electrical
+  part: 6
+  title: 'Laboratory Safety: Designing Safe Labs and Preventing Electrical Hazards'
+  publisher: Atlantic Training
+  url: https://www.youtube.com/watch?v=9daz2vuGlNU
+  tracks:
+  - core
+  from_transcript: true
+  context: >-
+    Safe electrical layout (clear labeling, no overloaded circuits, sensible placement), grounding
+    and bonding, and circuit protection such as fuses, breakers and GFCIs near sinks. Covers
+    PPE for electrical work: face shields, insulated gloves and arc-rated hoods.
+- id: tradesafe-loto
+  part: 6
+  title: Lockout Tagout Procedure
+  publisher: TRADESAFE
+  url: https://www.youtube.com/watch?v=oExsdV8x3-c
+  tracks:
+  - core
+  from_transcript: true
+  context: >-
+    The 8-step LOTO sequence: identify energy sources, notify affected people, shut down,
+    isolate, apply locks and tags, release stored energy, verify isolation by trying the controls,
+    then do the work.
+- id: schneider-electrical
+  part: 6
+  title: Electrical Safety Basic Training for Non-Electricians
+  publisher: Schneider Electric
+  url: https://www.youtube.com/watch?v=ggJo6m8NZtA
+  tracks:
+  - core
+  from_transcript: true
+  context: >-
+    Inspect work areas for electrical hazards, use GFCIs around water, and never remove another
+    person's LOTO lock. Water is a serious conductivity risk. The video cites Canada's CSA
+    Z462; the US equivalent is NFPA 70E. It stays in the list because 70E material is too
+    detailed for non-electricians.
+- id: sentis-attitudes
+  part: 7
+  title: Safety Attitudes at Work
+  publisher: Sentis
+  url: https://www.youtube.com/watch?v=5_IFz7FEZ9E
+  tracks:
+  - core
+  from_transcript: true
+  context: >-
+    Uses the Attitude-Behavior-Results model to contrast two workers. A poor attitude (taking
+    gloves off for convenience) leads to unsafe behavior and a serious injury that turns septic.
+- id: csb-t2-runaway
+  part: 7
+  title: 'Runaway: Explosion at T2 Laboratories'
+  publisher: CSB
+  url: https://www.youtube.com/watch?v=C561PCq5E1g
+  tracks:
+  - core
+  - scale-up
+  from_transcript: true
+  context: >-
+    A runaway exothermic reaction during MCMT production in a 2,450-gallon reactor. Cooling
+    failed, the reactor burst, and the explosion equaled about 1,400 lb of TNT. The lesson:
+    understand the process hazards, including a cooling failure, before scaling up.
+- id: csb-texas-tech
+  part: 7
+  title: Texas Tech Lab Explosion
+  publisher: CSB
+  url: https://www.youtube.com/watch?v=sjDdl_d8br8
+  tracks:
+  - core
+  from_transcript: true
+  context: >-
+    A graduate student was badly hurt working with an energetic material. The CSB found inconsistent
+    PPE use, no formal hazard analysis before scaling up, and a 100 mg limit that was only
+    communicated verbally, never documented.
+- id: csb-experimenting-with-danger
+  part: 7
+  title: Experimenting with Danger
+  publisher: CSB
+  url: https://www.youtube.com/watch?v=ALBWxGik64A
+  tracks:
+  - core
+  from_transcript: false
+  context: >-
+    Academic lab incidents: the 2008 UCLA flash fire that killed a research assistant, the
+    1997 Dartmouth poisoning that killed a professor, and the 2010 Texas Tech explosion in
+    the most detail. The CSB counted about 120 university lab fires, explosions and releases
+    since 2001. Its message: new projects need formal training and a verified understanding
+    of the hazards. Released 2011, 24 minutes.
+- id: csb-after-the-rainbow
+  part: 7
+  title: After the Rainbow
+  publisher: CSB
+  url: https://www.youtube.com/watch?v=g6vR0BdRCNY
+  tracks:
+  - core
+  from_transcript: false
+  context: >-
+    Calais Weber describes being burned over about 40% of her body at 15, when a teacher poured
+    methanol from a large bottle onto a dimming flame during a 2006 "rainbow" demonstration.
+    Lessons: keep only small amounts of flammable liquid at the work, never add fuel to a
+    flame, wear the right PPE, and speak up when something looks unsafe. Released 2013.
+- id: ucla-liquid-nitrogen
+  part: 8
+  title: 'In Focus: Being Safe With Liquid Nitrogen'
+  publisher: UCLA EHS
+  url: https://www.youtube.com/watch?v=fPLCrlQnDC8
+  tracks:
+  - core
+  from_transcript: true
+  context: >-
+    Dispensing from large tanks into transport dewars. Wear a face shield, cryogenic gloves
+    and an apron, open valves slowly to prevent splashing, and make sure the room is ventilated,
+    because boil-off displaces oxygen.
+- id: csb-nitrogen-asphyxiation
+  part: 8
+  title: Hazards of Nitrogen Asphyxiation
+  publisher: CSB
+  url: https://www.youtube.com/watch?v=f2ItJe2Incs
+  tracks:
+  - core
+  from_transcript: false
+  context: >-
+    Nitrogen is 78% of air and seems harmless, but in an enclosed or poorly ventilated space
+    it can push oxygen down with no smell or warning; only an oxygen monitor detects it. Every
+    year people die from breathing "air" with too little oxygen.
+- id: osha-ladder
+  part: 8
+  title: 'OSHA: 5 Things to Know about Ladder Safety'
+  publisher: US Department of Labor
+  url: https://www.youtube.com/watch?v=GuPdykagKMg
+  tracks:
+  - core
+  from_transcript: false
+  context: >-
+    Pick the right ladder for the job, inspect it before use, set it on firm level ground,
+    keep three points of contact, and don't stand on the top steps.
+- id: jkem-quick-start
+  part: 8
+  title: J-KEM Temperature Controller Quick Start
+  publisher: J-KEM Scientific
+  url: https://www.youtube.com/watch?v=5SKkWle-bIk
+  tracks:
+  - air-sensitive
+  - scale-up
+  from_transcript: true
+  context: >-
+    Set the power level to match the solution volume, use the star button and arrows to set
+    the ramp and setpoint, and watch the thermocouple reading. The thermocouple must sit in
+    the solution, or the controller keeps heating.
+- id: cdc-regulator
+  part: 8
+  title: 'Handling Compressed Gas Cylinders Safely: Setting Regulator Pressure'
+  publisher: CDC
+  url: https://www.youtube.com/watch?v=XFstMNB0wk0
+  tracks:
+  - drums-cylinders
+  from_transcript: true
+  context: >-
+    Open the cylinder valve slowly while standing to the side of the regulator outlet, check
+    the inlet gauge, and set delivery pressure with the regulator's adjusting knob, not the
+    outlet flow valve.
+- id: lbl-securing-cylinder
+  part: 8
+  title: Securing a Cylinder
+  publisher: Berkeley Lab
+  url: >-
+    https://training.lbl.gov/ehs/training/resources/gas_safety/Securing_a_Cylinder/story.html
+  tracks:
+  - drums-cylinders
+  from_transcript: false
+  context: >-
+    Keep cylinders upright and chained or strapped to a wall or bench, with the valve cap
+    on whenever no regulator is attached.
+- id: lbl-transport-cylinders
+  part: 8
+  title: How to Safely Transport Gas Cylinders
+  publisher: Berkeley Lab
+  url: https://training.lbl.gov/videos/TransportGasCylinder.html
+  tracks:
+  - drums-cylinders
+  from_transcript: false
+  context: >-
+    Remove the regulator, put the valve cap on, and strap the cylinder to a cylinder cart.
+    Never roll, drag or lift a cylinder by its cap.
+- id: lbl-leak-testing
+  part: 8
+  title: Testing for Leaks
+  publisher: Berkeley Lab
+  url: >-
+    https://training.lbl.gov/ehs/training/resources/gas_safety/Leak%20Testing/story.html
+  tracks:
+  - drums-cylinders
+  from_transcript: false
+  context: >-
+    After attaching a regulator, brush leak-detection solution on the connections; bubbles
+    mean a leak. Never use a flame to look for leaks.
+- id: uline-pallet-jack
+  part: 8
+  title: How to Use a Manual Pallet Jack
+  publisher: Uline
+  url: https://www.youtube.com/watch?v=jfB07vDWT6U
+  tracks:
+  - drums-cylinders
+  from_transcript: false
+  context: >-
+    Check the load against the jack's rating, center the forks under the load, lower it before
+    moving, and push rather than pull where you can.
+- id: hazardous-waste-2025
+  part: 9
+  title: Hazardous Waste Training 2025
+  publisher: Individual uploader
+  url: https://www.youtube.com/watch?v=8y0bqvrf0j8
+  tracks:
+  - waste
+  from_transcript: true
+  context: >-
+    RCRA basics for a Small Quantity Generator: characteristic wastes (ignitable, corrosive,
+    reactive, toxic) and listed wastes. SAA containers must be at the point of generation,
+    under the operator's control, and closed except when adding waste. Once the 55-gallon
+    limit is reached, the container moves to the 90-day storage area within 3 days.
+  site_rule: >-
+    **Time limits:** RCRA allows an SQG up to 180 days on site (270 days if the disposal facility
+    is over 200 miles away) and a 6,000 kg cap. The Ereztech CHP sets a stricter 90 days,
+    and that is the limit to follow. **CHP:** Hazard Mat Storage Room #137 holds at most 24
+    drums.
+- id: nu-nitric-acid-waste
+  part: 9
+  title: Nitric Acid Waste
+  publisher: Northwestern University
+  url: https://vimeo.com/163014970
+  tracks:
+  - waste
+  from_transcript: false
+  context: >-
+    Nitric acid oxidizes organic material in a waste container, producing heat and gas that
+    can burst the bottle. Collect nitric acid waste separately and never add it to organic
+    solvent waste. Applies to the HNO3 baths.
+- id: nu-vented-caps
+  part: 9
+  title: Vented Caps
+  publisher: Northwestern University
+  url: https://vimeo.com/nuors/vented-caps
+  tracks:
+  - waste
+  from_transcript: false
+  context: >-
+    Vented caps relieve pressure from wastes that can keep generating gas, while still keeping
+    the container closed as RCRA requires.
+- id: nu-triple-rinse
+  part: 9
+  title: Triple Rinse Procedure
+  publisher: Northwestern University
+  url: https://vimeo.com/nuors/triple-rinse-procedure
+  tracks:
+  - waste
+  from_transcript: false
+  context: >-
+    Rinse an empty chemical container three times with a suitable solvent, collect the rinsate
+    as hazardous waste, deface the label, then dispose of the container. RCRA requires triple
+    rinsing for containers that held acutely hazardous (P-listed) waste.
+- id: acs-hydrogen-fluoride
+  part: 10
+  title: 'Hydrogen Fluoride: Dangerous and Surprisingly Useful'
+  publisher: ACS
+  url: https://youtu.be/hd3EAzJ_McA
+  tracks:
+  - hf
+  from_transcript: true
+  context: >-
+    HF stays undissociated until it reaches deep tissue, where it releases fluoride ions that
+    destroy tissue and bind calcium and magnesium, causing severe pain and nerve disruption.
+    Also covers industrial uses such as etching silicon wafers and making PTFE.
+- id: janette-hf-safety
+  part: 10
+  title: Hydrofluoric Acid Safety
+  publisher: j@nette
+  url: https://www.youtube.com/watch?v=R62GIezA1Ws
+  tracks:
+  - hf
+  from_transcript: true
+  context: >-
+    Work in a fume hood, use the buddy system, and wear PVC or butyl gloves over nitrile,
+    goggles, a face shield and a waterproof apron or Tyvek suit. Have a spill kit and calcium
+    gluconate gel ready before starting.
+  site_rule: >-
+    **Correction:** the video lists sodium bicarbonate for the spill kit. Use a calcium-based
+    neutralizer, and never sand, kitty litter or other silica absorbents, which react with
+    HF to form toxic silicon tetrafluoride gas.
+- id: suchard-hf-calcium
+  part: 10
+  title: Hydrofluoric Acid (Fluorides & Antidotal Calcium)
+  publisher: Jeff Suchard
+  url: https://www.youtube.com/watch?v=9jF-6QY-smg
+  tracks:
+  - hf
+  - first-aid
+  from_transcript: true
+  context: >-
+    Medical treatment of HF burns. Unlike most acids, HF penetrates deeply, like an alkali
+    burn. Decontaminate with water, then apply 2.5% calcium gluconate gel; severe cases with
+    persistent pain need calcium gluconate by injection or intra-arterial infusion. Clinical
+    in tone, so best suited to first-aid responders.
+- id: nu-pressure-vessels
+  part: 11
+  title: 'Lessons Learned: Pressure Vessels'
+  publisher: Northwestern University
+  url: https://vimeo.com/nuors/pressurevessels
+  tracks:
+  - scale-up
+  from_transcript: false
+  context: >-
+    Pressure vessels fail when they are run past their rated pressure or temperature, used
+    with damaged parts or seals, or operated without a working relief device. Check the rating
+    before every use, fit a relief device, use a blast shield, and inspect seals and fittings.

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Training records — Ereztech Safety Training{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Training records</h1>
+    <div class="sub">{{ rows | length }} {{ 'people' if rows | length != 1 else 'person' }}{{ ' including inactive accounts' if show_all }} · {{ playlist.version }}</div>
+  </div>
+  <div class="head-actions">
+    <a class="btn btn-ghost" href="{{ url_for('records.matrix', all='0' if show_all else '1') }}">{{ 'Hide inactive' if show_all else 'Show inactive' }}</a>
+    <a class="btn btn-orange" href="{{ url_for('records.matrix_csv') }}">Download CSV</a>
+  </div>
+</div>
+
+<div class="stat-row">
+  {% for key in ['overdue', 'awaiting-verification', 'ready-to-sign', 'due-soon', 'in-progress', 'not-started', 'current'] %}
+  <div class="stat-tile"><div class="stat-num">{{ counts.get(key, 0) }}</div><div class="stat-label">{{ labels[key] }}</div></div>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <div class="table-scroll">
+  <table class="table matrix">
+    <thead><tr><th>Name</th><th>Role</th><th>Tracks</th><th class="num">Videos</th><th class="num">Best quiz</th><th>Status</th><th>Last verified</th><th>Due</th></tr></thead>
+    <tbody>
+    {% for rec, st in rows %}
+    <tr>
+      <td><a href="{{ url_for('records.detail', username=rec.username) }}">{{ rec.full_name }}</a>
+        <div class="muted small mono">{{ rec.username }}{{ ' · inactive' if not rec.get('active', True) }}</div></td>
+      <td><span class="pill" style="background: {{ role_colors.get(rec.role, '#8a8797') }};">{{ role_labels.get(rec.role, rec.role) }}</span></td>
+      <td>{% for t in st.tracks %}<span class="tag tag-track">{{ track_labels.get(t, t) }}</span>{% endfor %}</td>
+      <td class="num">{{ st.watched_required | length }}/{{ st.required_ids | length }}</td>
+      <td class="num">{{ ('%.0f' % st.best.pct) ~ '%' if st.best else '—' }}</td>
+      <td><span class="badge {{ st.badge }}">{{ st.label }}</span></td>
+      <td>{% if st.last_verified %}{{ st.last_verified.verified.at | day }}<div class="muted small">{{ st.last_verified.verified.name }}</div>{% else %}<span class="muted">—</span>{% endif %}</td>
+      <td>{{ st.due | day if st.due else '—' }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

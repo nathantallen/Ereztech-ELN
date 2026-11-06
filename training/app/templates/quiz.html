@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Quiz — Ereztech Safety Training{% endblock %}
+{% block content %}
+{% set total = quiz.questions | length %}
+<div class="page-head">
+  <div>
+    <h1>{{ quiz.title }}</h1>
+    <div class="sub">{{ quiz.version }} · pass mark {{ quiz.pass_mark }}% · questions tagged
+      <span class="tag tag-site">EEOP</span> or <span class="tag tag-site">CHP</span> cover Saukville site rules</div>
+  </div>
+</div>
+
+<form method="post" id="quiz-form" data-total="{{ total }}" {% if first_missing %}data-first-missing="{{ first_missing }}"{% endif %}>
+  <div class="quiz-rail">
+    <span class="quiz-count"><strong id="quiz-answered">{{ answers | length }}</strong> of {{ total }} answered</span>
+    <div class="progress-bar"><i id="quiz-bar" style="width: {{ (100 * (answers | length) / total) | round(0) }}%"></i></div>
+    <button class="btn btn-orange" type="submit">Submit answers</button>
+  </div>
+
+  {% for part_no, part_title, questions in groups %}
+  <section class="card">
+    <div class="part-head">
+      <span class="part-num">Part {{ part_no }}</span>
+      <h2>{{ part_title }}</h2>
+    </div>
+    {% for q in questions %}
+    <fieldset class="q-card {{ 'q-missing' if first_missing and q.n not in answers }}" id="q{{ q.n }}">
+      <legend><span class="q-num">Q{{ q.n }}</span> {{ q.question }}
+        {% if q.site %}<span class="tag tag-site">{{ q.site }}</span>{% endif %}</legend>
+      {% for opt in q.options %}
+      {% set letter = 'ABCD'[loop.index0] %}
+      <label class="opt">
+        <input type="radio" name="q{{ q.n }}" value="{{ letter }}" {{ 'checked' if answers.get(q.n) == letter }}>
+        <span class="opt-letter">{{ letter }}</span><span>{{ opt }}</span>
+      </label>
+      {% endfor %}
+    </fieldset>
+    {% endfor %}
+  </section>
+  {% endfor %}
+
+  <div class="form-actions">
+    <button class="btn btn-orange" type="submit">Submit answers</button>
+    <span class="muted small">Answers are scored when you submit. Every attempt is saved to your record.</span>
+  </div>
+</form>
+{% endblock %}

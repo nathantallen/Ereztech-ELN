@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>{% block title %}Ereztech Safety Training{% endblock %}</title>
+  <link rel="icon" href="{{ url_for('static', filename='img/favicon-32.png') }}" sizes="32x32">
+  <link rel="icon" href="{{ url_for('static', filename='img/favicon-192.png') }}" sizes="192x192">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/favicon-192.png') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script>window.TRAINING_TZ = {{ (timezone or "") | tojson }};</script>
+  <script src="{{ url_for('static', filename='js/localtime.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/training.js') }}" defer></script>
+</head>
+<body>
+{% if current_user.is_authenticated %}
+<header class="topbar">
+  <a class="brand" href="{{ url_for('main.dashboard') }}">
+    <img class="brand-logo" src="{{ url_for('static', filename='img/ereztech-logo.svg') }}" alt="Ereztech">
+    <span class="brand-sub">Safety Training</span>
+  </a>
+  <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav">
+    <span aria-hidden="true">☰</span><span class="sr-only">Open navigation</span>
+  </button>
+  <nav id="main-nav">
+    <a href="{{ url_for('main.dashboard') }}" class="{{ 'active' if request.blueprint == 'main' }}">My Training</a>
+    <a href="{{ url_for('playlist.list_videos') }}" class="{{ 'active' if request.blueprint == 'playlist' }}">Playlist</a>
+    <a href="{{ url_for('quiz.take') }}" class="{{ 'active' if request.blueprint == 'quiz' }}">Quiz</a>
+    {% if can_verify %}
+    <a href="{{ url_for('records.matrix') }}" class="{{ 'active' if request.blueprint == 'records' }}">Records</a>
+    {% endif %}
+    {% if is_admin %}
+    <a href="{{ url_for('admin.list_users') }}" class="{{ 'active' if request.endpoint in ('admin.list_users', 'admin.user_form', 'admin.role_form') }}">Users</a>
+    <a href="{{ url_for('admin.settings') }}" class="{{ 'active' if request.endpoint == 'admin.settings' }}">Settings</a>
+    {% endif %}
+  </nav>
+  <div class="userbox">
+    <a class="user-name" href="{{ url_for('auth.profile') }}" title="Change your password">{{ current_user.full_name }}</a>
+    <span class="user-role" style="background: {{ role_colors.get(current_user.role, '#F7941E') }};">{{ role_labels.get(current_user.role, current_user.role) }}</span>
+    <form method="post" action="{{ url_for('auth.logout') }}" class="logout-form" style="display:inline">
+      <button class="logout" type="submit" style="background:none;border:0;font:inherit;cursor:pointer">Sign out</button>
+    </form>
+  </div>
+</header>
+{% endif %}
+<main class="container {% block container_class %}{% endblock %}">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+<footer class="footer">
+  <img class="footer-logo" src="{{ url_for('static', filename='img/ereztech-logo.svg') }}" alt="Ereztech">
+  <span>Chemical Safety Training — Bridging Chemical Gaps</span>
+</footer>
+</body>
+</html>

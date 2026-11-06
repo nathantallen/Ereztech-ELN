@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}My Training — Ereztech Safety Training{% endblock %}
+{% block content %}
+{% set req = status.required_ids | length %}
+{% set done = status.watched_required | length %}
+{% set returned = (status.completions | selectattr('status', 'equalto', 'returned') | list) %}
+{% set latest_return = returned | sort(attribute='id') | last if returned else None %}
+<div class="page-head">
+  <div>
+    <h1>My training</h1>
+    <div class="sub">{{ playlist.title }} · {{ playlist.version }} · {{ playlist.site }}</div>
+  </div>
+  <span class="badge {{ status.badge }} pill-lg">{{ status.label }}</span>
+</div>
+
+<div class="stat-row">
+  <div class="stat-tile"><div class="stat-num">{{ done }}/{{ req }}</div><div class="stat-label">Videos watched</div></div>
+  <div class="stat-tile"><div class="stat-num">{{ ('%.0f' % status.best.pct) ~ '%' if status.best else '—' }}</div><div class="stat-label">Best quiz score</div></div>
+  <div class="stat-tile"><div class="stat-num">{{ status.tracks | length }}</div><div class="stat-label">Tracks assigned</div></div>
+  <div class="stat-tile"><div class="stat-num stat-date">{{ status.due | day if status.due else '—' }}</div><div class="stat-label">Retraining due</div></div>
+</div>
+
+<div class="grid-main-side">
+  <div>
+    <div class="card">
+      <h2>Next step</h2>
+      {% if status.pending %}
+        <p>You signed <a href="{{ url_for('records.detail', username=current_user.username) }}">{{ status.pending.id }}</a>
+          on {{ status.pending.signed.at | nicedate }}. A trainer will verify it.</p>
+      {% elif status.key in ('current', 'due-soon') %}
+        <p>Your training is current until <strong>{{ status.due | day }}</strong>
+          (verified by {{ status.last_verified.verified.name }}).
+          {% if status.key == 'due-soon' %}Start the next cycle now: watch your videos again and retake the quiz.{% endif %}</p>
+      {% else %}
+        {% if latest_return and not status.pending %}
+        <div class="lockbar">Your last record, {{ latest_return.id }}, was returned by
+          {{ latest_return.returned.name }}: “{{ latest_return.returned.reason }}”</div>
+        {% endif %}
+        <ol class="steps">
+          <li class="{{ 'step-done' if status.videos_done }}">
+            <strong>Watch your assigned videos</strong> and mark each one watched.
+            {% if not status.videos_done %}<span class="muted">{{ req - done }} to go.</span>
+              <a href="{{ url_for('playlist.list_videos', track='mine') }}">Open my videos</a>{% endif %}
+          </li>
+          <li class="{{ 'step-done' if status.latest_pass }}">
+            <strong>Pass the quiz</strong> ({{ quiz.pass_mark }}% or better).
+            {% if status.latest_pass %}<span class="muted">Passed {{ status.latest_pass.pct }}% on {{ status.latest_pass.at | nicedate }}.</span>
+            {% else %}<a href="{{ url_for('quiz.take') }}">Take the quiz</a>{% endif %}
+          </li>
+          <li>
+            <strong>Sign your record</strong>, then a trainer verifies it.
+          </li>
+        </ol>
+        {% if status.ready %}
+        <form method="post" action="{{ url_for('records.sign') }}" class="signoff-form sign-box">
+          <label class="checkbox-line"><input type="checkbox" name="attest" value="1" required>
+            I watched the assigned training videos and understand the content.</label>
+          <label>Confirm with your password
+            <input type="password" name="password" autocomplete="current-password" required>
+          </label>
+          <div><button class="btn btn-orange" type="submit">Sign training record</button></div>
+        </form>
+        {% endif %}
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-title-row">
+        <h2>Progress by part</h2>
+        <a class="btn btn-ghost btn-sm" href="{{ url_for('playlist.list_videos', track='mine') }}">My videos</a>
+      </div>
+      <table class="table">
+        <thead><tr><th>Part</th><th class="num">Watched</th><th style="width:38%">Progress</th></tr></thead>
+        <tbody>
+        {% for part, vids, n in parts %}
+        <tr>
+          <td><span class="muted">Part {{ part.number }}</span> {{ part.title }}</td>
+          <td class="num">{{ n }}/{{ vids | length }}</td>
+          <td><div class="progress-bar" role="img" aria-label="{{ n }} of {{ vids | length }} watched"><i style="width: {{ (100 * n / (vids | length)) | round(0) }}%"></i></div></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h2>My tracks</h2>
+      <ul class="plain-list">
+        {% for t in status.tracks %}<li><span class="tag tag-track">{{ track_labels.get(t, t) }}</span></li>{% endfor %}
+      </ul>
+      <p class="muted small">Tracks are assigned by your administrator based on the work you do.</p>
+    </div>
+    <div class="card">
+      <h2>My record</h2>
+      {% if status.completions %}
+      <ul class="plain-list">
+        {% for c in status.completions | sort(attribute='id', reverse=True) %}
+        <li><a class="mono" href="{{ url_for('records.detail', username=current_user.username) }}">{{ c.id }}</a>
+          <span class="badge {{ {'verified': 'badge-approved', 'signed': 'badge-pending', 'returned': 'badge-rejected'}[c.status] }}">{{ c.status }}</span></li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="muted small">No signed records yet.</p>
+      {% endif %}
+      <a href="{{ url_for('records.detail', username=current_user.username) }}">Full history and quiz attempts</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

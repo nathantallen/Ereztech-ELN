@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{{ video.title }} — Ereztech Safety Training{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="sub"><a href="{{ url_for('playlist.list_videos') }}#v-{{ video.id }}">Playlist</a> › Part {{ part.number }}: {{ part.title }}</div>
+    <h1>{{ video.title }}</h1>
+    <div class="sub">{{ video.publisher }}
+      {% for t in video.tracks %}<span class="tag tag-track">{{ track_labels.get(t, t) }}</span>{% endfor %}
+      {% if not assigned %}<span class="tag">Not in your tracks</span>{% endif %}
+    </div>
+  </div>
+  <div class="head-actions">
+    {% if prev_v %}<a class="btn btn-ghost btn-sm" href="{{ url_for('playlist.video', vid=prev_v.id) }}">‹ Previous</a>{% endif %}
+    {% if next_v %}<a class="btn btn-ghost btn-sm" href="{{ url_for('playlist.video', vid=next_v.id) }}">Next ›</a>{% endif %}
+  </div>
+</div>
+
+<div class="grid-main-side">
+  <div>
+    <div class="card">
+      {% if yt %}
+      <div class="video-embed">
+        <iframe src="https://www.youtube-nocookie.com/embed/{{ yt }}" title="{{ video.title }}"
+                allow="encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin"
+                loading="lazy"></iframe>
+      </div>
+      <p class="small muted">Not playing? <a href="{{ video.url }}" target="_blank" rel="noopener">Open it on YouTube</a>.</p>
+      {% else %}
+      <p>This video is hosted on another site.</p>
+      <a class="btn" href="{{ video.url }}" target="_blank" rel="noopener">Open video ↗</a>
+      {% endif %}
+    </div>
+    <div class="card">
+      <h2>Key points</h2>
+      <div class="md-body">{{ video.context | markdown }}</div>
+      {% if video.site_rule %}<div class="site-rule md-body">{{ video.site_rule | markdown }}</div>{% endif %}
+      {% if not video.from_transcript %}
+      <p class="muted small">Written from the video's topic and publisher information, not a transcript.</p>
+      {% endif %}
+    </div>
+  </div>
+  <div>
+    <div class="card">
+      <h2>Watched?</h2>
+      {% if video.id in status.watched %}
+      <p><span class="watched">✓</span> Marked watched {{ status.watched[video.id] | nicedate }}.</p>
+      {% else %}
+      <p class="muted small">Mark it once you've watched the whole video. This goes on your training record.</p>
+      <form method="post" action="{{ url_for('playlist.mark_watched', vid=video.id) }}">
+        <button class="btn btn-orange btn-block" type="submit">Mark as watched</button>
+      </form>
+      {% endif %}
+    </div>
+    {% if part.notes %}
+    <div class="card"><div class="site-rule md-body">{{ part.notes | markdown }}</div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
